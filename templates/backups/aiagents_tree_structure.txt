@@ -1,0 +1,41 @@
+D:/ai_agents_suite
+├── README.md                  # Project documentation
+├── requirements.txt           # Python dependencies
+├── .env                       # Environment variables
+├── agents/                    # Core AI agent implementations
+│   ├── coding_agent.py        # Main coding agent logic
+│   ├── base_agent.py          # Abstract base class for agents
+│   └── __init__.py            # Init file for the agents package
+├── configs/                   # Configuration files for agents and tools
+│   ├── lmstudio_config.yaml   # Configuration for LMStudio
+│   ├── agents.yaml            # Configuration for various agents
+│   └── tasks.yaml             # Task configuration for agents
+├── tools/                     # Custom tools and utilities
+│   ├── __init__.py            # Init file for the tools package
+│   ├── code_tools.py          # Tools for code generation and execution
+│   ├── task_scheduler.py      # Tool for managing agent tasks
+│   └── lmstudio_connector.py  # Connector for interacting with LMStudio
+├── integrations/              # API integrations and external services
+│   ├── __init__.py            # Init file for integrations
+│   ├── github_integration.py  # Example integration with GitHub
+│   └── slack_integration.py   # Example integration with Slack
+├── examples/                  # Examples and demos
+│   ├── coding_agent_demo.py   # Demo for the coding agent
+│   ├── integration_demo.py    # Demo for an external integration
+│   └── tasks_demo.py          # Demo for task execution
+├── logs/                      # Logs directory
+│   └── agent_logs.log         # Log file for agent actions
+├── data/                      # Data storage and caching
+│   ├── cache/                 # Caches for temporary data
+│   └── history/               # Persistent storage for task and agent history
+├── tests/                     # Unit and integration tests
+│   ├── test_agents.py         # Tests for agent logic
+│   ├── test_tools.py          # Tests for tools and utilities
+│   ├── test_integrations.py   # Tests for integrations
+│   └── __init__.py            # Init file for tests
+├── static/                    # Static files for UI (if applicable)
+│   ├── styles.css             # Example CSS file for a UI
+│   └── index.html             # Example HTML file for a web interface
+├── templates/                 # Jinja2 or other templates for dynamic UI
+│   └── task_template.html     # Template for displaying tasks or logs
+└── main.py                    # Entry point for the project

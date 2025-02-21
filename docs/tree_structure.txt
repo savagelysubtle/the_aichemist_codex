@@ -1,0 +1,15 @@
+project_root/
+├── src/
+│   └── your_package/
+│       ├── __init__.py
+│       ├── file_tree.py
+│       └── code_summary.py
+├── tests/
+│   ├── __init__.py
+│   └── test_file_tree.py
+├── scripts/
+│   └── run_analysis.py
+├── README.md
+├── pyproject.toml
+├── uv.lock
+└── .gitignore

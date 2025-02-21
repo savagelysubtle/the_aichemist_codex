@@ -1,0 +1,41 @@
+{
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/common/config.py": "src/common/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/common/logging_config.py": "src/common/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/common/utils.py": "src/common/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/file_manager/file_manager.py": "src/file_manager/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/file_manager/file_moves.json": "src/file_manager/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/file_manager/main.py": "src/file_manager/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/code_summary.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/file_tree.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/logging_config.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/main.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/markdown_output.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/schemas.py": "src/project_reader/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_reader/tags.py": "src/project_reader/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_generator/new_project.py": "src/project_generator/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/src/project_generator/main.py": "src/project_generator/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/scripts/run_analysis.py": "scripts/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/tests/test_file_manager.py": "tests/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/tests/test_project_generator.py": "tests/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/tests/test_project_reader/test_file_tree.py": "tests/test_project_reader/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/docs/howto.txt": "docs/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/docs/tree_structure.txt": "docs/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/templates/basic_project/README.md": "templates/basic_project/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/templates/backups/tree_structure_templates.txt": "templates/backups/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/templates/backups/New-Project_tree_structure.txt": "templates/backups/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/config": "config/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/data/backups/": "data/backups/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/data/logs/": "data/logs/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/data/processed/": "data/processed/",
+    "D:/Coding/Python_Projects/the_aichemist_codex/data/raw/": "data/raw/",
+
+    "D:/Coding/Python_Projects/the_aichemist_codex/pyproject.toml": "./"
+}
