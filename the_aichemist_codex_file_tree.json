@@ -1,0 +1,310 @@
+{
+    ".git": {
+        "COMMIT_EDITMSG": null,
+        "config": null,
+        "description": null,
+        "HEAD": null,
+        "hooks": {
+            "applypatch-msg.sample": null,
+            "commit-msg.sample": null,
+            "fsmonitor-watchman.sample": null,
+            "post-update.sample": null,
+            "pre-applypatch.sample": null,
+            "pre-commit.sample": null,
+            "pre-merge-commit.sample": null,
+            "pre-push.sample": null,
+            "pre-rebase.sample": null,
+            "pre-receive.sample": null,
+            "prepare-commit-msg.sample": null,
+            "push-to-checkout.sample": null,
+            "sendemail-validate.sample": null,
+            "update.sample": null
+        },
+        "index": null,
+        "info": {
+            "exclude": null
+        },
+        "logs": {
+            "HEAD": null,
+            "refs": {
+                "heads": {
+                    "main": null
+                },
+                "remotes": {
+                    "origin": {
+                        "main": null
+                    }
+                }
+            }
+        },
+        "objects": {
+            "0c": {
+                "01d5b08b6b44379b931d54d7fcf5221fdc9fde": null
+            },
+            "0f": {
+                "b919499ce82554d4bedbf5a55168c22f8a2e20": null
+            },
+            "19": {
+                "1cc056dfbb791b486efa297165d4ac79ca5bcd": null,
+                "b4acac4720e2b577232777267f4c9f79696aee": null
+            },
+            "1a": {
+                "568218b8225d48d212611af6d6441d7d31008c": null
+            },
+            "1d": {
+                "900a04ae03bc31f32bd65513052728644fec61": null
+            },
+            "1e": {
+                "d21081e78804c1165ded416adda5a1dde4c8cf": null
+            },
+            "1f": {
+                "82ef0c48d0ad98030256a5d498444aaeaa56a2": null
+            },
+            "2a": {
+                "be4331f83ca5f535c49afbc4a4fc41c3362720": null
+            },
+            "2b": {
+                "6c64f09f16580b960bbbfeccef487069b376b8": null
+            },
+            "36": {
+                "8df5621084555bbe74ada875de9102afe0070e": null
+            },
+            "37": {
+                "3f68caf61aba31590325f6c2d3ec2ca9490034": null
+            },
+            "42": {
+                "062b97b7219148ed02360e7011e3523759f34a": null
+            },
+            "4b": {
+                "825dc642cb6eb9a060e54bf8d69288fbee4904": null
+            },
+            "53": {
+                "ceb17b68c96a327a80b8d660dfbd63495667e2": null
+            },
+            "54": {
+                "8b11be73809d0eb5246a0ce41b989a740978c7": null
+            },
+            "5a": {
+                "309d02b2df70ed07377c63e132b486d91f675e": null
+            },
+            "5e": {
+                "65db9285692d5af9fc7e518361c52307d158d6": null
+            },
+            "64": {
+                "76b5b7082e2ae188a879dea3094bcf7a717971": null
+            },
+            "73": {
+                "248bd4a90c3d5caea8f388518c0c0882161afa": null
+            },
+            "77": {
+                "fe3a6578c32900eaf9615bf9e957376aedeb32": null
+            },
+            "7a": {
+                "17b7b3b6ad49157ee41f3da304fec3d32342d3": null
+            },
+            "7f": {
+                "12a27a27a43aab54aef266ec6cd7bb3dfbe5f3": null
+            },
+            "85": {
+                "8a41014169b8f0eb1b905fa3bb69c753a1bda5": null
+            },
+            "87": {
+                "1f80a34bee8d31d18202d8a434da137374886f": null
+            },
+            "8f": {
+                "1123e65e72187cf20a8140983071ea99b79b2b": null
+            },
+            "92": {
+                "c278c57aa76d942088e90d65c9cdf9b33216e7": null
+            },
+            "98": {
+                "bb3ea670b0172f54a8d2d052b45707867f7127": null
+            },
+            "9e": {
+                "645b6cbbcfe433bdba47488814948138d8bf60": null
+            },
+            "a4": {
+                "464a1d09d2bd5fcaf550dee4a0b3f3a9a9bb84": null
+            },
+            "a5": {
+                "e69fd11a2781c5a4f08fd198b375e8f1d74479": null
+            },
+            "a6": {
+                "45c0ed943beea602d15527e4e8a91017890c2b": null
+            },
+            "c3": {
+                "e8238bc3b6dc8b72c24943e290552092c061b2": null
+            },
+            "c4": {
+                "21dd145c931092bc7350e617a306bce25be285": null
+            },
+            "c9": {
+                "9c83d4148eba9a46af0b1acae56e8c531337e7": null,
+                "f5d9d3ed096751f8018f726d7be54ca67cd393": null
+            },
+            "ca": {
+                "5be8646ae8b2a3cb27b75989a99da944ffbc58": null
+            },
+            "d6": {
+                "7fcce0882d6e0a0938c2780882dcf31eb09db1": null
+            },
+            "d9": {
+                "28f4601bc0f1bc0fd8a2b40302dd263a767fb3": null
+            },
+            "dd": {
+                "d7c0ad531b09fbbe629b75edec792fb94d6b2c": null
+            },
+            "de": {
+                "24f3e3c99d6717c649bb529d417df462435d52": null
+            },
+            "e5": {
+                "89bb917e23823e25f9fff7e0849c4d6d4a62bc": null
+            },
+            "e6": {
+                "80b184a2df69438a5608967bbc76cd896b9e4e": null,
+                "9de29bb2d1d6434b8b29ae775ad8c2e48c5391": null
+            },
+            "e9": {
+                "248b15c3bc51c359baadb1e95627c0cd0a546a": null
+            },
+            "ea": {
+                "8791670a2b76a2a40e42a3a150b5b029cfa308": null
+            },
+            "f2": {
+                "9e4e0b42430274d7543af0f85853b5e3127ecb": null
+            },
+            "f6": {
+                "ba0c4dfe5047105dcd0078f42c73c3d4f02edb": null
+            },
+            "f7": {
+                "4fc22428820790b80b1aa9affa3ba7c964dd5a": null
+            },
+            "f9": {
+                "3e3a1a1525fb5b91020da86e44810c87a2d7bc": null
+            },
+            "fa": {
+                "2c0d368ec1b30548910287f9fde2ee29fce195": null
+            },
+            "info": {},
+            "pack": {}
+        },
+        "refs": {
+            "heads": {
+                "main": null
+            },
+            "remotes": {
+                "origin": {
+                    "main": null
+                }
+            },
+            "tags": {}
+        }
+    },
+    ".gitignore": null,
+    ".python-version": null,
+    "config": {
+        "config": {}
+    },
+    "data": {},
+    "docs": {
+        "howto.txt": null,
+        "Role Product Manager.txt": null,
+        "tree_structure.txt": null
+    },
+    "images": {},
+    "pyproject.toml": null,
+    "scripts": {
+        "run_analysis.py": null
+    },
+    "src": {
+        "common": {
+            "config.py": null,
+            "logging_config.py": null,
+            "utils.py": null
+        },
+        "file_manager": {
+            "__init__.py": null,
+            "file_manager.py": null,
+            "main.py": null
+        },
+        "project_generator": {
+            ".git": {
+                "config": null,
+                "description": null,
+                "HEAD": null,
+                "hooks": {
+                    "applypatch-msg.sample": null,
+                    "commit-msg.sample": null,
+                    "fsmonitor-watchman.sample": null,
+                    "post-update.sample": null,
+                    "pre-applypatch.sample": null,
+                    "pre-commit.sample": null,
+                    "pre-merge-commit.sample": null,
+                    "pre-push.sample": null,
+                    "pre-rebase.sample": null,
+                    "pre-receive.sample": null,
+                    "prepare-commit-msg.sample": null,
+                    "push-to-checkout.sample": null,
+                    "sendemail-validate.sample": null,
+                    "update.sample": null
+                },
+                "info": {
+                    "exclude": null
+                },
+                "objects": {
+                    "info": {},
+                    "pack": {}
+                },
+                "refs": {
+                    "heads": {},
+                    "tags": {}
+                }
+            },
+            "__init__.py": null,
+            "exporters": {},
+            "main.py": null,
+            "new_project.py": null,
+            "tree_structure_file_backups": {},
+            "validators": {}
+        },
+        "project_reader": {
+            "__init__.py": null,
+            "code_summary.py": null,
+            "file_tree.py": null,
+            "logging_config.py": null,
+            "main.py": null,
+            "markdown_output.py": null,
+            "parsers": {},
+            "schemas.py": null,
+            "tags.py": null,
+            "templates": {
+                "basic_project": {}
+            },
+            "tests": {
+                " __init__.py": null,
+                "test_file_manager": {},
+                "test_project_generator": {},
+                "test_project_reader": {
+                    " test_file_tree.py": null
+                }
+            },
+            "version.py": null
+        }
+    },
+    "templates": {
+        "backups": {
+            "aiagents_tree_structure.txt": null,
+            "AutoDev-tree_structure.txt": null,
+            "New-Project_tree_structure.txt": null,
+            "tree_structure_templates.txt": null
+        },
+        "basic_project": {
+            "README.md": null
+        }
+    },
+    "tests": {
+        "__init__.py": null,
+        "test_project_reader": {}
+    },
+    "texts": {}
+}
