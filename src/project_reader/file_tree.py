@@ -40,18 +40,16 @@ def generate_file_tree(directory: Path, depth=0) -> dict:
 
     try:
         for entry in sorted(directory.iterdir(), key=lambda e: e.name.lower()):
-            if any(excluded in entry.parts for excluded in EXCLUDED_DIRS):
+            if entry.name in EXCLUDED_DIRS:
                 continue
 
             if entry.is_dir():
                 tree[entry.name] = generate_file_tree(entry, depth + 1)
             else:
                 tree[entry.name] = None
-
     except PermissionError:
         logging.error(f"Permission denied: {directory}")
         tree["ERROR"] = "Permission denied"
-
     except Exception as e:
         logging.error(f"Unexpected error while reading {directory}: {e}")
         tree["ERROR"] = str(e)
@@ -59,26 +57,25 @@ def generate_file_tree(directory: Path, depth=0) -> dict:
     return tree
 
 
-def safe_read_file(file_path):
+def safe_read_file(file_path: Path) -> str:
     """Reads a file safely, handling encoding errors and large files."""
     MAX_FILE_SIZE_MB = 10
 
     if file_path.stat().st_size > MAX_FILE_SIZE_MB * 1024 * 1024:
         logging.warning(f"Skipping large file: {file_path}")
-        return None
+        return ""
 
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            return f.read()
+        return file_path.read_text(encoding="utf-8", errors="ignore")
     except Exception as e:
         logging.error(f"Skipping file {file_path}: {e}")
-        return None
+        return ""
 
 
-def parse_python_code(file_path):
-    """Parses Python code and extracts functions/classes while avoiding syntax errors."""
+def parse_python_code(file_path: Path) -> list:
+    """Parses Python code and extracts function and class names while avoiding syntax errors."""
     content = safe_read_file(file_path)
-    if content is None:
+    if not content:
         return []
 
     try:
@@ -93,26 +90,23 @@ def parse_python_code(file_path):
         return []
 
 
-def list_python_files(directory: Path):
-    """Returns a list of all Python files in the given directory (including subdirectories)."""
+def list_python_files(directory: Path) -> list:
+    """Returns a list of Python files in a given directory."""
     return [file for file in directory.glob("**/*.py") if file.is_file()]
 
 
-def summarize_for_gpt(file_tree_path, gpt_summary_path):
-    """Generates a concise summary for GPT from the file tree and extracted function/class definitions."""
-    try:
-        with open(file_tree_path, "r", encoding="utf-8") as ft:
-            file_tree = json.load(ft)
-    except Exception as e:
-        logging.error(f"Error loading file tree: {e}")
-        return None
+def summarize_for_gpt(file_tree_path: Path, gpt_summary_path: Path) -> str:
+    """Generates a concise summary for GPT from the file tree."""
+    if not file_tree_path.exists() or not gpt_summary_path.exists():
+        logging.error("File tree or GPT summary file is missing.")
+        return ""
 
     try:
-        with open(gpt_summary_path, "r", encoding="utf-8") as gs:
-            gpt_summary = json.load(gs)
+        file_tree = json.loads(file_tree_path.read_text(encoding="utf-8"))
+        gpt_summary = json.loads(gpt_summary_path.read_text(encoding="utf-8"))
     except Exception as e:
-        logging.error(f"Error loading GPT summary: {e}")
-        return None
+        logging.error(f"Error loading files: {e}")
+        return ""
 
     summary = {}
 
@@ -121,9 +115,8 @@ def summarize_for_gpt(file_tree_path, gpt_summary_path):
             full_path = f"{path}/{key}" if path else key
             if isinstance(value, dict):
                 summarize_tree(value, full_path)
-            else:
-                if full_path in gpt_summary:
-                    summary[full_path] = gpt_summary[full_path]
+            elif full_path in gpt_summary:
+                summary[full_path] = gpt_summary[full_path]
 
     summarize_tree(file_tree)
 
@@ -138,24 +131,17 @@ if __name__ == "__main__":
         "directory", type=Path, help="Path to the directory to analyze."
     )
     parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help="Output JSON file for file tree. Defaults to <project_name>_file_tree.json",
+        "-o", "--output", type=Path, help="Output JSON file for file tree."
     )
 
     args = parser.parse_args()
     project_name = get_project_name(args.directory)
-
     output_file = (
-        args.output
-        if args.output
-        else args.directory.parent / f"{project_name}_file_tree.json"
+        args.output or args.directory.parent / f"{project_name}_file_tree.json"
     )
 
     logging.info(f"Generating file tree for {args.directory}")
     file_tree = generate_file_tree(args.directory)
 
     output_file.write_text(json.dumps(file_tree, indent=4), encoding="utf-8")
-
     logging.info(f"File tree saved to {output_file}")

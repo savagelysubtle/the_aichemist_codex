@@ -66,7 +66,9 @@ def process_file(file_path: Path):
                 )
 
         # Generate GPT-friendly summary
-        gpt_summary = summarize_for_gpt(". ".join(raw_summary))
+        gpt_summary = summarize_for_gpt(
+            ". ".join(raw_summary), gpt_summary_path="path/to/gpt_summary.json"
+        )
 
         return file_path.resolve().as_posix(), summaries, gpt_summary
 
