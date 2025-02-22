@@ -1,84 +1,94 @@
 import argparse
-import ast
 import json
 import logging
 from pathlib import Path
 
 from project_reader.logging_config import setup_logging
 
+from .config import CodexConfig
+from .patterns import should_ignore
+
+# Initialize logging and load config
 setup_logging()
+config = CodexConfig()  # Future use for modularizing per package
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-EXCLUDED_DIRS = {
-    ".venv",
-    "venv",
-    "myenv",
-    "Lib",
-    "site-packages",
-    "__pycache__",
-    "node_modules",
-    "dist",
-    "build",
-}
 MAX_DEPTH = 10
 
 
 def get_project_name(directory: Path) -> str:
-    """Returns the project name based on the directory structure."""
+    """Returns the project name based on the directory name."""
     return directory.name
 
 
-def generate_file_tree(directory: Path, depth=0) -> dict:
-    """Recursively generates a file tree dictionary structure while handling errors."""
+def _is_safe_symlink(symlink: Path, base_dir: Path) -> bool:
+    """
+    Determines if a symlink resolves to a location within the base directory.
+    """
+    try:
+        resolved = symlink.resolve(strict=True)
+        return base_dir in resolved.parents or resolved == base_dir
+    except Exception:
+        return False
+
+
+async def generate_file_tree(directory: Path, depth=0) -> dict:
+    """
+    Asynchronously generates a file tree dictionary structure.
+    Applies pattern exclusion and checks symlink safety.
+    """
     if depth > MAX_DEPTH:
-        return {"ERROR": "Max depth reached"}
+        return {"error": "max_depth_exceeded"}
 
     tree = {}
-
     try:
         for entry in sorted(directory.iterdir(), key=lambda e: e.name.lower()):
-            if entry.name in EXCLUDED_DIRS:
+            rel_path = str(entry.relative_to(directory))
+            if should_ignore(rel_path):
                 continue
-
+            if entry.is_symlink() and not _is_safe_symlink(entry, directory):
+                continue
             if entry.is_dir():
-                tree[entry.name] = generate_file_tree(entry, depth + 1)
+                tree[entry.name] = await generate_file_tree(entry, depth + 1)
             else:
                 tree[entry.name] = None
     except PermissionError:
         logging.error(f"Permission denied: {directory}")
-        tree["ERROR"] = "Permission denied"
+        tree["error"] = "permission_denied"
     except Exception as e:
         logging.error(f"Unexpected error while reading {directory}: {e}")
-        tree["ERROR"] = str(e)
-
+        tree["error"] = str(e)
     return tree
 
 
 def safe_read_file(file_path: Path) -> str:
-    """Reads a file safely, handling encoding errors and large files."""
+    """
+    Reads a file safely, handling encoding issues and large file warnings.
+    """
     MAX_FILE_SIZE_MB = 10
-
     if file_path.stat().st_size > MAX_FILE_SIZE_MB * 1024 * 1024:
         logging.warning(f"Skipping large file: {file_path}")
         return ""
-
     try:
         return file_path.read_text(encoding="utf-8", errors="ignore")
     except Exception as e:
-        logging.error(f"Skipping file {file_path}: {e}")
+        logging.error(f"Error reading file {file_path}: {e}")
         return ""
 
 
 def parse_python_code(file_path: Path) -> list:
-    """Parses Python code and extracts function and class names while avoiding syntax errors."""
+    """
+    Parses Python code to extract function and class names.
+    """
     content = safe_read_file(file_path)
     if not content:
         return []
-
     try:
+        import ast
+
         tree = ast.parse(content, filename=str(file_path))
         return [
             node.name
@@ -86,26 +96,29 @@ def parse_python_code(file_path: Path) -> list:
             if isinstance(node, (ast.FunctionDef, ast.ClassDef))
         ]
     except SyntaxError as e:
-        logging.warning(f"Skipping {file_path} due to syntax error: {e}")
+        logging.warning(f"Syntax error in {file_path}: {e}")
         return []
 
 
 def list_python_files(directory: Path) -> list:
-    """Returns a list of Python files in a given directory."""
+    """
+    Returns a list of Python files in the given directory and its subdirectories.
+    """
     return [file for file in directory.glob("**/*.py") if file.is_file()]
 
 
 def summarize_for_gpt(file_tree_path: Path, gpt_summary_path: Path) -> str:
-    """Generates a concise summary for GPT from the file tree."""
+    """
+    Generates a concise summary for GPT based on the file tree and a GPT summary JSON.
+    """
     if not file_tree_path.exists() or not gpt_summary_path.exists():
         logging.error("File tree or GPT summary file is missing.")
         return ""
-
     try:
         file_tree = json.loads(file_tree_path.read_text(encoding="utf-8"))
         gpt_summary = json.loads(gpt_summary_path.read_text(encoding="utf-8"))
     except Exception as e:
-        logging.error(f"Error loading files: {e}")
+        logging.error(f"Error loading JSON files: {e}")
         return ""
 
     summary = {}
@@ -119,7 +132,6 @@ def summarize_for_gpt(file_tree_path: Path, gpt_summary_path: Path) -> str:
                 summary[full_path] = gpt_summary[full_path]
 
     summarize_tree(file_tree)
-
     return json.dumps(summary, indent=4)
 
 
@@ -133,15 +145,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output", type=Path, help="Output JSON file for file tree."
     )
-
     args = parser.parse_args()
+
     project_name = get_project_name(args.directory)
     output_file = (
-        args.output or args.directory.parent / f"{project_name}_file_tree.json"
+        args.output
+        if args.output
+        else args.directory.parent / f"{project_name}_file_tree.json"
     )
 
-    logging.info(f"Generating file tree for {args.directory}")
-    file_tree = generate_file_tree(args.directory)
+    import asyncio
 
-    output_file.write_text(json.dumps(file_tree, indent=4), encoding="utf-8")
+    logging.info(f"Generating file tree for {args.directory}")
+    tree = asyncio.run(generate_file_tree(args.directory))
+    output_file.write_text(json.dumps(tree, indent=4), encoding="utf-8")
     logging.info(f"File tree saved to {output_file}")

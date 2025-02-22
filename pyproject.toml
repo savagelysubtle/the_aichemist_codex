@@ -4,8 +4,25 @@ version = "0.1.0"
 description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
-dependencies = []
+dependencies = [
+    "dynaconf",
+    "pydantic",
+    "aiofiles",
+    "tenacity",
+    "structlog"
+]
+
+[project.scripts]
+codex = "the_aichemist_codex.cli.main:main"
+
+[project.entry-points."codex.plugins"]
+# External plugins will register entry points here.
+# Example:
+# fancy = "fancy_plugin:display_function"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "src/common", "src/project_generator", "src/project_reader", "src/file_manager"]
+pythonpath = ["src"]
