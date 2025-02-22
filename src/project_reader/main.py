@@ -9,9 +9,8 @@ from tkinter import filedialog
 # Ensure src/ is in the Python module search path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from common.utils import get_project_name
 from project_reader.code_summary import summarize_code
-from project_reader.file_tree import generate_file_tree
+from project_reader.file_tree import generate_file_tree, get_project_name
 from project_reader.markdown_output import save_as_markdown
 
 # Setup logging

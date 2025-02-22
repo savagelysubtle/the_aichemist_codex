@@ -5,7 +5,11 @@ import json
 import logging
 from pathlib import Path
 
-from common.utils import get_project_name, list_python_files, summarize_for_gpt
+from project_reader.file_tree import (
+    get_project_name,
+    list_python_files,
+    summarize_for_gpt,
+)
 
 # Setup logging
 logging.basicConfig(

@@ -1,7 +1,11 @@
 [project]
-name = "1new-projects-folder-maker"
+name = "the_aichemist_codex"
 version = "0.1.0"
-description = "Add your description here"
+description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
 dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "src/common", "src/project_generator", "src/project_reader", "src/file_manager"]

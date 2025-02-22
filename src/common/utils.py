@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 from typing import FrozenSet, NewType, Tuple, Union, cast
 
-from project_reader.tags import Tag, parse_tag
 from project_reader.version import InvalidVersion, Version
 
 BuildTag = Union[Tuple[()], Tuple[int, str]]
@@ -71,7 +70,7 @@ def canonicalize_version(version: Union[Version, str]) -> str:
 
 def parse_wheel_filename(
     filename: str,
-) -> Tuple[NormalizedName, Version, BuildTag, FrozenSet[Tag]]:
+) -> Tuple[NormalizedName, Version, BuildTag, FrozenSet]:
     """Parses a valid wheel filename according to PEP 427."""
     if not filename.endswith(".whl"):
         raise InvalidWheelFilename(
@@ -87,6 +86,7 @@ def parse_wheel_filename(
 
     parts = filename.split("-", dashes - 2)
     name_part = parts[0]
+
     if "__" in name_part or re.match(r"^[\w\d._]*$", name_part, re.UNICODE) is None:
         raise InvalidWheelFilename(f"Invalid project name: {filename}")
 
@@ -104,7 +104,12 @@ def parse_wheel_filename(
     else:
         build = ()
 
+    from project_reader.tags import (
+        parse_tag,
+    )  # ✅ Moved import inside function to prevent circular imports
+
     tags = parse_tag(parts[-1])
+
     return name, version, build, tags
 
 
@@ -126,11 +131,6 @@ def parse_sdist_filename(filename: str) -> Tuple[NormalizedName, Version]:
     name = canonicalize_name(name_part)
     version = Version(version_part)
     return name, version
-
-
-def get_project_name(directory: Path) -> str:
-    """Returns the project name based on the directory structure."""
-    return directory.name
 
 
 def list_python_files(directory: Path):
@@ -155,7 +155,7 @@ def summarize_for_gpt(text, max_sentences=10, max_length=1000):
     return summary[:max_length].strip()
 
 
-### 🔹 Added File Management Utilities (From `file_manager/utils.py`) ###
+### 🔹 File Management Utilities ###
 def setup_logging(log_dir, log_file_name="file_events.log"):
     """
     Sets up logging with a specified directory and file name.
