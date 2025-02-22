@@ -1,7 +1,7 @@
 import pytest
 import shutil
 from unittest.mock import patch
-from src.file_manager.file_mover import FileMover
+from project_generator.file_mover import FileMover
 
 
 @pytest.fixture

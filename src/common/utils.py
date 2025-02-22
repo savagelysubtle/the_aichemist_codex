@@ -2,7 +2,11 @@
 # 2.0, and the BSD License. See the LICENSE file in the root of this repository
 # for complete details.
 
+import json
+import logging
+import os
 import re
+import sys
 from pathlib import Path
 from typing import FrozenSet, NewType, Tuple, Union, cast
 
@@ -14,65 +18,51 @@ NormalizedName = NewType("NormalizedName", str)
 
 
 class InvalidWheelFilename(ValueError):
-    """
-    An invalid wheel filename was found, users should refer to PEP 427.
-    """
+    """An invalid wheel filename was found, users should refer to PEP 427."""
 
 
 class InvalidSdistFilename(ValueError):
-    """
-    An invalid sdist filename was found, users should refer to the packaging user guide.
-    """
+    """An invalid sdist filename was found, users should refer to the packaging user guide."""
 
 
 _canonicalize_regex = re.compile(r"[-_.]+")
-# PEP 427: The build number must start with a digit.
-_build_tag_regex = re.compile(r"(\d+)(.*)")
+_build_tag_regex = re.compile(
+    r"(\d+)(.*)"
+)  # PEP 427: The build number must start with a digit.
 
 
 def canonicalize_name(name: str) -> NormalizedName:
-    # This is taken from PEP 503.
+    """Converts a package name to its canonical form."""
     value = _canonicalize_regex.sub("-", name).lower()
     return cast(NormalizedName, value)
 
 
 def canonicalize_version(version: Union[Version, str]) -> str:
-    """
-    This is very similar to Version.__str__, but has one subtle difference
-    with the way it handles the release segment.
-    """
+    """Normalizes a version string based on PEP 440."""
     if isinstance(version, str):
         try:
             parsed = Version(version)
         except InvalidVersion:
-            # Legacy versions cannot be normalized
-            return version
+            return version  # Legacy versions cannot be normalized
     else:
         parsed = version
 
     parts = []
 
-    # Epoch
     if parsed.epoch != 0:
         parts.append(f"{parsed.epoch}!")
 
-    # Release segment
-    # NB: This strips trailing '.0's to normalize
     parts.append(re.sub(r"(\.0)+$", "", ".".join(str(x) for x in parsed.release)))
 
-    # Pre-release
     if parsed.pre is not None:
         parts.append("".join(str(x) for x in parsed.pre))
 
-    # Post-release
     if parsed.post is not None:
         parts.append(f".post{parsed.post}")
 
-    # Development release
     if parsed.dev is not None:
         parts.append(f".dev{parsed.dev}")
 
-    # Local version segment
     if parsed.local is not None:
         parts.append(f"+{parsed.local}")
 
@@ -82,9 +72,10 @@ def canonicalize_version(version: Union[Version, str]) -> str:
 def parse_wheel_filename(
     filename: str,
 ) -> Tuple[NormalizedName, Version, BuildTag, FrozenSet[Tag]]:
+    """Parses a valid wheel filename according to PEP 427."""
     if not filename.endswith(".whl"):
         raise InvalidWheelFilename(
-            f"Invalid wheel filename (extension must be '.whl'): {filename}"
+            f"Invalid wheel filename (must end in '.whl'): {filename}"
         )
 
     filename = filename[:-4]
@@ -96,11 +87,12 @@ def parse_wheel_filename(
 
     parts = filename.split("-", dashes - 2)
     name_part = parts[0]
-    # See PEP 427 for the rules on escaping the project name
     if "__" in name_part or re.match(r"^[\w\d._]*$", name_part, re.UNICODE) is None:
         raise InvalidWheelFilename(f"Invalid project name: {filename}")
+
     name = canonicalize_name(name_part)
     version = Version(parts[1])
+
     if dashes == 5:
         build_part = parts[2]
         build_match = _build_tag_regex.match(build_part)
@@ -111,30 +103,29 @@ def parse_wheel_filename(
         build = cast(BuildTag, (int(build_match.group(1)), build_match.group(2)))
     else:
         build = ()
+
     tags = parse_tag(parts[-1])
-    return (name, version, build, tags)
+    return name, version, build, tags
 
 
 def parse_sdist_filename(filename: str) -> Tuple[NormalizedName, Version]:
+    """Parses a valid source distribution filename."""
     if filename.endswith(".tar.gz"):
         file_stem = filename[: -len(".tar.gz")]
     elif filename.endswith(".zip"):
         file_stem = filename[: -len(".zip")]
     else:
         raise InvalidSdistFilename(
-            f"Invalid sdist filename (extension must be '.tar.gz' or '.zip'):"
-            f" {filename}"
+            f"Invalid sdist filename (must be '.tar.gz' or '.zip'): {filename}"
         )
 
-    # We are requiring a PEP 440 version, which cannot contain dashes,
-    # so we split on the last dash.
     name_part, sep, version_part = file_stem.rpartition("-")
     if not sep:
         raise InvalidSdistFilename(f"Invalid sdist filename: {filename}")
 
     name = canonicalize_name(name_part)
     version = Version(version_part)
-    return (name, version)
+    return name, version
 
 
 def get_project_name(directory: Path) -> str:
@@ -157,9 +148,59 @@ def summarize_for_gpt(text, max_sentences=10, max_length=1000):
     :return: A compact summary suitable for GPT input.
     """
     if len(text) <= max_length:
-        return text  # No need to summarize if within the limit
+        return text
 
     sentences = text.split(". ")
     summary = ". ".join(sentences[:max_sentences]) + "."
-
     return summary[:max_length].strip()
+
+
+### 🔹 Added File Management Utilities (From `file_manager/utils.py`) ###
+def setup_logging(log_dir, log_file_name="file_events.log"):
+    """
+    Sets up logging with a specified directory and file name.
+
+    :param log_dir: Directory where logs will be stored.
+    :param log_file_name: Name of the log file.
+    :return: Path to the log file.
+    """
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating log directory: {e}")
+        sys.exit(1)
+
+    log_file_path = os.path.join(log_dir, log_file_name)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(log_file_path),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+    logging.info(f"Log file initialized at: {log_file_path}")
+    return log_file_path
+
+
+def load_config(config_path):
+    """
+    Loads directory paths and rules from a JSON configuration file.
+
+    :param config_path: Path to the configuration file.
+    :return: Dictionary containing directories to watch and rules.
+    """
+    if not os.path.exists(config_path):
+        logging.error(f"Configuration file not found: {config_path}")
+        return {"directories_to_watch": [], "rules": []}
+
+    try:
+        with open(config_path, "r") as config_file:
+            config = json.load(config_file)
+            return {
+                "directories_to_watch": config.get("directories_to_watch", []),
+                "rules": config.get("rules", []),
+            }
+    except Exception as e:
+        logging.error(f"Error reading configuration file: {e}")
+        return {"directories_to_watch": [], "rules": []}

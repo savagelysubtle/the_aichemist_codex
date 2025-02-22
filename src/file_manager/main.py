@@ -1,34 +1,34 @@
 import logging
+import os
 import sys
 
-from .file_mover import FileMover
-from .json_loader import load_file_moves
+from common.utils import load_config, setup_logging
+from file_manager.file_watcher import monitor_directory
 
-# Configure logging globally
-logging.basicConfig(
-    filename="file_manager.log",
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+# Configure logging
+LOG_DIR = "logs"
+setup_logging(LOG_DIR)
 logger = logging.getLogger(__name__)
+
+CONFIG_PATH = "config/config.json"
 
 
 def main():
-    """Entry point when running as a script."""
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <file_moves.json>")
+    """Entry point for the file manager."""
+    if not os.path.exists(CONFIG_PATH):
+        logger.error(f"Configuration file not found: {CONFIG_PATH}")
         sys.exit(1)
 
-    json_file = sys.argv[1]
-    file_moves = load_file_moves(json_file)
+    config = load_config(CONFIG_PATH)
+    directories_to_watch = config["directories_to_watch"]
+    rules = config["rules"]
 
-    if not file_moves:
-        print("No valid file moves found.")
+    if not directories_to_watch:
+        logger.error("No directories specified to watch. Exiting...")
         sys.exit(1)
 
-    mover = FileMover(base_dir="D:/Sorted_Files")
-    mover.batch_move_files(file_moves)
-    print("🎯 File Management Completed")
+    logger.info("🚀 Starting AI-Powered File Manager...")
+    monitor_directory(directories_to_watch, rules)
 
 
 if __name__ == "__main__":
