@@ -1,44 +1,52 @@
-import os
+from pathlib import Path
 
 import pytest
 
-from project_reader.code_summary import process_file, summarize_code
+from project_reader.code_summary import process_file
 
 
 @pytest.mark.asyncio
-async def test_process_python_file(tmp_path):
-    """Test AST parsing for function and class extraction."""
-    test_file = tmp_path / "sample.py"
+async def test_function_metadata_extraction(tmp_path):
+    """Test extracting function metadata, including decorators and return types."""
+    test_file = tmp_path / "test_script.py"
     test_file.write_text(
         """
-def hello(name):
-    return f"Hello, {name}!"
-
-class Greeter:
-    def __init__(self, name):
-        self.name = name
-    """
+@staticmethod
+def my_func(a: int, b: str) -> bool:
+    return True
+"""
     )
 
-    file_path, summary, gpt_summary = await process_file(test_file)
+    file_path, summaries = await process_file(test_file)
 
-    assert os.path.normpath(file_path) == os.path.normpath(str(test_file.resolve()))
-    assert any(entry["name"] == "hello" for entry in summary)
-    assert any(entry["name"] == "Greeter" for entry in summary)
-    assert "Function `hello`" in gpt_summary
+    # Normalize paths to ensure Windows/Linux compatibility
+    assert Path(file_path).as_posix() == test_file.resolve().as_posix()
+    assert summaries[0]["name"] == "my_func"
+    assert summaries[0]["decorators"] == ["staticmethod"]
+    assert summaries[0]["return_type"] == "bool"
 
 
 @pytest.mark.asyncio
-async def test_summarize_code(tmp_path):
-    """Test summarizing an entire directory of Python files."""
-    code_dir = tmp_path / "code"
-    code_dir.mkdir()
-    (code_dir / "file1.py").write_text("def foo(): pass")
-    (code_dir / "file2.py").write_text("class Bar: pass")
+async def test_class_extraction(tmp_path):
+    """Test extracting class metadata, including methods."""
+    test_file = tmp_path / "test_class.py"
+    test_file.write_text(
+        """
+class MyClass:
+    def method_one(self):
+        pass
 
-    summaries, gpt_summaries = await summarize_code(code_dir)
+    def method_two(self, x: int) -> str:
+        return str(x)
+"""
+    )
 
-    assert any("file1.py" in key for key in summaries)
-    assert any("file2.py" in key for key in summaries)
-    assert any("Function `foo`" in value for value in gpt_summaries.values())
-    assert any("Class `Bar`" in value for value in gpt_summaries.values())
+    file_path, summaries = await process_file(test_file)
+
+    # Normalize paths before assertion
+    assert Path(file_path).as_posix() == test_file.resolve().as_posix()
+    assert any(item["name"] == "MyClass" for item in summaries)
+
+    class_summary = next(item for item in summaries if item["name"] == "MyClass")
+    assert "method_one" in class_summary["methods"]
+    assert "method_two" in class_summary["methods"]

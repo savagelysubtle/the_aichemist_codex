@@ -4,18 +4,12 @@ import json
 import logging
 from pathlib import Path
 
-from common.safety import SafeDirectoryScanner
 from config.config_manager import CodexConfig
 from project_reader.logging_config import setup_logging
 from project_reader.patterns import PatternMatcher
 
-# Initialize logging and load config
 setup_logging()
-config = CodexConfig()  # Future use for modularizing per package
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+config = CodexConfig()
 
 MAX_DEPTH = 10
 
@@ -23,13 +17,9 @@ MAX_DEPTH = 10
 class FileTreeGenerator:
     def __init__(self):
         self.pattern_matcher = PatternMatcher()
-        self.scanner = SafeDirectoryScanner()
 
     async def generate(self, directory: Path, depth=0) -> dict:
-        """
-        Asynchronously generates a file tree dictionary structure.
-        Applies pattern exclusion and checks symlink safety.
-        """
+        """Recursively generates a file tree, applying ignore patterns."""
         if depth > MAX_DEPTH:
             return {"error": "max_depth_exceeded"}
 
@@ -38,27 +28,34 @@ class FileTreeGenerator:
             for entry in sorted(directory.iterdir(), key=lambda e: e.name.lower()):
                 rel_path = str(entry.relative_to(directory))
 
-                # Ignore patterns
                 if self.pattern_matcher.should_ignore(rel_path):
                     continue
 
-                # Symlink safety check
-                if entry.is_symlink() and not self.scanner.is_safe_path(
-                    entry, directory
-                ):
+                if entry.is_symlink() and not self._is_safe_symlink(entry, directory):
                     continue
 
                 if entry.is_dir():
                     tree[entry.name] = await self.generate(entry, depth + 1)
                 else:
-                    tree[entry.name] = None
+                    tree[entry.name] = {
+                        "size": entry.stat().st_size,
+                        "type": "file",
+                    }
         except PermissionError:
             logging.error(f"Permission denied: {directory}")
             tree["error"] = "permission_denied"
         except Exception as e:
-            logging.error(f"Unexpected error while reading {directory}: {e}")
+            logging.error(f"Error scanning {directory}: {e}")
             tree["error"] = str(e)
         return tree
+
+    def _is_safe_symlink(self, symlink: Path, base_path: Path) -> bool:
+        """Ensures symlink targets remain within the base directory."""
+        try:
+            target = symlink.resolve()
+            return base_path in target.parents
+        except Exception:
+            return False
 
 
 def get_project_name(directory: Path) -> str:
@@ -72,25 +69,14 @@ def list_python_files(directory: Path) -> list:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate a file tree for a given directory."
-    )
-    parser.add_argument(
-        "directory", type=Path, help="Path to the directory to analyze."
-    )
-    parser.add_argument(
-        "-o", "--output", type=Path, help="Output JSON file for file tree."
-    )
+    parser = argparse.ArgumentParser(description="Generate a file tree.")
+    parser.add_argument("directory", type=Path, help="Directory to analyze.")
+    parser.add_argument("-o", "--output", type=Path, help="Output JSON file.")
     args = parser.parse_args()
 
-    project_name = get_project_name(args.directory)
-    output_file = (
-        args.output
-        if args.output
-        else args.directory.parent / f"{project_name}_file_tree.json"
-    )
+    output_file = args.output or args.directory.parent / "file_tree.json"
 
-    logging.info(f"Generating file tree for {args.directory}")
+    logging.info(f"Scanning: {args.directory}")
     generator = FileTreeGenerator()
     tree = asyncio.run(generator.generate(args.directory))
 
