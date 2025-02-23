@@ -1,11 +1,13 @@
 import argparse
 import ast
-import concurrent.futures
+import asyncio
 import json
 import logging
 from pathlib import Path
 
-from project_reader.file_tree import get_project_name, list_python_files
+from common.async_io import AsyncFileReader
+from common.utils import get_project_name
+from project_reader.file_tree import list_python_files
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -24,13 +26,12 @@ def get_function_args(node):
     return args
 
 
-def process_file(file_path: Path):
+async def process_file(file_path: Path):
     """
-    Extracts function and class definitions from a Python file and generates a GPT-friendly summary.
+    Asynchronously extracts function and class definitions from a Python file.
     """
     try:
-        with file_path.open("r", encoding="utf-8") as f:
-            code = f.read()
+        code = await AsyncFileReader.read(file_path)
         tree = ast.parse(code, filename=str(file_path))
         summaries = []
         raw_summary = []
@@ -62,9 +63,7 @@ def process_file(file_path: Path):
                     f"Class `{node.name}` with {len(methods)} methods (line {node.lineno})"
                 )
 
-        # For now, simply join the raw summaries for a GPT-friendly version.
-        gpt_summary = " ".join(raw_summary)
-        return file_path.resolve().as_posix(), summaries, gpt_summary
+        return file_path.resolve().as_posix(), summaries, " ".join(raw_summary)
 
     except SyntaxError as e:
         logging.error(f"Syntax error in {file_path}: {e}")
@@ -74,10 +73,9 @@ def process_file(file_path: Path):
         return file_path.resolve().as_posix(), {"error": str(e)}, ""
 
 
-def summarize_code(directory: Path):
+async def summarize_code(directory: Path):
     """
-    Parallelizes code analysis for Python files in a directory,
-    returning both full summaries and GPT-friendly summaries.
+    Asynchronously analyzes Python code in a directory.
     """
     directory = Path(directory)
     python_files = list_python_files(directory)
@@ -85,15 +83,11 @@ def summarize_code(directory: Path):
         logging.warning(f"No Python files found in '{directory}'.")
         return {}, {}
 
-    code_summaries = {}
-    gpt_summaries = {}
+    tasks = [process_file(file) for file in python_files]
+    results = await asyncio.gather(*tasks)
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = executor.map(process_file, python_files)
-
-    for file_path, summary, gpt_summary in results:
-        code_summaries[file_path] = summary
-        gpt_summaries[file_path] = gpt_summary
+    code_summaries = {file: summary for file, summary, _ in results}
+    gpt_summaries = {file: gpt_summary for file, _, gpt_summary in results}
 
     return code_summaries, gpt_summaries
 
@@ -102,14 +96,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Summarize Python code in a directory."
     )
+    parser.add_argument("directory", type=Path, help="Directory to analyze.")
     parser.add_argument(
-        "directory", type=Path, help="Directory to analyze for Python code."
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help="Output JSON file for code summary. Defaults to <project_name>_code_summary.json",
+        "-o", "--output", type=Path, help="Output JSON file for code summary."
     )
     args = parser.parse_args()
 
@@ -120,7 +109,8 @@ if __name__ == "__main__":
         else args.directory.parent / f"{project_name}_code_summary.json"
     )
 
-    logging.info(f"Starting code analysis for directory: {args.directory}")
-    summary = summarize_code(args.directory)
+    logging.info(f"Starting code analysis for {args.directory}")
+    summary = asyncio.run(summarize_code(args.directory))
+
     output_file.write_text(json.dumps(summary, indent=4), encoding="utf-8")
     logging.info(f"Code summary saved to {output_file}")

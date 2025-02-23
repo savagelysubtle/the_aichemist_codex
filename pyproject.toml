@@ -5,11 +5,10 @@ description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
 dependencies = [
-    "dynaconf",
-    "pydantic",
-    "aiofiles",
-    "tenacity",
-    "structlog"
+    "aiofiles",    # Async file I/O
+    "tiktoken",     # Token counting
+    "tomli",        # Config parsing
+    "nbformat"      # Notebook validation (optional)
 ]
 
 [project.scripts]

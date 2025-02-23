@@ -25,6 +25,13 @@ DEFAULT_IGNORE_PATTERNS = {
 }
 
 
-def should_ignore(path: str) -> bool:
-    """Determines if a file should be ignored based on default patterns."""
-    return any(fnmatch.fnmatch(path, pattern) for pattern in DEFAULT_IGNORE_PATTERNS)
+def __init__(self):
+    self.ignore_patterns = self.DEFAULT_PATTERNS.copy()
+
+
+def add_patterns(self, patterns: set):
+    self.ignore_patterns.update(patterns)
+
+
+def should_ignore(self, path: str) -> bool:
+    return any(fnmatch.fnmatch(path, p) for p in self.ignore_patterns)
