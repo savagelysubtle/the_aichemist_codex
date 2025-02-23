@@ -4,8 +4,8 @@ import json
 import logging
 from pathlib import Path
 
-from common.config_manager import CodexConfig
 from common.safety import SafeDirectoryScanner
+from config.config_manager import CodexConfig
 from project_reader.logging_config import setup_logging
 from project_reader.patterns import PatternMatcher
 
@@ -64,6 +64,11 @@ class FileTreeGenerator:
 def get_project_name(directory: Path) -> str:
     """Returns the project name based on the directory name."""
     return directory.name
+
+
+def list_python_files(directory: Path) -> list:
+    """Returns a list of Python files in the given directory and its subdirectories."""
+    return [file for file in directory.glob("**/*.py") if file.is_file()]
 
 
 if __name__ == "__main__":

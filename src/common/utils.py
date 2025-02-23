@@ -204,3 +204,8 @@ def load_config(config_path):
     except Exception as e:
         logging.error(f"Error reading configuration file: {e}")
         return {"directories_to_watch": [], "rules": []}
+
+
+def get_project_name(directory: Path) -> str:
+    """Returns the project name based on the directory name."""
+    return directory.name

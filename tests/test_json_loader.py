@@ -1,7 +1,7 @@
 import json
 from unittest.mock import mock_open, patch
 
-from src.file_manager.json_loader import load_file_moves
+from file_manager.json_loader import load_file_moves
 
 
 def test_load_valid_json():

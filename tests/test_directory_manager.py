@@ -1,6 +1,6 @@
 import pytest
-from pathlib import Path
-from src.file_manager.directory_manager import DirectoryManager
+
+from file_manager.directory_manager import DirectoryManager
 
 
 @pytest.fixture

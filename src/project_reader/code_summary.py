@@ -5,9 +5,9 @@ import json
 import logging
 from pathlib import Path
 
+from project_reader.file_tree import list_python_files
 from common.async_io import AsyncFileReader
 from common.utils import get_project_name
-from project_reader.file_tree import list_python_files
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
