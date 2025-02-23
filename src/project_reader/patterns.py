@@ -16,6 +16,7 @@ DEFAULT_IGNORE_PATTERNS = {
     ".hg",
     "venv",
     ".venv",
+    "myenv",
     "env",
     "build",
     "dist",
@@ -32,13 +33,23 @@ class PatternMatcher:
         self.ignore_patterns = set(DEFAULT_IGNORE_PATTERNS)
 
     def add_patterns(self, patterns: set):
+        """Allow dynamically adding more patterns at runtime."""
         self.ignore_patterns.update(patterns)
 
     def should_ignore(self, path: str) -> bool:
-        path = os.path.normpath(path)  # Normalize Windows/Unix paths
+        """
+        Determines if a given path should be ignored based on patterns.
+        - Matches exact filenames, directory names, and subdirectory patterns.
+        - Normalizes paths for cross-platform compatibility.
+        """
+        norm_path = os.path.normpath(path)  # Normalize Windows/Unix paths
+        base_name = os.path.basename(norm_path)  # Extract last part of path
+
         return any(
-            fnmatch.fnmatch(os.path.basename(path), pattern)
-            or fnmatch.fnmatch(path, pattern)
-            or path.startswith(pattern)  # Ensure directories are ignored
+            fnmatch.fnmatch(base_name, pattern)  # Match just filename/dirname
+            or fnmatch.fnmatch(norm_path, pattern)  # Match full relative path
+            or any(
+                part in self.ignore_patterns for part in norm_path.split(os.sep)
+            )  # Match partial path segments
             for pattern in self.ignore_patterns
         )

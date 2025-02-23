@@ -68,6 +68,7 @@ def list_python_files(directory: Path) -> list:
     return [file for file in directory.glob("**/*.py") if file.is_file()]
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a file tree.")
     parser.add_argument("directory", type=Path, help="Directory to analyze.")

@@ -1,17 +1,14 @@
 import argparse
+import asyncio
 import json
 import logging
-import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog
 
-# Ensure src/ is in the Python module search path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from project_reader.code_summary import summarize_code
-from project_reader.file_tree import generate_file_tree, get_project_name
-from project_reader.markdown_output import save_as_markdown
+from .code_summary import summarize_code
+from .file_tree import FileTreeGenerator, get_project_name
+from .markdown_output import save_as_markdown
 
 # Setup logging
 logging.basicConfig(
@@ -46,9 +43,6 @@ def main(directory: Path, output_directory: Path):
         logging.error("No valid directory selected for analysis.")
         return
 
-    if not output_directory:
-        output_directory = directory.parent
-
     ensure_directory_exists(output_directory)
 
     project_name = get_project_name(directory)
@@ -62,11 +56,14 @@ def main(directory: Path, output_directory: Path):
     logging.info(f"Saving outputs to: {output_directory}")
 
     try:
-        file_tree = generate_file_tree(directory)
+        # Generate file tree
+        tree_generator = FileTreeGenerator()
+        file_tree = asyncio.run(tree_generator.generate(directory))
         file_tree_output.write_text(json.dumps(file_tree, indent=4), encoding="utf-8")
         logging.info(f"File tree saved to {file_tree_output}")
 
-        code_summaries, gpt_summaries = summarize_code(directory)
+        # Run code summarization
+        code_summaries, gpt_summaries = asyncio.run(summarize_code(directory))
         code_summary_output.write_text(
             json.dumps(code_summaries, indent=4), encoding="utf-8"
         )
@@ -76,6 +73,7 @@ def main(directory: Path, output_directory: Path):
         logging.info(f"Code summary saved to {code_summary_output}")
         logging.info(f"GPT-friendly summary saved to {gpt_summary_output}")
 
+        # Save Markdown output
         save_as_markdown(
             markdown_output, code_summaries, gpt_summaries, "Project Code Summary"
         )
@@ -89,14 +87,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Analyze a directory for file structure and code summaries."
     )
+    parser.add_argument("--dir", type=Path, help="Directory to analyze")
+    parser.add_argument("--out", type=Path, help="Output directory (optional)")
     args = parser.parse_args()
 
-    input_directory = select_directory("Select the directory to analyze")
+    # Use CLI arguments if provided; otherwise, prompt the user
+    input_directory = args.dir or select_directory("Select the directory to analyze")
     if not input_directory:
         logging.error("No input directory selected. Exiting.")
         exit(1)
 
-    output_directory = select_directory(
+    output_directory = args.out or select_directory(
         "Select the output directory (Cancel to use default)"
     )
 
