@@ -10,6 +10,7 @@ from watchdog.observers import Observer
 
 from aichemist_codex.config.config_loader import config
 from aichemist_codex.file_manager.file_mover import FileMover
+from aichemist_codex.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,21 @@ class FileEventHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         """Triggered when a file is created in the watched directory."""
-        if not event.is_directory:
-            file_path = Path(event.src_path)
+        if event.is_directory:
+            return  # Ignore directory creation events
+
+        file_path = Path(event.src_path)
+
+        # ✅ Check if file should be ignored before processing
+        if SafeFileHandler.should_ignore(file_path):
+            logger.info(f"Skipping ignored file: {file_path}")
+            return
+
+        try:
             logger.info(f"New file detected: {file_path}")
             self.file_mover.apply_rules(file_path)
+        except Exception as e:
+            logger.error(f"Error processing file {file_path}: {e}")
 
 
 def monitor_directory():

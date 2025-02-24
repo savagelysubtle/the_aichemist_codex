@@ -3,7 +3,7 @@
 from .async_io import AsyncFileReader
 from .errors import CodexError, MaxTokenError, NotebookProcessingError
 from .patterns import pattern_matcher
-from .safety import SafeDirectoryScanner
+from .safety import SafeFileHandler
 from .summarizer import summarize_for_gpt
 from .validator import get_project_name
 
@@ -13,7 +13,7 @@ __all__ = [
     "CodexError",
     "MaxTokenError",
     "NotebookProcessingError",
-    "SafeDirectoryScanner",
+    "SafeFileHandler",
     "get_project_name",
     "summarize_for_gpt",
 ]

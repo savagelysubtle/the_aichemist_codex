@@ -3,12 +3,14 @@
 import argparse
 import ast
 import asyncio
+import json
 import logging
 from pathlib import Path
 
 from aichemist_codex.output.json_writer import save_as_json
 from aichemist_codex.output.markdown_writer import save_as_markdown
 from aichemist_codex.utils.async_io import AsyncFileReader
+from aichemist_codex.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -28,48 +30,64 @@ def get_function_metadata(node):
 
 
 async def process_file(file_path: Path):
-    """Extracts function and class details from a Python file."""
+    """Extracts function and class details from a Python file, including docstrings and line numbers."""
     try:
         code = await AsyncFileReader.read(file_path)
         tree = ast.parse(code, filename=str(file_path))
 
+        file_summary = ast.get_docstring(tree) or "No summary available."
         summaries = []
+
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                summaries.append(get_function_metadata(node))
-            elif isinstance(node, ast.ClassDef):
+                docstring = ast.get_docstring(node) or "No docstring provided."
                 summaries.append(
                     {
-                        "type": "class",
                         "name": node.name,
-                        "methods": [
-                            m.name for m in node.body if isinstance(m, ast.FunctionDef)
-                        ],
+                        "args": [arg.arg for arg in node.args.args],
                         "lineno": node.lineno,
+                        "docstring": docstring,
                     }
                 )
 
-        return (str(file_path.resolve()), summaries)  # Ensure tuple with string path
+        folder_name = file_path.parent.name  # Extracts the folder name
+
+        return file_path.resolve().as_posix(), {
+            "summary": file_summary,
+            "folder": folder_name,
+            "functions": summaries,
+        }
 
     except SyntaxError as e:
         logging.error(f"Syntax error in {file_path}: {e}")
-        return (str(file_path.resolve()), {"error": f"Syntax error: {e}"})
+        return file_path.resolve().as_posix(), {
+            "summary": "Syntax error.",
+            "folder": file_path.parent.name,
+            "functions": [],
+        }
     except Exception as e:
         logging.error(f"Error processing {file_path}: {e}")
-        return (str(file_path.resolve()), {"error": str(e)})  # Ensure tuple
+        return file_path.resolve().as_posix(), {
+            "summary": "Processing error.",
+            "folder": file_path.parent.name,
+            "functions": [],
+        }
 
 
 async def summarize_code(directory: Path):
     """Analyzes Python code in a directory."""
-    directory = directory.resolve()  # Ensure absolute path
+    directory = directory.resolve()
     python_files = list(directory.glob("**/*.py"))
 
+    # ✅ Exclude ignored paths before scanning
+    python_files = [f for f in python_files if not SafeFileHandler.should_ignore(f)]
+
     tasks = [process_file(file) for file in python_files]
-    results = await asyncio.gather(*tasks, return_exceptions=True)  # Handle errors
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
     valid_results = {}
     for res in results:
-        if isinstance(res, tuple) and len(res) == 2:  # Ensure correct format
+        if isinstance(res, tuple) and len(res) == 2:
             valid_results[res[0]] = res[1]
         else:
             logging.error(f"Invalid result from process_file(): {res}")
@@ -81,10 +99,15 @@ def summarize_project(directory: Path, output_markdown: Path, output_json: Path)
     """Runs the code summarization process and saves multiple output formats."""
     summary = asyncio.run(summarize_code(directory))
 
-    # ✅ Now uses the new output module
-    save_as_markdown(
-        output_markdown, summary, {}, "Project Code Summary"
-    )  # Empty GPT summaries for now
+    # ✅ Debugging: Log output before saving
+    logger.info(
+        f"Summarization completed. Sample output: {json.dumps(list(summary.items())[:2], indent=4)}"
+    )
+
+    if not summary:
+        logger.error("No files were analyzed. The summary is empty.")
+
+    save_as_markdown(output_markdown, summary, {}, "Project Code Summary")
     save_as_json(output_json, summary)
 
     return summary

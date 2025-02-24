@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 
-from aichemist_codex.utils.patterns import pattern_matcher
+from aichemist_codex.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 MAX_DEPTH = 10  # Prevent infinite recursion
@@ -22,9 +22,9 @@ class FileTreeGenerator:
         tree = {}
         try:
             for entry in sorted(directory.iterdir(), key=lambda e: e.name.lower()):
-                rel_path = str(entry.relative_to(directory))
-
-                if pattern_matcher.should_ignore(rel_path):
+                # ✅ Ensure correct path handling
+                if SafeFileHandler.should_ignore(entry):
+                    logger.info(f"Skipping ignored path: {entry}")
                     continue
 
                 if entry.is_dir():
