@@ -6,18 +6,21 @@ readme = "README.md"
 requires-python = ">=3.12.3"
 dependencies = [
     "aiofiles",    # Async file I/O
-    "tiktoken",     # Token counting
-    "tomli",        # Config parsing
-    "nbformat"      # Notebook validation (optional)
+    "tiktoken",    # Token counting
+    "tomli",       # Config parsing
+    "nbformat",    # Notebook validation (optional)
+    "watchdog",    # File system monitoring
+    "pytest",      # Testing framework
+    "pytest-asyncio", # Async test support
+    "rich",        # CLI output formatting
 ]
 
 [project.scripts]
-codex = "the_aichemist_codex.cli.main:main"
+codex = "aichemist_codex.cli:main"
 
-[project.entry-points."codex.plugins"]
-# External plugins will register entry points here.
-# Example:
-# fancy = "fancy_plugin:display_function"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -25,3 +28,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+asyncio_mode = "auto"
+tmp_path_retention_count = 2
+tmp_path_retention_policy = "failed"
+addopts = "--basetemp=./tmp"
