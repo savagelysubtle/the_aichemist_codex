@@ -22,7 +22,18 @@ class SafeFileHandler:
     @staticmethod
     def should_ignore(file_path: Path) -> bool:
         """Checks if a file should be ignored based on default ignore patterns."""
-        return any(file_path.match(pattern) for pattern in DEFAULT_IGNORE_PATTERNS)
+        for pattern in DEFAULT_IGNORE_PATTERNS:
+            if file_path.match(pattern):
+                logger.info(f"Skipping ignored file: {file_path} (matched {pattern})")
+                return True
+            if any(
+                part == pattern for part in file_path.parts
+            ):  # Check parent directories
+                logger.info(
+                    f"Skipping ignored directory: {file_path} (matched {pattern})"
+                )
+                return True
+        return False
 
     @staticmethod
     def is_binary_file(file_path: Path) -> bool:

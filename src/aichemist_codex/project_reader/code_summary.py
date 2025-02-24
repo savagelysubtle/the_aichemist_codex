@@ -75,19 +75,27 @@ async def process_file(file_path: Path):
 
 
 async def summarize_code(directory: Path):
-    """Analyzes Python code in a directory."""
-    directory = directory.resolve()
-    python_files = list(directory.glob("**/*.py"))
+    """Analyzes Python code in a directory, skipping ignored files."""
+    directory = directory.resolve()  # Ensure absolute path
 
-    # ✅ Exclude ignored paths before scanning
-    python_files = [f for f in python_files if not SafeFileHandler.should_ignore(f)]
+    # ✅ Instead of using `rglob`, manually scan to filter out directories first
+    python_files = []
+    for path in directory.glob("**/*.py"):
+        if SafeFileHandler.should_ignore(path):
+            continue  # Skip ignored files and directories
+        python_files.append(path)
+
+    if not python_files:
+        logger.warning(
+            f"No Python files found in {directory} after filtering ignored paths."
+        )
 
     tasks = [process_file(file) for file in python_files]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results = await asyncio.gather(*tasks, return_exceptions=True)  # Handle errors
 
     valid_results = {}
     for res in results:
-        if isinstance(res, tuple) and len(res) == 2:
+        if isinstance(res, tuple) and len(res) == 2:  # Ensure correct format
             valid_results[res[0]] = res[1]
         else:
             logging.error(f"Invalid result from process_file(): {res}")

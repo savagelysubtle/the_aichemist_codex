@@ -11,6 +11,8 @@ wheels/
 output/
 __pycache__/
 *.log
+.cursorrules
+.project_checklist
 
 #test files
 
