@@ -13,6 +13,12 @@ dependencies = [
     "pytest",      # Testing framework
     "pytest-asyncio", # Async test support
     "rich",        # CLI output formatting
+    "python-magic", # For MIME type detection
+    "pandas",      # For CSV and Excel file handling
+    "PyYAML",      # For YAML file parsing
+    "lxml",        # For XML parsing
+    "opencv-python", # For OCR support
+    "Kreuzberg"    # For OCR integration
 ]
 
 [project.scripts]
