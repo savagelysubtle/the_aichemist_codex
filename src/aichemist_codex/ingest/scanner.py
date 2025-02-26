@@ -7,6 +7,8 @@ Description:
     in the ingestion process. This module applies user-defined inclusion and exclusion patterns, along with
     configurable limits, to produce a list of file paths.
 
+    It now leverages the default ignore patterns from SafeFileHandler as used in async_io.py.
+
 Functions:
     - scan_directory(directory: Path,
                      include_patterns: Optional[Set[str]] = None,
@@ -22,6 +24,8 @@ Type Hints:
 
 from pathlib import Path
 from typing import List, Optional, Set
+
+from aichemist_codex.utils.safety import SafeFileHandler
 
 
 def scan_directory(
@@ -42,15 +46,19 @@ def scan_directory(
     """
     files: List[Path] = []
     for item in directory.iterdir():
+        # Use the default ignore patterns via SafeFileHandler
+        if SafeFileHandler.should_ignore(item):
+            continue
+
         if item.is_dir():
             files.extend(scan_directory(item, include_patterns, ignore_patterns))
         elif item.is_file():
-            # Skip the file if it matches any ignore pattern.
+            # Additional ignore check using provided patterns
             if ignore_patterns and any(
                 item.match(pattern) for pattern in ignore_patterns
             ):
                 continue
-            # If include patterns are specified, only add the file if it matches one of them.
+            # Only include file if it matches one of the include patterns, if provided.
             if include_patterns and not any(
                 item.match(pattern) for pattern in include_patterns
             ):
