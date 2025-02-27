@@ -5,20 +5,22 @@ description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
 dependencies = [
-    "aiofiles",    # Async file I/O
-    "tiktoken",    # Token counting
-    "tomli",       # Config parsing
-    "nbformat",    # Notebook validation (optional)
-    "watchdog",    # File system monitoring
-    "pytest",      # Testing framework
-    "pytest-asyncio", # Async test support
-    "rich",        # CLI output formatting
-    "python-magic", # For MIME type detection
-    "pandas",      # For CSV and Excel file handling
-    "PyYAML",      # For YAML file parsing
-    "lxml",        # For XML parsing
-    "opencv-python", # For OCR support
-    "Kreuzberg"    # For OCR integration
+    "aiofiles",             # Async file I/O
+    "tiktoken",             # Token counting
+    "tomli",                # Config parsing
+    "nbformat",             # Notebook validation (optional)
+    "watchdog",             # File system monitoring
+    "pytest",               # Testing framework
+    "pytest-asyncio",       # Async test support
+    "rich",                 # CLI output formatting
+    "python-magic",         # MIME type detection
+    "pandas",               # For CSV and Excel file handling
+    "PyYAML",               # YAML file parsing
+    "lxml",                 # XML parsing
+    "opencv-python",        # For OCR support
+    "Kreuzberg",            # OCR integration
+    "py7zr",                # Archive handling (7z)
+    "rarfile"               # Archive handling (RAR)
 ]
 
 [project.scripts]

@@ -18,14 +18,14 @@ import tarfile
 import xml.etree.ElementTree as ET
 import zipfile
 from abc import ABC, abstractmethod
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import aiofiles
 import ezdxf
 import pandas as pd
 import py7zr
+import rarfile  # New import for RAR support
 import tomli
 import yaml
 from docx import Document
@@ -634,7 +634,7 @@ class VectorParser(BaseParser):
             }
 
             return {
-                "content": str(doc.entitydb),  # Store entity database as string
+                "content": str(doc.entitydb),
                 "preview": f"CAD drawing with {sum(entities.values())} entities across {len(layers)} layers",
                 "metadata": metadata,
             }
@@ -645,16 +645,13 @@ class VectorParser(BaseParser):
     async def _parse_svg(self, file_path: Path) -> Dict[str, Any]:
         """Parse SVG files."""
         try:
-            # Parse SVG using ElementTree for metadata
             tree = ET.parse(file_path)
             root = tree.getroot()
 
-            # Get SVG attributes
             width = root.get("width", "unknown")
             height = root.get("height", "unknown")
             viewBox = root.get("viewBox", "unknown")
 
-            # Count SVG elements
             elements = {
                 "path": len(root.findall(".//{*}path")),
                 "rect": len(root.findall(".//{*}rect")),
@@ -663,7 +660,6 @@ class VectorParser(BaseParser):
                 "group": len(root.findall(".//{*}g")),
             }
 
-            # Read SVG content
             async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
                 content = await f.read()
 
@@ -687,172 +683,66 @@ class VectorParser(BaseParser):
 
 
 class ArchiveParser(BaseParser):
-    """Parser for archive files (ZIP, TAR, RAR, 7Z)."""
+    """Parser for archive files (ZIP, TAR, RAR, 7Z).
+
+    This parser extracts a list of contained files from the archive.
+    """
 
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse archive file and return its contents and metadata."""
-        suffix = file_path.suffix.lower()
+        """Parse the archive file and return its contents and metadata.
+
+        Args:
+            file_path (Path): The path to the archive file.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the list of file names and count.
+
+        Raises:
+            Exception: If parsing fails or the archive format is unsupported.
+        """
         try:
+            suffix = file_path.suffix.lower()
+            files_list = []
             if suffix == ".zip":
-                return await self._parse_zip(file_path)
-            elif suffix in [".tar", ".gz", ".bz2", ".xz"]:
-                return await self._parse_tar(file_path)
+                with zipfile.ZipFile(file_path, "r") as archive:
+                    files_list = archive.namelist()
+            elif suffix in [".tar", ".tgz", ".gz", ".bz2"]:
+                with tarfile.open(file_path, "r") as archive:
+                    files_list = archive.getnames()
             elif suffix == ".rar":
-                return await self._parse_rar(file_path)
+                try:
+                    with rarfile.RarFile(file_path, "r") as archive:
+                        files_list = archive.namelist()
+                except Exception as e:
+                    if isinstance(e, rarfile.NotRarFile):
+                        raise ValueError(f"Unsupported archive format: {suffix}") from e
+                    else:
+                        raise
             elif suffix == ".7z":
-                return await self._parse_7z(file_path)
+                with py7zr.SevenZipFile(file_path, "r") as archive:
+                    files_list = archive.getnames()
             else:
                 raise ValueError(f"Unsupported archive format: {suffix}")
+            return {"files": files_list, "count": len(files_list)}
         except Exception as e:
-            logger.error(f"Error parsing archive {file_path}: {str(e)}")
+            logger.error(f"Archive parsing failed for {file_path}: {e}", exc_info=True)
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the archive content."""
-        preview = parsed_data.get("preview", "")
+        """Generate a preview of the archive contents.
+
+        Args:
+            parsed_data (Dict[str, Any]): The parsed archive data.
+            max_length (int): Maximum length of the preview text.
+
+        Returns:
+            str: A string preview of the archive file names.
+        """
+        files = parsed_data.get("files", [])
+        preview = "\n".join(files)
         if len(preview) > max_length:
-            return preview[:max_length] + "..."
+            preview = preview[:max_length] + "..."
         return preview
-
-    async def _parse_zip(self, file_path: Path) -> Dict[str, Any]:
-        """Parse ZIP files."""
-        try:
-            with zipfile.ZipFile(file_path, "r") as zip_file:
-                info_list = zip_file.infolist()
-                files = [
-                    {
-                        "filename": info.filename,
-                        "size": info.file_size,
-                        "compressed_size": info.compress_size,
-                        "modified": datetime(*info.date_time),
-                        "is_dir": info.filename.endswith("/"),
-                    }
-                    for info in info_list
-                ]
-
-                total_size = sum(f["size"] for f in files)
-                total_compressed = sum(f["compressed_size"] for f in files)
-                compression_ratio = (
-                    (total_size - total_compressed) / total_size * 100
-                    if total_size > 0
-                    else 0
-                )
-
-                return {
-                    "content": files,
-                    "preview": self._generate_archive_preview(files),
-                    "metadata": {
-                        "total_files": len(files),
-                        "total_size": total_size,
-                        "compressed_size": total_compressed,
-                        "compression_ratio": f"{compression_ratio:.1f}%",
-                        "directories": sum(1 for f in files if f["is_dir"]),
-                        "files": sum(1 for f in files if not f["is_dir"]),
-                    },
-                }
-        except Exception as e:
-            logger.error(f"ZIP parsing error: {str(e)}")
-            raise
-
-    def _generate_archive_preview(self, files: List[Dict]) -> str:
-        """Generate a preview of archive contents."""
-        sorted_files = sorted(files, key=lambda x: x["size"], reverse=True)[:5]
-        preview_lines = [
-            "Top files by size:",
-            *[
-                f"- {f['filename']}: {self._format_size(f['size'])}"
-                for f in sorted_files
-            ],
-        ]
-        return "\n".join(preview_lines)
-
-    def _format_size(self, size: int) -> str:
-        """Format size in bytes to human-readable format."""
-        for unit in ["B", "KB", "MB", "GB"]:
-            if size < 1024:
-                return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} TB"
-
-    async def _parse_tar(self, file_path: Path) -> Dict[str, Any]:
-        """Parse TAR files."""
-        try:
-            with tarfile.open(file_path, "r:*") as tar_file:
-                members = tar_file.getmembers()
-                files = [
-                    {
-                        "filename": member.name,
-                        "size": member.size,
-                        "modified": datetime.fromtimestamp(member.mtime),
-                        "is_dir": member.isdir(),
-                        "type": self._get_tar_type(member),
-                    }
-                    for member in members
-                ]
-
-                total_size = sum(f["size"] for f in files)
-
-                return {
-                    "content": files,
-                    "preview": self._generate_archive_preview(files),
-                    "metadata": {
-                        "total_files": len(files),
-                        "total_size": total_size,
-                        "directories": sum(1 for f in files if f["is_dir"]),
-                        "files": sum(1 for f in files if not f["is_dir"]),
-                    },
-                }
-        except Exception as e:
-            logger.error(f"TAR parsing error: {str(e)}")
-            raise
-
-    async def _parse_7z(self, file_path: Path) -> Dict[str, Any]:
-        """Parse 7Z files."""
-        try:
-            with py7zr.SevenZipFile(file_path, "r") as sz_file:
-                files = [
-                    {
-                        "filename": name,
-                        "size": info.uncompressed,
-                        "modified": info.creationtime,
-                        "is_dir": name.endswith("/"),
-                    }
-                    for name, info in sz_file.files.items()
-                ]
-
-                total_size = sum(f["size"] for f in files)
-
-                return {
-                    "content": files,
-                    "preview": self._generate_archive_preview(files),
-                    "metadata": {
-                        "total_files": len(files),
-                        "total_size": total_size,
-                        "directories": sum(1 for f in files if f["is_dir"]),
-                        "files": sum(1 for f in files if not f["is_dir"]),
-                        "method": sz_file.method_names,
-                    },
-                }
-        except Exception as e:
-            logger.error(f"7Z parsing error: {str(e)}")
-            raise
-
-    def _get_tar_type(self, member: tarfile.TarInfo) -> str:
-        """Get type of tar member."""
-        if member.isfile():
-            return "file"
-        elif member.isdir():
-            return "directory"
-        elif member.issym():
-            return "symlink"
-        elif member.islnk():
-            return "hardlink"
-        elif member.isdev():
-            return "device"
-        elif member.isfifo():
-            return "fifo"
-        else:
-            return "unknown"
 
 
 def get_parser_for_mime_type(mime_type: str) -> Optional[BaseParser]:
@@ -879,31 +769,23 @@ def get_parser_for_mime_type(mime_type: str) -> Optional[BaseParser]:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": DocumentParser(),
         "application/vnd.oasis.opendocument.text": DocumentParser(),
         "application/epub+zip": DocumentParser(),
-        "text/csv": SpreadsheetParser(),
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": SpreadsheetParser(),
-        "application/vnd.oasis.opendocument.spreadsheet": SpreadsheetParser(),
-        "text/x-python": CodeParser(),
-        "application/javascript": CodeParser(),
-        "application/yaml": CodeParser(),
-        "application/xml": CodeParser(),
-        "application/toml": CodeParser(),
-        "image/vnd.dxf": VectorParser(),
-        "image/x-dwg": VectorParser(),
-        "image/svg+xml": VectorParser(),
         "application/zip": ArchiveParser(),
         "application/x-tar": ArchiveParser(),
         "application/x-rar-compressed": ArchiveParser(),
         "application/x-7z-compressed": ArchiveParser(),
         "application/gzip": ArchiveParser(),
         "application/x-bzip2": ArchiveParser(),
-        "application/x-xz": ArchiveParser(),
+        "image/vnd.dxf": VectorParser(),
+        "image/x-dwg": VectorParser(),
+        "image/svg+xml": VectorParser(),
+        "text/x-python": CodeParser(),
+        "application/javascript": CodeParser(),
+        "application/toml": CodeParser(),
     }
 
-    # Try exact match first
     if mime_type in parsers:
         return parsers[mime_type]
 
-    # Try matching by main type
     main_type = mime_type.split("/")[0]
     if main_type == "text":
         return TextParser()
