@@ -1,7 +1,6 @@
-"""Monitors directories and triggers file organization on changes."""
-
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -10,38 +9,48 @@ from watchdog.observers import Observer
 
 from aichemist_codex.config.config_loader import config
 from aichemist_codex.file_manager.file_mover import FileMover
+from aichemist_codex.file_manager.sorter import RuleBasedSorter
 from aichemist_codex.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
 
 class FileEventHandler(FileSystemEventHandler):
-    """Handles file events and triggers file movement rules."""
-
     def __init__(self, base_directory: Path):
+        self.base_directory = base_directory
         self.file_mover = FileMover(base_directory)
+        self.debounce_timer = None
+        self.debounce_interval = 2  # seconds
 
     def on_created(self, event):
-        """Triggered when a file is created in the watched directory."""
         if event.is_directory:
-            return  # Ignore directory creation events
-
+            return
         file_path = Path(event.src_path)
-
-        # ✅ Check if file should be ignored before processing
         if SafeFileHandler.should_ignore(file_path):
             logger.info(f"Skipping ignored file: {file_path}")
             return
+        logger.info(f"New file detected: {file_path}")
+        # Debounce to avoid rapid re-triggering.
+        if self.debounce_timer:
+            self.debounce_timer.cancel()
+        self.debounce_timer = threading.Timer(
+            self.debounce_interval, self.process_file, args=[file_path]
+        )
+        self.debounce_timer.start()
 
+    def process_file(self, file_path: Path):
         try:
-            logger.info(f"New file detected: {file_path}")
-            self.file_mover.apply_rules(file_path)
+            # First, try applying rule-based sorting.
+            rule_applied = self.file_mover.apply_rules(file_path)
+            # If no rule was applied, use auto-folder structuring.
+            if not rule_applied and file_path.exists():
+                target_dir = self.file_mover.auto_folder_structure(file_path)
+                FileMover.move_file(file_path, target_dir / file_path.name)
         except Exception as e:
             logger.error(f"Error processing file {file_path}: {e}")
 
 
 def monitor_directory():
-    """Starts monitoring directories for file changes."""
     paths_to_watch = config.get("directories_to_watch", [])
     if not paths_to_watch:
         logger.warning("No directories specified for monitoring.")
@@ -52,13 +61,23 @@ def monitor_directory():
         if not os.path.exists(path):
             logger.warning(f"Skipping non-existent path: {path}")
             continue
-
         event_handler = FileEventHandler(Path(path))
         observer = Observer()
         observer.schedule(event_handler, path, recursive=True)
         observer.start()
         observers.append(observer)
         logger.info(f"Monitoring started on: {path}")
+
+    # Start a scheduled sorting task using the rule-based sorter.
+    sorter = RuleBasedSorter()
+
+    def scheduled_sorting():
+        while True:
+            for path in paths_to_watch:
+                sorter.sort_directory(Path(path))
+            time.sleep(config.get("sorting_interval", 300))  # Default 5 minutes.
+
+    threading.Thread(target=scheduled_sorting, daemon=True).start()
 
     try:
         while True:
