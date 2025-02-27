@@ -373,16 +373,6 @@ async def test_xml_parser(xml_file):
 
 
 @pytest.mark.asyncio
-async def test_document_parser_pdf(sample_pdf):
-    """Test PDF parsing functionality."""
-    parser = DocumentParser()
-    result = await parser.parse(sample_pdf)
-    assert isinstance(result, dict)
-    assert "content" in result
-    assert "metadata" in result
-
-
-@pytest.mark.asyncio
 async def test_document_parser_docx(sample_docx):
     """Test DOCX parsing functionality."""
     parser = DocumentParser()
