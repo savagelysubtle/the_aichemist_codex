@@ -1,28 +1,39 @@
-# Example of a comprehensive CLI for The Aichemist Codex
+# Comprehensive CLI for The Aichemist Codex
 
 import argparse
 import logging
 from pathlib import Path
 
-from aichemist_codex.file_manager.duplicate_detector import find_duplicates
-from aichemist_codex.file_manager.file_tree import generate_file_tree
-from aichemist_codex.file_manager.file_watcher import start_watcher
-from aichemist_codex.file_manager.sorter import sort_files
-from aichemist_codex.file_reader.file_reader import read_file
-from aichemist_codex.ingest.aggregator import aggregate_content
+from aichemist_codex.file_manager.duplicate_detector import (
+    DuplicateDetector as find_duplicates,
+)
+from aichemist_codex.file_manager.file_tree import (
+    FileTreeGenerator as generate_file_tree,
+)
+from aichemist_codex.file_manager.file_watcher import FileEventHandler as start_watcher
+from aichemist_codex.file_manager.sorter import RuleBasedSorter as sort_files
+from aichemist_codex.file_reader.file_reader import FileReader
+from aichemist_codex.ingest.aggregator import aggregate_digest as aggregate_content
 from aichemist_codex.ingest.scanner import scan_directory
-from aichemist_codex.output_formatter.json_writer import write_json
-from aichemist_codex.output_formatter.markdown_writer import write_markdown
+from aichemist_codex.output_formatter.json_writer import (
+    save_as_json_async as write_json,
+)
+from aichemist_codex.output_formatter.markdown_writer import (
+    save_as_markdown as write_markdown,
+)
 from aichemist_codex.project_reader.code_summary import summarize_project
-from aichemist_codex.project_reader.notebooks import convert_notebooks
-from aichemist_codex.project_reader.token_counter import count_tokens
+from aichemist_codex.project_reader.notebooks import (
+    NotebookConverter as convert_notebooks,
+)
+from aichemist_codex.project_reader.token_counter import TokenAnalyzer as count_tokens
 from aichemist_codex.search.search_engine import SearchEngine
 
 logger = logging.getLogger(__name__)
 
 
-def validate_directory(directory: Path) -> Path:
+def validate_directory(directory) -> Path:
     """Ensure the given directory exists and is accessible."""
+    directory = Path(directory)
     resolved_dir = directory.resolve()
     if not resolved_dir.exists() or not resolved_dir.is_dir():
         raise argparse.ArgumentTypeError(f"Directory does not exist: {resolved_dir}")
@@ -189,9 +200,12 @@ def main():
 
     # ✅ File Tree Generation
     if args.command == "tree":
-        output_file = args.output or args.directory / "file_tree.json"
         logger.info(f"Generating file tree for {args.directory}")
-        generate_file_tree(args.directory, output_file, max_depth=args.depth)
+        # Instantiate the FileTreeGenerator and call its generate() method.
+        tree_generator = generate_file_tree()
+        file_tree = tree_generator.generate(args.directory, max_depth=args.depth)
+        output_file = args.output or args.directory / "file_tree.json"
+        write_json(file_tree, output_file)
         logger.info(f"File tree saved to {output_file}")
 
     # ✅ Code Summarization
@@ -290,15 +304,25 @@ def main():
             return
 
         logger.info(f"Reading file: {args.file}")
-        content = read_file(args.file, extract_text=args.extract_text)
+        # Call FileReader as a callable with the file and extract_text flag.
+        content = FileReader(args.file, extract_text=args.extract_text)
 
         # Output content based on format
         if args.format == "auto":
             print(content)
         elif args.format == "json":
-            write_json(content, None)  # Print to stdout
+            if args.output:
+                write_json(content, args.output)
+                logger.info(f"JSON output saved to {args.output}")
+            else:
+                print(content)
         elif args.format == "markdown":
-            write_markdown(content, None)  # Print to stdout
+            if args.output:
+                write_markdown(content, args.output)
+                logger.info(f"Markdown output saved to {args.output}")
+            else:
+                md_content = write_markdown(content, None)
+                print(md_content)
         else:
             print(content)
 

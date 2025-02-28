@@ -1,6 +1,5 @@
 """Generates and manages project file trees."""
 
-import asyncio
 import logging
 from pathlib import Path
 

@@ -1,32 +1,41 @@
-"""Handles CSV output for structured code summaries."""
-
 import csv
+import io
 import logging
 from pathlib import Path
+
+from aichemist_codex.utils.async_io import AsyncFileIO  # Adjust import as needed
 
 logger = logging.getLogger(__name__)
 
 
-def save_as_csv(output_file: Path, data: dict):
-    """Saves extracted code summary as a CSV file."""
+async def save_as_csv(output_file: Path, data: dict) -> bool:
+    """Asynchronously saves extracted code summary as a CSV file."""
     try:
-        with output_file.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["File", "Type", "Name", "Arguments", "Line Number"])
+        # Create CSV content in memory using StringIO.
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
+        writer.writerow(["File", "Type", "Name", "Arguments", "Line Number"])
+        for file, functions in data.items():
+            for func in functions:
+                writer.writerow(
+                    [
+                        file,
+                        func["type"],
+                        func["name"],
+                        ", ".join(func.get("args", [])),
+                        func["lineno"],
+                    ]
+                )
+        csv_content = csv_buffer.getvalue()
 
-            for file, functions in data.items():
-                for func in functions:
-                    writer.writerow(
-                        [
-                            file,
-                            func["type"],
-                            func["name"],
-                            ", ".join(func.get("args", [])),
-                            func["lineno"],
-                        ]
-                    )
-
-        logger.info(f"CSV summary saved: {output_file}")
+        # Write CSV content asynchronously.
+        success = await AsyncFileIO.write(output_file, csv_content)
+        if success:
+            logger.info(f"CSV summary saved: {output_file}")
+        else:
+            logger.error(f"Error writing CSV output to {output_file}")
+        return success
 
     except Exception as e:
         logger.error(f"Error writing CSV output to {output_file}: {e}")
+        return False
