@@ -1,31 +1,20 @@
-# Comprehensive CLI for The Aichemist Codex
-
 import argparse
+import asyncio
 import logging
 from pathlib import Path
 
-from aichemist_codex.file_manager.duplicate_detector import (
-    DuplicateDetector as find_duplicates,
-)
-from aichemist_codex.file_manager.file_tree import (
-    FileTreeGenerator as generate_file_tree,
-)
-from aichemist_codex.file_manager.file_watcher import FileEventHandler as start_watcher
-from aichemist_codex.file_manager.sorter import RuleBasedSorter as sort_files
+from aichemist_codex.file_manager.duplicate_detector import DuplicateDetector
+from aichemist_codex.file_manager.file_tree import FileTreeGenerator
+from aichemist_codex.file_manager.file_watcher import FileEventHandler
+from aichemist_codex.file_manager.sorter import RuleBasedSorter
 from aichemist_codex.file_reader.file_reader import FileReader
-from aichemist_codex.ingest.aggregator import aggregate_digest as aggregate_content
+from aichemist_codex.ingest.aggregator import aggregate_digest
 from aichemist_codex.ingest.scanner import scan_directory
-from aichemist_codex.output_formatter.json_writer import (
-    save_as_json_async as write_json,
-)
-from aichemist_codex.output_formatter.markdown_writer import (
-    save_as_markdown as write_markdown,
-)
+from aichemist_codex.output_formatter.json_writer import save_as_json_async
+from aichemist_codex.output_formatter.markdown_writer import save_as_markdown
 from aichemist_codex.project_reader.code_summary import summarize_project
-from aichemist_codex.project_reader.notebooks import (
-    NotebookConverter as convert_notebooks,
-)
-from aichemist_codex.project_reader.token_counter import TokenAnalyzer as count_tokens
+from aichemist_codex.project_reader.notebooks import NotebookConverter
+from aichemist_codex.project_reader.token_counter import TokenAnalyzer
 from aichemist_codex.search.search_engine import SearchEngine
 
 logger = logging.getLogger(__name__)
@@ -201,18 +190,16 @@ def main():
     # ✅ File Tree Generation
     if args.command == "tree":
         logger.info(f"Generating file tree for {args.directory}")
-        # Instantiate the FileTreeGenerator and call its generate() method.
-        tree_generator = generate_file_tree()
-        file_tree = tree_generator.generate(args.directory, max_depth=args.depth)
+        tree_generator = FileTreeGenerator()
+        file_tree = asyncio.run(tree_generator.generate(args.directory))
         output_file = args.output or args.directory / "file_tree.json"
-        write_json(file_tree, output_file)
+        asyncio.run(save_as_json_async(file_tree, output_file))
         logger.info(f"File tree saved to {output_file}")
 
     # ✅ Code Summarization
     elif args.command == "summarize":
         output_json_file = args.directory / "code_summary.json"
         output_md_file = args.directory / "code_summary.md"
-
         logger.info(f"Analyzing code in {args.directory}")
         summarize_project(
             args.directory,
@@ -220,7 +207,6 @@ def main():
             output_json_file,
             include_notebooks=args.include_notebooks,
         )
-
         if args.output_format == "json":
             logger.info(f"Code summary saved to {output_json_file}")
         elif args.output_format == "md":
@@ -229,37 +215,76 @@ def main():
     # ✅ File Sorting
     elif args.command == "sort":
         logger.info(f"Sorting files in {args.directory}")
-        sort_files(args.directory, config_file=args.config, dry_run=args.dry_run)
+        sorter = RuleBasedSorter()
+        sorter.sort_directory_sync(args.directory)
         logger.info("File sorting completed")
 
     # ✅ Duplicate Detection
     elif args.command == "duplicates":
         output_file = args.output or args.directory / "duplicates.json"
         logger.info(f"Scanning for duplicates in {args.directory}")
-        duplicates = find_duplicates(args.directory, method=args.method)
-        write_json(duplicates, output_file)
-        logger.info(f"Found {len(duplicates)} duplicate sets, saved to {output_file}")
+        duplicate_detector = DuplicateDetector()
+        duplicates = asyncio.run(
+            duplicate_detector.scan_directory(args.directory, args.method)
+        )
+        duplicates_dict = duplicate_detector.get_duplicates()
+        asyncio.run(save_as_json_async(duplicates_dict, output_file))
+        logger.info(
+            f"Found {len(duplicates_dict)} duplicate sets, saved to {output_file}"
+        )
 
     # ✅ File Watcher
     elif args.command == "watch":
         logger.info(f"Starting file watcher for {args.directory}")
-        start_watcher(args.directory, config_file=args.config, recursive=args.recursive)
+        event_handler = FileEventHandler(args.directory)
         # This will run until terminated
+        try:
+            from watchdog.observers import Observer
+
+            observer = Observer()
+            observer.schedule(
+                event_handler, str(args.directory), recursive=args.recursive
+            )
+            observer.start()
+            try:
+                while True:
+                    import time
+
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                observer.stop()
+            observer.join()
+        except KeyboardInterrupt:
+            logger.info("File watcher stopped")
 
     # ✅ Notebook Conversion
     elif args.command == "notebooks":
         logger.info(f"Converting notebooks in {args.directory}")
-        convert_notebooks(
-            args.directory, output_format=args.output_format, recursive=args.recursive
-        )
+        notebook_converter = NotebookConverter()
+        # Call the appropriate method based on output format
+        if args.recursive:
+            for notebook_file in args.directory.rglob("*.ipynb"):
+                if args.output_format == "py":
+                    output = notebook_converter.to_script(notebook_file)
+                    with open(notebook_file.with_suffix(".py"), "w") as f:
+                        f.write(output)
+        else:
+            for notebook_file in args.directory.glob("*.ipynb"):
+                if args.output_format == "py":
+                    output = notebook_converter.to_script(notebook_file)
+                    with open(notebook_file.with_suffix(".py"), "w") as f:
+                        f.write(output)
         logger.info("Notebook conversion completed")
 
     # ✅ Token Counting
     elif args.command == "tokens":
         output_file = args.output or args.directory / "token_counts.json"
         logger.info(f"Counting tokens in {args.directory}")
-        token_counts = count_tokens(args.directory, model=args.model)
-        write_json(token_counts, output_file)
+        token_analyzer = TokenAnalyzer()
+        token_counts = token_analyzer.analyze_directory(
+            args.directory, model=args.model
+        )
+        asyncio.run(save_as_json_async(token_counts, output_file))
         logger.info(f"Token counts saved to {output_file}")
 
     # ✅ Search
@@ -268,12 +293,10 @@ def main():
         logger.info(f"Searching for '{args.query}' in {args.directory}")
         search_engine = SearchEngine(args.directory)
         results = search_engine.search(args.query, method=args.method)
-
         if output_file:
-            write_json(results, output_file)
+            asyncio.run(save_as_json_async(results, output_file))
             logger.info(f"Search results saved to {output_file}")
         else:
-            # Print results to console
             for result in results:
                 print(f"{result['path']} - Score: {result['score']}")
                 if result.get("snippet"):
@@ -284,15 +307,12 @@ def main():
     elif args.command == "ingest":
         include_patterns = set(args.include) if args.include else {"*"}
         ignore_patterns = set(args.ignore) if args.ignore else set()
-
         logger.info(f"Scanning directory: {args.directory}")
         files = scan_directory(args.directory, include_patterns, ignore_patterns)
-
         logger.info(f"Ingesting {len(files)} files")
-        content = aggregate_content(files)
-
+        content = aggregate_digest(files)
         if args.output:
-            write_json(content, args.output)
+            asyncio.run(save_as_json_async(content, args.output))
             logger.info(f"Ingestion results saved to {args.output}")
         else:
             logger.info(f"Ingested {len(content)} files successfully")
@@ -302,26 +322,27 @@ def main():
         if not args.file.exists():
             logger.error(f"File does not exist: {args.file}")
             return
-
         logger.info(f"Reading file: {args.file}")
-        # Call FileReader as a callable with the file and extract_text flag.
-        content = FileReader(args.file, extract_text=args.extract_text)
+        # Instantiate FileReader
+        reader = FileReader()
+        mime_type = reader.get_mime_type(args.file)
+        metadata = asyncio.run(reader.process_file(args.file))
+        content = metadata.preview
 
-        # Output content based on format
         if args.format == "auto":
             print(content)
         elif args.format == "json":
             if args.output:
-                write_json(content, args.output)
+                asyncio.run(save_as_json_async(metadata.to_dict(), args.output))
                 logger.info(f"JSON output saved to {args.output}")
             else:
                 print(content)
         elif args.format == "markdown":
             if args.output:
-                write_markdown(content, args.output)
+                save_as_markdown(content, args.output)
                 logger.info(f"Markdown output saved to {args.output}")
             else:
-                md_content = write_markdown(content, None)
+                md_content = save_as_markdown(content, None)
                 print(md_content)
         else:
             print(content)
