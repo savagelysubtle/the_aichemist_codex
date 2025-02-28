@@ -71,3 +71,91 @@
 ├── README.md                      # Project overview and basic instructions
 ├── CONTRIBUTING.md                # Contribution guidelines
 └── pyproject.toml                 # Build and dependency configurations
+│
+├── middleware/                  # API Gateway (Node.js + Express)
+│   ├── controllers/
+│   │   ├── authController.js        # User authentication and permissions
+│   │   ├── fileController.js        # Calls backend file management API
+│   │   ├── aiController.js          # Exposes AI actions via API
+│   │   ├── searchController.js      # Search and metadata retrieval
+│   │   └── loggingController.js     # Logs API usage & analytics
+│   │
+│   ├── routes/
+│   │   ├── auth.js                  # API routes for authentication
+│   │   ├── files.js                 # Routes for file operations
+│   │   ├── search.js                # Routes for search functionality
+│   │   ├── ai.js                    # AI-related API routes
+│   │   ├── logging.js               # API logging and analytics
+│   │   ├── websocket.js             # WebSocket event handler
+│   │   └── health.js                # Health check route
+│   │
+│   ├── services/                  # Middleware service layer (modular)
+│   │   ├── apiClient.js             # Handles API requests to the backend
+│   │   ├── authService.js           # Authentication utilities
+│   │   ├── fileService.js           # Handles file-related middleware logic
+│   │   ├── aiService.js             # Calls AI-powered backend endpoints
+│   │   ├── searchService.js         # Manages search requests
+│   │   └── loggingService.js        # Middleware-level logging
+│   │
+│   ├── config/
+│   │   ├── env.js                   # Environment variables config
+│   │   ├── apiConfig.js             # API endpoint mappings
+│   │   └── middlewareConfig.js      # Middleware settings
+│   │
+│   ├── tests/                     # Middleware test cases
+│   ├── index.js                   # Express.js app entry point
+│   ├── package.json               # Middleware dependencies
+│   ├── .env                       # Environment variables
+│   └── README.md                  # Middleware documentation
+│
+├── frontend/                      # Next.js Frontend
+│   ├── src/
+│   │   ├── pages/                 # Next.js pages
+│   │   │   ├── index.js           # Home page
+│   │   │   ├── dashboard.js       # User dashboard
+│   │   │   ├── login.js           # Authentication page
+│   │   │   ├── search.js          # Search UI
+│   │   │   ├── settings.js        # User settings
+│   │   │   └── ai-control.js      # AI control panel
+│   │   │
+│   │   ├── components/
+│   │   │   ├── FileUpload.js      # File upload UI
+│   │   │   ├── FileList.js        # Displays file data
+│   │   │   ├── SearchBar.js       # Search input
+│   │   │   ├── UserProfile.js     # Profile display
+│   │   │   ├── Sidebar.js         # Navigation panel
+│   │   │   ├── Notification.js    # System notifications
+│   │   │   ├── AIInsights.js      # AI-driven analytics
+│   │   │   └── ControlPanel.js    # AI backend control interface
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js         # Authentication logic
+│   │   │   ├── useFetch.js        # API data fetching
+│   │   │   ├── useFileActions.js  # File interactions
+│   │   │   ├── useSearch.js       # Search handling
+│   │   │   ├── useAI.js           # AI interaction hooks
+│   │   │   └── useWebSocket.js    # Handles real-time WebSocket events
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── apiClient.js       # API handler for middleware
+│   │   │   ├── auth.js            # Authentication helper
+│   │   │   ├── formatters.js      # Data formatting utilities
+│   │   │   └── websocket.js       # WebSocket client helper
+│   │   │
+│   │   ├── App.js                 # Main React component
+│   │   ├── index.js               # Next.js entry point
+│   │   ├── _app.js                # Global styles & context provider
+│   │   ├──_document.js           # Next.js Document (optional)
+│   │   └── layout.js              # Shared layout components
+│   │
+│   ├── public/                    # Static assets (CSS, images)
+│   ├── styles/                    # CSS modules or global styles
+│   ├── package.json               # Frontend dependencies
+│   ├── next.config.js             # Next.js configuration
+│   ├── .env                       # Environment variables
+│   ├── README.md                  # Frontend documentation
+│   ├── tests/                     # Frontend unit and integration tests
+│   └── e2e/                       # End-to-end testing with Playwright/Cypress
+│
+├── README.md
+└── package.json                   # Root dependencies
