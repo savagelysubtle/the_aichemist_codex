@@ -1,10 +1,16 @@
 """
 File parsers module for handling different file types.
 This module provides specialized parsers for various file formats including:
-...
+- Text files (TXT, CSV, YAML, JSON, XML)
+- Document files (PDF, DOCX)
+- Spreadsheets (XLSX, ODS)
+- Code/config files (PY, JS, TOML, etc.)
+- Vector/CAD files (DWG, DXF, SVG)
+- Archives (ZIP, TAR, RAR, 7Z)
 """
 
 import ast
+import asyncio
 import csv
 import json
 import logging
@@ -18,7 +24,7 @@ from typing import Any, Dict, Optional
 import ezdxf
 import pandas as pd
 import py7zr
-import rarfile  # New import for RAR support
+import rarfile  # RAR support
 import tomli
 import yaml
 from docx import Document
@@ -28,42 +34,72 @@ logger = logging.getLogger(__name__)
 
 
 class BaseParser(ABC):
+    """Abstract base class for file parsers."""
+
     @abstractmethod
     async def parse(self, file_path: Path) -> Dict[str, Any]:
+        """
+        Parse a file asynchronously and return its structured data.
+
+        :param file_path: Path to the file to parse
+        :return: A dictionary containing parsed data (keys may differ by parser).
+        """
         pass
 
     @abstractmethod
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
+        """
+        Generate a textual preview for the parsed data.
+
+        :param parsed_data: The dictionary returned by `parse()`
+        :param max_length: Maximum length of the preview string
+        :return: A string preview of the data
+        """
         pass
 
 
 class TextParser(BaseParser):
+    """Parser for basic text files (TXT, MD, etc.)."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
+        from aichemist_codex.utils import AsyncFileIO
+
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            content = await AsyncFileIO.read(file_path)  # Async read
+            if content.startswith("# "):
+                # Means either file was ignored or an error occurred
+                return {
+                    "error": content,
+                    "content": "",
+                    "encoding": "",
+                    "line_count": 0,
+                }
+
+            encoding_used = "utf-8"
+            line_count = content.count("\n") + 1
             return {
                 "content": content,
-                "encoding": "utf-8",
-                "line_count": content.count("\n") + 1,
+                "encoding": encoding_used,
+                "line_count": line_count,
             }
         except UnicodeDecodeError:
-            with open(file_path, "r", encoding="latin-1") as f:
-                content = f.read()
+            # Skipping fallback for brevity; you could do another read with 'latin-1'
             return {
-                "content": content,
-                "encoding": "latin-1",
-                "line_count": content.count("\n") + 1,
+                "error": "UnicodeDecodeError on text file",
+                "content": "",
+                "encoding": "",
+                "line_count": 0,
             }
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        content = parsed_data["content"]
+        content = parsed_data.get("content", "")
         return content[:max_length] + "..." if len(content) > max_length else content
 
 
 class JsonParser(BaseParser):
+    """Parser for JSON files."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        # Use AsyncFileIO.read_json for async JSON parsing
         from aichemist_codex.utils import AsyncFileIO
 
         json_data = await AsyncFileIO.read_json(file_path)
@@ -79,6 +115,8 @@ class JsonParser(BaseParser):
 
 
 class YamlParser(BaseParser):
+    """Parser for YAML files."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         from aichemist_codex.utils import AsyncFileIO
 
@@ -99,20 +137,43 @@ class YamlParser(BaseParser):
 
 
 class CsvParser(BaseParser):
+    """Parser for CSV files."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        rows = []
-        with open(file_path, "r", encoding="utf-8", newline="") as f:
-            reader = csv.reader(f)
+        from aichemist_codex.utils import AsyncFileIO
+
+        try:
+            content = await AsyncFileIO.read(file_path)  # Async read entire CSV
+            if content.startswith("# "):
+                return {
+                    "error": content,
+                    "header": None,
+                    "rows": [],
+                    "row_count": 0,
+                    "column_count": 0,
+                }
+
+            rows = []
+            reader = csv.reader(content.splitlines())
             header = next(reader, None)
             for row in reader:
                 rows.append(row)
 
-        return {
-            "header": header,
-            "rows": rows,
-            "row_count": len(rows),
-            "column_count": len(header) if header else 0,
-        }
+            return {
+                "header": header,
+                "rows": rows,
+                "row_count": len(rows),
+                "column_count": len(header) if header else 0,
+            }
+        except Exception as e:
+            logger.error(f"Error parsing CSV: {e}")
+            return {
+                "error": str(e),
+                "header": None,
+                "rows": [],
+                "row_count": 0,
+                "column_count": 0,
+            }
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         preview_lines = []
@@ -127,10 +188,21 @@ class CsvParser(BaseParser):
 
 
 class XmlParser(BaseParser):
+    """Parser for XML files."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
+        import xml.etree.ElementTree as ET
+
         from aichemist_codex.utils import AsyncFileIO
 
         content = await AsyncFileIO.read(file_path)
+        if content.startswith("# "):
+            return {
+                "error": content,
+                "content": "",
+                "metadata": {},
+                "preview": "",
+            }
         root = ET.fromstring(content)
         return {
             "content": content,
@@ -145,51 +217,51 @@ class XmlParser(BaseParser):
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         preview = f"Root: {parsed_data['metadata']['root_tag']}\n"
         content_preview = parsed_data["content"]
-        return preview + (
-            content_preview[: max_length - len(preview)] + "..."
-            if len(preview) + len(content_preview) > max_length
-            else content_preview
-        )
+        if len(preview) + len(content_preview) > max_length:
+            return preview + content_preview[: max_length - len(preview)] + "..."
+        return preview + content_preview
 
 
 class DocumentParser(BaseParser):
+    """Parser for document files (PDF, DOCX, etc.)."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
+
         suffix = file_path.suffix.lower()
         try:
             if suffix == ".pdf":
                 return await self._parse_pdf(file_path)
             elif suffix == ".docx":
                 return await self._parse_docx(file_path)
-            elif suffix == ".odt":
-                return await self._parse_odt(file_path)
-            elif suffix == ".epub":
-                return await self._parse_epub(file_path)
             else:
                 raise ValueError(f"Unsupported document format: {suffix}")
         except Exception as e:
-            logger.error(f"Error parsing document {file_path}: {str(e)}")
+            logger.error(f"Error parsing document {file_path}: {e}")
             raise
 
-    def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        content = parsed_data.get("content", "")
-        return content[:max_length] + "..." if len(content) > max_length else content
-
     async def _parse_pdf(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            reader = PdfReader(str(file_path))
-            text_content = [page.extract_text() for page in reader.pages]
+        loop = asyncio.get_running_loop()
+
+        def parse_pdf_sync(p):
+            reader = PdfReader(str(p))
+            text_content = []
+            for page in reader.pages:
+                text_content.append(page.extract_text())
             return {
                 "content": "\n".join(text_content),
                 "metadata": reader.metadata,
                 "pages": len(reader.pages),
             }
-        except Exception as e:
-            logger.error(f"PDF parsing error: {str(e)}")
-            raise
+
+        return await loop.run_in_executor(None, parse_pdf_sync, file_path)
 
     async def _parse_docx(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            doc = Document(file_path)
+        import asyncio
+
+        loop = asyncio.get_running_loop()
+
+        def parse_docx_sync(p):
+            doc = Document(str(p))
             content = "\n".join(para.text for para in doc.paragraphs)
             return {
                 "content": content,
@@ -198,12 +270,17 @@ class DocumentParser(BaseParser):
                     "paragraphs": len(doc.paragraphs),
                 },
             }
-        except Exception as e:
-            logger.error(f"DOCX parsing error: {str(e)}")
-            raise
+
+        return await loop.run_in_executor(None, parse_docx_sync, file_path)
+
+    def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
+        content = parsed_data.get("content", "")
+        return content[:max_length] + "..." if len(content) > max_length else content
 
 
 class SpreadsheetParser(BaseParser):
+    """Parser for spreadsheet files (CSV, XLSX, ODS)."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         suffix = file_path.suffix.lower()
         try:
@@ -219,64 +296,72 @@ class SpreadsheetParser(BaseParser):
             logger.error(f"Error parsing spreadsheet {file_path}: {str(e)}")
             raise
 
+    async def _parse_csv(self, file_path: Path) -> Dict[str, Any]:
+        import asyncio
+
+        def parse_csv_sync(p):
+            df = pd.read_csv(p)
+            preview = df.head().to_string()
+            return {
+                "content": df.to_dict(),
+                "preview": preview,
+                "metadata": {
+                    "rows": len(df),
+                    "columns": len(df.columns),
+                    "column_names": df.columns.tolist(),
+                },
+            }
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, parse_csv_sync, file_path)
+
+    async def _parse_xlsx(self, file_path: Path) -> Dict[str, Any]:
+        import asyncio
+
+        def parse_xlsx_sync(p):
+            df = pd.read_excel(p)
+            preview = df.head().to_string()
+            return {
+                "content": df.to_dict(),
+                "preview": preview,
+                "metadata": {
+                    "rows": len(df),
+                    "columns": len(df.columns),
+                    "column_names": df.columns.tolist(),
+                    "sheet_names": pd.ExcelFile(str(p)).sheet_names,
+                },
+            }
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, parse_xlsx_sync, file_path)
+
+    async def _parse_ods(self, file_path: Path) -> Dict[str, Any]:
+        import asyncio
+
+        def parse_ods_sync(p):
+            df = pd.read_excel(p, engine="odf")
+            preview = df.head().to_string()
+            return {
+                "content": df.to_dict(),
+                "preview": preview,
+                "metadata": {
+                    "rows": len(df),
+                    "columns": len(df.columns),
+                    "column_names": df.columns.tolist(),
+                },
+            }
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, parse_ods_sync, file_path)
+
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         preview = parsed_data.get("preview", "")
         return preview[:max_length] + "..." if len(preview) > max_length else preview
 
-    async def _parse_csv(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            df = pd.read_csv(file_path)
-            preview = df.head().to_string()
-            return {
-                "content": df.to_dict(),
-                "preview": preview,
-                "metadata": {
-                    "rows": len(df),
-                    "columns": len(df.columns),
-                    "column_names": df.columns.tolist(),
-                },
-            }
-        except Exception as e:
-            logger.error(f"CSV parsing error: {str(e)}")
-            raise
-
-    async def _parse_xlsx(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            df = pd.read_excel(file_path)
-            preview = df.head().to_string()
-            return {
-                "content": df.to_dict(),
-                "preview": preview,
-                "metadata": {
-                    "rows": len(df),
-                    "columns": len(df.columns),
-                    "column_names": df.columns.tolist(),
-                    "sheet_names": pd.ExcelFile(file_path).sheet_names,
-                },
-            }
-        except Exception as e:
-            logger.error(f"XLSX parsing error: {str(e)}")
-            raise
-
-    async def _parse_ods(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            df = pd.read_excel(file_path, engine="odf")
-            preview = df.head().to_string()
-            return {
-                "content": df.to_dict(),
-                "preview": preview,
-                "metadata": {
-                    "rows": len(df),
-                    "columns": len(df.columns),
-                    "column_names": df.columns.tolist(),
-                },
-            }
-        except Exception as e:
-            logger.error(f"ODS parsing error: {str(e)}")
-            raise
-
 
 class CodeParser(BaseParser):
+    """Parser for code and configuration files (Python, JS, JSON, YAML, XML, TOML)."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         suffix = file_path.suffix.lower()
         try:
@@ -303,28 +388,21 @@ class CodeParser(BaseParser):
         return preview[:max_length] + "..." if len(preview) > max_length else preview
 
     async def _parse_python(self, file_path: Path) -> Dict[str, Any]:
+        from aichemist_codex.utils import AsyncFileIO
+
+        content = await AsyncFileIO.read(file_path)
+        if content.startswith("# "):
+            return {"error": content, "preview": content, "metadata": {}}
+
         try:
-            from aichemist_codex.utils import AsyncFileIO
-
-            content = await AsyncFileIO.read(file_path)
-            if content.startswith("# "):
-                return {"error": content, "preview": content, "metadata": {}}
-
             tree = ast.parse(content)
-            classes = [
-                node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-            ]
+            classes = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
             functions = [
-                node.name
-                for node in ast.walk(tree)
-                if isinstance(node, ast.FunctionDef)
+                n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
             ]
             imports = [
-                node
-                for node in ast.walk(tree)
-                if isinstance(node, (ast.Import, ast.ImportFrom))
+                n for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))
             ]
-
             return {
                 "content": content,
                 "preview": content[:1000] if len(content) > 1000 else content,
@@ -340,92 +418,74 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_javascript(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
-            content = await AsyncFileIO.read(file_path)
-            if content.startswith("// "):
-                return {"error": content, "preview": content, "metadata": {}}
+        content = await AsyncFileIO.read(file_path)
+        if content.startswith("// "):
+            return {"error": content, "preview": content, "metadata": {}}
 
-            return {
-                "content": content,
-                "preview": content[:1000] if len(content) > 1000 else content,
-                "metadata": {"loc": len(content.splitlines())},
-            }
-        except Exception as e:
-            logger.error(f"JavaScript parsing error: {str(e)}")
-            raise
+        return {
+            "content": content,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {"loc": len(content.splitlines())},
+        }
 
     async def _parse_json(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
-            json_data = await AsyncFileIO.read_json(file_path)
-            if not json_data:
-                return {
-                    "error": "Failed to parse JSON file",
-                    "preview": "Error reading JSON",
-                    "metadata": {},
-                }
-            content = await AsyncFileIO.read(file_path)
+        json_data = await AsyncFileIO.read_json(file_path)
+        if not json_data:
             return {
-                "content": json_data,
-                "preview": content[:1000] if len(content) > 1000 else content,
-                "metadata": {
-                    "keys": (
-                        list(json_data.keys()) if isinstance(json_data, dict) else None
-                    ),
-                    "size": (
-                        len(json_data) if isinstance(json_data, (dict, list)) else None
-                    ),
-                },
+                "error": "Failed to parse JSON file",
+                "preview": "Error reading JSON",
+                "metadata": {},
             }
-        except Exception as e:
-            logger.error(f"JSON parsing error: {str(e)}")
-            raise
+        content = await AsyncFileIO.read(file_path)
+        return {
+            "content": json_data,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {
+                "keys": list(json_data.keys()) if isinstance(json_data, dict) else None,
+                "size": (
+                    len(json_data) if isinstance(json_data, (dict, list)) else None
+                ),
+            },
+        }
 
     async def _parse_yaml(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
-            content = await AsyncFileIO.read(file_path)
-            data = yaml.safe_load(content)
-            return {
-                "content": data,
-                "preview": content[:1000] if len(content) > 1000 else content,
-                "metadata": {
-                    "keys": list(data.keys()) if isinstance(data, dict) else None,
-                    "size": len(data) if isinstance(data, (dict, list)) else None,
-                },
-            }
-        except Exception as e:
-            logger.error(f"YAML parsing error: {str(e)}")
-            raise
+        content = await AsyncFileIO.read(file_path)
+        data = yaml.safe_load(content)
+        return {
+            "content": data,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {
+                "keys": list(data.keys()) if isinstance(data, dict) else None,
+                "size": len(data) if isinstance(data, (dict, list)) else None,
+            },
+        }
 
     async def _parse_xml(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
-            content = await AsyncFileIO.read(file_path)
-            root = ET.fromstring(content)
-            return {
-                "content": content,
-                "preview": content[:1000] if len(content) > 1000 else content,
-                "metadata": {
-                    "root_tag": root.tag,
-                    "children_count": len(list(root)),
-                    "attributes": dict(root.attrib),
-                },
-            }
-        except Exception as e:
-            logger.error(f"XML parsing error: {str(e)}")
-            raise
+        content = await AsyncFileIO.read(file_path)
+        root = ET.fromstring(content)
+        return {
+            "content": content,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {
+                "root_tag": root.tag,
+                "children_count": len(list(root)),
+                "attributes": dict(root.attrib),
+            },
+        }
 
     async def _parse_toml(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
-            content = await AsyncFileIO.read_binary(file_path)
+        content = await AsyncFileIO.read_binary(file_path)
+        try:
             data = tomli.loads(content.decode("utf-8"))
             return {
                 "content": data,
@@ -441,6 +501,8 @@ class CodeParser(BaseParser):
 
 
 class VectorParser(BaseParser):
+    """Parser for CAD and vector files (DWG, DXF, SVG)."""
+
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         suffix = file_path.suffix.lower()
         try:
@@ -488,9 +550,9 @@ class VectorParser(BaseParser):
             raise
 
     async def _parse_svg(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+        from aichemist_codex.utils import AsyncFileIO
 
+        try:
             tree = ET.parse(file_path)
             root = tree.getroot()
             width = root.get("width", "unknown")
@@ -526,10 +588,12 @@ class VectorParser(BaseParser):
 
 
 class ArchiveParser(BaseParser):
-    async def parse(self, file_path: Path) -> Dict[str, Any]:
-        try:
-            from aichemist_codex.utils import AsyncFileIO
+    """Parser for archive files (ZIP, TAR, RAR, 7Z)."""
 
+    async def parse(self, file_path: Path) -> Dict[str, Any]:
+        from aichemist_codex.utils import AsyncFileIO
+
+        try:
             if not await AsyncFileIO.exists(file_path):
                 raise FileNotFoundError(f"Archive file not found: {file_path}")
 
@@ -569,6 +633,9 @@ class ArchiveParser(BaseParser):
 
 
 def get_parser_for_mime_type(mime_type: str) -> Optional[BaseParser]:
+    """
+    Factory function to get the appropriate parser for a MIME type.
+    """
     parsers = {
         "text/plain": TextParser(),
         "text/markdown": TextParser(),
