@@ -1,3 +1,6 @@
+# Future File Tree/RoadMap
+
+```plaintext
 /the_aichemist_codex
 │
 ├── src/
@@ -159,3 +162,4 @@
 │
 ├── README.md
 └── package.json                   # Root dependencies
+```
