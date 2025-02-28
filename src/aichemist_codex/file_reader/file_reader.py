@@ -153,9 +153,10 @@ class FileReader:
                 mime_type=mime_type,
                 size=file_path.stat().st_size,
                 extension=file_path.suffix.lower(),
+                preview="",  # Added preview parameter
+                error=None,  # Added error parameter
                 parsed_data=None,
             )
-
             # Get preview if possible
             try:
                 preview, parsed_data = await self._get_preview_and_data(

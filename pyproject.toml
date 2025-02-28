@@ -5,29 +5,51 @@ description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
 dependencies = [
-    "aiofiles",             # Async file I/O
-    "tiktoken",             # Token counting
-    "tomli",                # Config parsing
-    "nbformat",             # Notebook validation (optional)
-    "watchdog",             # File system monitoring
-    "pytest",               # Testing framework
-    "pytest-asyncio",       # Async test support
-    "rich",                 # CLI output formatting
-    "python-magic",         # MIME type detection
-    "pandas",               # For CSV and Excel file handling
-    "PyYAML",               # YAML file parsing
-    "lxml",                 # XML parsing
-    "opencv-python",        # For OCR support
-    "Kreuzberg",            # OCR integration
-    "py7zr",                # Archive handling (7z)
-    "rarfile"               # Archive handling (RAR)
+    "aiofiles>=24.1.0",             # Async file I/O
+    "tiktoken>=0.5.1",               # Token counting
+    "tomli>=2.0.1",                 # Config parsing
+    "nbformat>=5.10.4",             # Notebook validation
+    "watchdog>=3.0.0",              # File system monitoring
+    "pytest>=8.3.4",                # Testing framework
+    "pytest-asyncio>=0.25.3",       # Async test support
+    "rich>=13.6.0",                 # CLI output formatting
+    "python-magic>=0.4.27",         # MIME type detection
+    "python-magic-bin>=0.4.14; sys_platform == 'win32'",  # Windows compatibility
+    "pandas>=2.0.0",                # For CSV and Excel file handling
+    "PyYAML>=6.0.1",                # YAML file parsing
+    "lxml>=4.9.3",                  # XML parsing
+    "opencv-python>=4.9.0",         # For OCR support
+    "Kreuzberg>=0.1.0",             # OCR integration
+    "py7zr>=0.20.5",                # Archive handling (7z)
+    "rarfile>=4.0",                 # Archive handling (RAR)
+    "pypdf>=3.17.1",                # PDF parsing
+    "python-docx>=0.8.11",          # Word document parsing
+    "odfpy>=1.4.1",                 # Open Document format
+    "EbookLib>=0.17.1",             # E-book parsing
+    "xmltodict>=0.13.0",            # XML parsing
+    "ezdxf>=1.0.0",                 # CAD file parsing
+    "svglib>=1.5.1",                # SVG parsing
+    "reportlab>=4.0.4",             # Required by svglib
+    "openpyxl>=3.1.0",              # Excel file handling
+    "pydantic>=2.10.6",             # Data validation
+    "structlog>=25.1.0",            # Structured logging
+    "dynaconf>=3.2.10",             # Configuration management
+    "python-dotenv>=1.0.1",         # Environment variable handling
+    "psutil>=7.0.0",                # System monitoring
+    "tenacity>=9.0.0",              # Retry logic
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-cov>=6.0.0",            # Test coverage
+    "pytest-mock>=3.14.0",          # Test mocking
 ]
 
 [project.scripts]
 codex = "aichemist_codex.cli:main"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=75.8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

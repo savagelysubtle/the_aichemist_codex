@@ -6,19 +6,19 @@ from pathlib import Path
 import yaml
 
 from aichemist_codex.file_manager import directory_manager, file_mover
+from aichemist_codex.utils import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
 
 class RuleBasedSorter:
     def __init__(self):
-        self.rules = asyncio.run(self.load_rules())
+        # Remove the synchronous load_rules call; rules will be loaded asynchronously.
+        self.rules = None
 
     async def load_rules(self):
         config_dir = Path(__file__).resolve().parent.parent / "config"
         rules_file = config_dir / "sorting_rules.yaml"
-        from aichemist_codex.utils import AsyncFileIO
-
         if not await AsyncFileIO.exists(rules_file):
             logger.warning(
                 f"Sorting rules file not found at {rules_file}. No rules loaded."
@@ -43,7 +43,9 @@ class RuleBasedSorter:
             return False
         return True
 
-    async def _sort_directory(self, directory: Path):
+    async def sort_directory(self, directory: Path):
+        if self.rules is None:
+            self.rules = await self.load_rules()
         for file in directory.rglob("*"):
             if file.is_file():
                 for rule in self.rules:
@@ -51,6 +53,9 @@ class RuleBasedSorter:
                         target_dir = Path(rule.get("target_dir"))
                         if not target_dir.is_absolute():
                             target_dir = directory / target_dir
+                        # Skip the file if it's already in the target directory.
+                        if file.parent == target_dir:
+                            continue
                         await directory_manager.DirectoryManager.ensure_directory(
                             target_dir
                         )
@@ -60,5 +65,6 @@ class RuleBasedSorter:
                         )
                         break
 
-    def sort_directory(self, directory: Path):
-        asyncio.run(self._sort_directory(directory))
+    # Optional: Provide a synchronous wrapper if needed.
+    def sort_directory_sync(self, directory: Path):
+        asyncio.run(self.sort_directory(directory))

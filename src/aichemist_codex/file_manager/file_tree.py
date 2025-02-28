@@ -39,11 +39,10 @@ class FileTreeGenerator:
         return tree
 
 
-def generate_file_tree(directory: Path, output_file: Path):
-    """Generates and saves the file tree as JSON."""
+async def generate_file_tree(directory: Path, output_file: Path):
     generator = FileTreeGenerator()
-    file_tree = asyncio.run(generator.generate(directory))
-    success = asyncio.run(AsyncFileIO.write_json(output_file, file_tree))
+    file_tree = await generator.generate(directory)
+    success = await AsyncFileIO.write_json(output_file, file_tree)
     if success:
         logger.info(f"File tree saved to {output_file}")
     else:
