@@ -1,7 +1,42 @@
 [project]
-name = "1new-projects-folder-maker"
+name = "the_aichemist_codex"
 version = "0.1.0"
-description = "Add your description here"
+description = "A modular file and project management system."
 readme = "README.md"
 requires-python = ">=3.12.3"
-dependencies = []
+dependencies = [
+    "aiofiles",             # Async file I/O
+    "tiktoken",             # Token counting
+    "tomli",                # Config parsing
+    "nbformat",             # Notebook validation (optional)
+    "watchdog",             # File system monitoring
+    "pytest",               # Testing framework
+    "pytest-asyncio",       # Async test support
+    "rich",                 # CLI output formatting
+    "python-magic",         # MIME type detection
+    "pandas",               # For CSV and Excel file handling
+    "PyYAML",               # YAML file parsing
+    "lxml",                 # XML parsing
+    "opencv-python",        # For OCR support
+    "Kreuzberg",            # OCR integration
+    "py7zr",                # Archive handling (7z)
+    "rarfile"               # Archive handling (RAR)
+]
+
+[project.scripts]
+codex = "aichemist_codex.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+tmp_path_retention_count = 2
+tmp_path_retention_policy = "failed"
+addopts = "--basetemp=./tmp"

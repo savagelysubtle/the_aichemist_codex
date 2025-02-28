@@ -11,3 +11,12 @@ wheels/
 output/
 __pycache__/
 *.log
+.cursorrules
+.project_checklist
+
+#test files
+
+the_aichemist_codex_summary.json
+the_aichemist_codex_file_tree.json
+the_aichemist_codex_gpt_summary.json
+the_aichemist_codex_summary.md
