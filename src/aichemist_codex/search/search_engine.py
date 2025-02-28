@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from aichemist_codex.file_reader.file_metadata import FileMetadata
+from aichemist_codex.utils import AsyncFileIO
 
 try:
     import whoosh.analysis
@@ -78,15 +80,27 @@ class SearchEngine:
 
     def add_to_index(self, file_metadata: FileMetadata):
         """Ensure files are indexed properly in both SQLite and Whoosh."""
+
         try:
             if not file_metadata.path.exists():
                 logger.warning(f"Skipping non-existent file: {file_metadata.path}")
                 return
 
+            # Use AsyncFileIO for reading file content if preview is empty
+            preview_content = file_metadata.preview
+            if not preview_content and file_metadata.mime_type.startswith("text/"):
+                # Run AsyncFileIO.read in a synchronous context
+                preview_content = asyncio.run(AsyncFileIO.read(file_metadata.path))
+                if preview_content.startswith("# "):  # Error message or skipped file
+                    logger.warning(
+                        f"Error reading content for indexing: {preview_content}"
+                    )
+                    preview_content = f"[File content error: {file_metadata.path}]"
+
             # ✅ Whoosh Full-Text Indexing with Force Commit
             writer = self.index.writer()
             writer.add_document(
-                path=str(file_metadata.path), content=file_metadata.preview
+                path=str(file_metadata.path), content=preview_content or ""
             )
             writer.commit(merge=False)  # ✅ Ensures immediate commit
 

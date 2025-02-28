@@ -1,13 +1,7 @@
 """
 File parsers module for handling different file types.
-
 This module provides specialized parsers for various file formats including:
-- Text-based files (TXT, MD, LOG, RTF, HTML)
-- Document files (PDF, DOCX, ODT, EPUB)
-- Spreadsheets (CSV, XLSX, ODS)
-- Code & configuration files (PY, JS, JSON, YAML, XML, TOML)
-- CAD & vector files (DWG, DXF, SVG)
-- Archives (ZIP, TAR, RAR, 7Z)
+...
 """
 
 import ast
@@ -21,7 +15,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import aiofiles
 import ezdxf
 import pandas as pd
 import py7zr
@@ -35,39 +28,16 @@ logger = logging.getLogger(__name__)
 
 
 class BaseParser(ABC):
-    """Base class for all file parsers."""
-
     @abstractmethod
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """
-        Parse the file and return its contents and metadata.
-
-        Args:
-            file_path: Path to the file to parse
-
-        Returns:
-            Dict containing parsed content and metadata
-        """
         pass
 
     @abstractmethod
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """
-        Generate a preview of the parsed content.
-
-        Args:
-            parsed_data: The parsed file data
-            max_length: Maximum length of the preview
-
-        Returns:
-            A string preview of the content
-        """
         pass
 
 
 class TextParser(BaseParser):
-    """Parser for text-based files (TXT, MD, LOG, etc.)."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -78,7 +48,6 @@ class TextParser(BaseParser):
                 "line_count": content.count("\n") + 1,
             }
         except UnicodeDecodeError:
-            # Try alternative encoding
             with open(file_path, "r", encoding="latin-1") as f:
                 content = f.read()
             return {
@@ -89,51 +58,47 @@ class TextParser(BaseParser):
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         content = parsed_data["content"]
-        if len(content) > max_length:
-            return content[:max_length] + "..."
-        return content
+        return content[:max_length] + "..." if len(content) > max_length else content
 
 
 class JsonParser(BaseParser):
-    """Parser for JSON files."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = json.load(f)
+        # Use AsyncFileIO.read_json for async JSON parsing
+        from aichemist_codex.utils import AsyncFileIO
+
+        json_data = await AsyncFileIO.read_json(file_path)
         return {
-            "content": content,
-            "structure": type(content).__name__,
-            "size": len(json.dumps(content)),
+            "content": json_data,
+            "structure": type(json_data).__name__,
+            "size": len(json.dumps(json_data)),
         }
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         preview = json.dumps(parsed_data["content"], indent=2)
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
 class YamlParser(BaseParser):
-    """Parser for YAML files."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = yaml.safe_load(f)
+        from aichemist_codex.utils import AsyncFileIO
+
+        content = await AsyncFileIO.read(file_path)
+        data = yaml.safe_load(content)
         return {
-            "content": content,
-            "structure": type(content).__name__,
+            "content": data,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {
+                "keys": list(data.keys()) if isinstance(data, dict) else None,
+                "size": len(data) if isinstance(data, (dict, list)) else None,
+            },
         }
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
         preview = yaml.dump(parsed_data["content"], default_flow_style=False)
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
 class CsvParser(BaseParser):
-    """Parser for CSV files."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
         rows = []
         with open(file_path, "r", encoding="utf-8", newline="") as f:
@@ -154,62 +119,41 @@ class CsvParser(BaseParser):
         if parsed_data["header"]:
             preview_lines.append(",".join(parsed_data["header"]))
 
-        for row in parsed_data["rows"][:5]:  # Show first 5 rows
+        for row in parsed_data["rows"][:5]:
             preview_lines.append(",".join(row))
 
         preview = "\n".join(preview_lines)
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
 class XmlParser(BaseParser):
-    """Parser for XML files."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
+        from aichemist_codex.utils import AsyncFileIO
 
-        def element_to_dict(element):
-            result = {}
-            for child in element:
-                if len(child) > 0:
-                    result[child.tag] = element_to_dict(child)
-                else:
-                    result[child.tag] = child.text
-            return result
-
+        content = await AsyncFileIO.read(file_path)
+        root = ET.fromstring(content)
         return {
-            "root_tag": root.tag,
-            "content": element_to_dict(root),
-            "attributes": dict(root.attrib),
+            "content": content,
+            "preview": content[:1000] if len(content) > 1000 else content,
+            "metadata": {
+                "root_tag": root.tag,
+                "children_count": len(list(root)),
+                "attributes": dict(root.attrib),
+            },
         }
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        preview = f"Root: {parsed_data['root_tag']}\n"
-        preview += f"Attributes: {json.dumps(parsed_data['attributes'], indent=2)}\n"
-        content_preview = json.dumps(parsed_data["content"], indent=2)
-
-        if len(preview) + len(content_preview) > max_length:
-            return preview + content_preview[: max_length - len(preview)] + "..."
-        return preview + content_preview
+        preview = f"Root: {parsed_data['metadata']['root_tag']}\n"
+        content_preview = parsed_data["content"]
+        return preview + (
+            content_preview[: max_length - len(preview)] + "..."
+            if len(preview) + len(content_preview) > max_length
+            else content_preview
+        )
 
 
 class DocumentParser(BaseParser):
-    """Parser for document files (PDF, DOCX, ODT, EPUB)."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse document file and return its contents and metadata.
-
-        Args:
-            file_path: Path to the document file
-
-        Returns:
-            Dict containing parsed content and metadata
-
-        Raises:
-            ValueError: If the file format is not supported
-        """
         suffix = file_path.suffix.lower()
         try:
             if suffix == ".pdf":
@@ -227,29 +171,13 @@ class DocumentParser(BaseParser):
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the document content.
-
-        Args:
-            parsed_data: The parsed document data
-            max_length: Maximum length of the preview
-
-        Returns:
-            A string preview of the content
-        """
         content = parsed_data.get("content", "")
-        if len(content) > max_length:
-            return content[:max_length] + "..."
-        return content
+        return content[:max_length] + "..." if len(content) > max_length else content
 
     async def _parse_pdf(self, file_path: Path) -> Dict[str, Any]:
-        """Parse PDF files using pypdf."""
         try:
-            # Open file directly instead of using bytes
             reader = PdfReader(str(file_path))
-            text_content = []
-            for page in reader.pages:
-                text_content.append(page.extract_text())
-
+            text_content = [page.extract_text() for page in reader.pages]
             return {
                 "content": "\n".join(text_content),
                 "metadata": reader.metadata,
@@ -260,15 +188,11 @@ class DocumentParser(BaseParser):
             raise
 
     async def _parse_docx(self, file_path: Path) -> Dict[str, Any]:
-        """Parse DOCX files."""
         try:
             doc = Document(file_path)
-            content = []
-            for para in doc.paragraphs:
-                content.append(para.text)
-
+            content = "\n".join(para.text for para in doc.paragraphs)
             return {
-                "content": "\n".join(content),
+                "content": content,
                 "metadata": {
                     "sections": len(doc.sections),
                     "paragraphs": len(doc.paragraphs),
@@ -280,20 +204,7 @@ class DocumentParser(BaseParser):
 
 
 class SpreadsheetParser(BaseParser):
-    """Parser for spreadsheet files (CSV, XLSX, ODS)."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse spreadsheet file and return its contents and metadata.
-
-        Args:
-            file_path: Path to the spreadsheet file
-
-        Returns:
-            Dict containing parsed content and metadata
-
-        Raises:
-            ValueError: If the file format is not supported
-        """
         suffix = file_path.suffix.lower()
         try:
             if suffix == ".csv":
@@ -309,22 +220,10 @@ class SpreadsheetParser(BaseParser):
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the spreadsheet content.
-
-        Args:
-            parsed_data: The parsed spreadsheet data
-            max_length: Maximum length of the preview
-
-        Returns:
-            A string preview of the content
-        """
         preview = parsed_data.get("preview", "")
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
     async def _parse_csv(self, file_path: Path) -> Dict[str, Any]:
-        """Parse CSV files."""
         try:
             df = pd.read_csv(file_path)
             preview = df.head().to_string()
@@ -342,7 +241,6 @@ class SpreadsheetParser(BaseParser):
             raise
 
     async def _parse_xlsx(self, file_path: Path) -> Dict[str, Any]:
-        """Parse XLSX files."""
         try:
             df = pd.read_excel(file_path)
             preview = df.head().to_string()
@@ -361,7 +259,6 @@ class SpreadsheetParser(BaseParser):
             raise
 
     async def _parse_ods(self, file_path: Path) -> Dict[str, Any]:
-        """Parse ODS files."""
         try:
             df = pd.read_excel(file_path, engine="odf")
             preview = df.head().to_string()
@@ -380,20 +277,7 @@ class SpreadsheetParser(BaseParser):
 
 
 class CodeParser(BaseParser):
-    """Parser for code and configuration files (PY, JS, JSON, YAML, XML, TOML)."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse code/config file and return its contents and metadata.
-
-        Args:
-            file_path: Path to the code/config file
-
-        Returns:
-            Dict containing parsed content and metadata
-
-        Raises:
-            ValueError: If the file format is not supported
-        """
         suffix = file_path.suffix.lower()
         try:
             if suffix == ".py":
@@ -415,29 +299,18 @@ class CodeParser(BaseParser):
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the code/config content.
-
-        Args:
-            parsed_data: The parsed code/config data
-            max_length: Maximum length of the preview
-
-        Returns:
-            A string preview of the content
-        """
         preview = parsed_data.get("preview", "")
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
     async def _parse_python(self, file_path: Path) -> Dict[str, Any]:
-        """Parse Python files with AST analysis."""
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
+            from aichemist_codex.utils import AsyncFileIO
+
+            content = await AsyncFileIO.read(file_path)
+            if content.startswith("# "):
+                return {"error": content, "preview": content, "metadata": {}}
 
             tree = ast.parse(content)
-
-            # Extract classes and functions
             classes = [
                 node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
             ]
@@ -446,8 +319,6 @@ class CodeParser(BaseParser):
                 for node in ast.walk(tree)
                 if isinstance(node, ast.FunctionDef)
             ]
-
-            # Count imports
             imports = [
                 node
                 for node in ast.walk(tree)
@@ -469,10 +340,12 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_javascript(self, file_path: Path) -> Dict[str, Any]:
-        """Parse JavaScript files."""
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
+            from aichemist_codex.utils import AsyncFileIO
+
+            content = await AsyncFileIO.read(file_path)
+            if content.startswith("// "):
+                return {"error": content, "preview": content, "metadata": {}}
 
             return {
                 "content": content,
@@ -484,18 +357,27 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_json(self, file_path: Path) -> Dict[str, Any]:
-        """Parse JSON files."""
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
-                data = json.loads(content)
+            from aichemist_codex.utils import AsyncFileIO
 
+            json_data = await AsyncFileIO.read_json(file_path)
+            if not json_data:
+                return {
+                    "error": "Failed to parse JSON file",
+                    "preview": "Error reading JSON",
+                    "metadata": {},
+                }
+            content = await AsyncFileIO.read(file_path)
             return {
-                "content": data,
+                "content": json_data,
                 "preview": content[:1000] if len(content) > 1000 else content,
                 "metadata": {
-                    "keys": list(data.keys()) if isinstance(data, dict) else None,
-                    "size": len(data) if isinstance(data, (dict, list)) else None,
+                    "keys": (
+                        list(json_data.keys()) if isinstance(json_data, dict) else None
+                    ),
+                    "size": (
+                        len(json_data) if isinstance(json_data, (dict, list)) else None
+                    ),
                 },
             }
         except Exception as e:
@@ -503,12 +385,11 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_yaml(self, file_path: Path) -> Dict[str, Any]:
-        """Parse YAML files."""
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
-                data = yaml.safe_load(content)
+            from aichemist_codex.utils import AsyncFileIO
 
+            content = await AsyncFileIO.read(file_path)
+            data = yaml.safe_load(content)
             return {
                 "content": data,
                 "preview": content[:1000] if len(content) > 1000 else content,
@@ -522,20 +403,17 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_xml(self, file_path: Path) -> Dict[str, Any]:
-        """Parse XML files."""
         try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
+            from aichemist_codex.utils import AsyncFileIO
 
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
-
+            content = await AsyncFileIO.read(file_path)
+            root = ET.fromstring(content)
             return {
                 "content": content,
                 "preview": content[:1000] if len(content) > 1000 else content,
                 "metadata": {
                     "root_tag": root.tag,
-                    "children_count": len(root),
+                    "children_count": len(list(root)),
                     "attributes": dict(root.attrib),
                 },
             }
@@ -544,12 +422,11 @@ class CodeParser(BaseParser):
             raise
 
     async def _parse_toml(self, file_path: Path) -> Dict[str, Any]:
-        """Parse TOML files."""
         try:
-            async with aiofiles.open(file_path, "rb") as f:
-                content = await f.read()
-                data = tomli.loads(content.decode("utf-8"))
+            from aichemist_codex.utils import AsyncFileIO
 
+            content = await AsyncFileIO.read_binary(file_path)
+            data = tomli.loads(content.decode("utf-8"))
             return {
                 "content": data,
                 "preview": str(data)[:1000],
@@ -564,20 +441,7 @@ class CodeParser(BaseParser):
 
 
 class VectorParser(BaseParser):
-    """Parser for CAD and vector files (DWG, DXF, SVG)."""
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse vector/CAD file and return its contents and metadata.
-
-        Args:
-            file_path: Path to the vector/CAD file
-
-        Returns:
-            Dict containing parsed content and metadata
-
-        Raises:
-            ValueError: If the file format is not supported
-        """
         suffix = file_path.suffix.lower()
         try:
             if suffix in [".dwg", ".dxf"]:
@@ -591,27 +455,13 @@ class VectorParser(BaseParser):
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the vector/CAD content.
-
-        Args:
-            parsed_data: The parsed vector/CAD data
-            max_length: Maximum length of the preview
-
-        Returns:
-            A string preview of the content
-        """
         preview = parsed_data.get("preview", "")
-        if len(preview) > max_length:
-            return preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
     async def _parse_cad(self, file_path: Path) -> Dict[str, Any]:
-        """Parse DWG/DXF files."""
         try:
             doc = ezdxf.readfile(str(file_path))
             modelspace = doc.modelspace()
-
-            # Extract entities
             entities = {
                 "lines": len(modelspace.query("LINE")),
                 "circles": len(modelspace.query("CIRCLE")),
@@ -619,11 +469,7 @@ class VectorParser(BaseParser):
                 "polylines": len(modelspace.query("LWPOLYLINE")),
                 "text": len(modelspace.query("TEXT")),
             }
-
-            # Extract layers
             layers = [layer.dxf.name for layer in doc.layers]
-
-            # Get document metadata
             metadata = {
                 "filename": file_path.name,
                 "created_by": doc.header["$TDCREATE"],
@@ -632,7 +478,6 @@ class VectorParser(BaseParser):
                 "layers": layers,
                 "entity_counts": entities,
             }
-
             return {
                 "content": str(doc.entitydb),
                 "preview": f"CAD drawing with {sum(entities.values())} entities across {len(layers)} layers",
@@ -643,15 +488,14 @@ class VectorParser(BaseParser):
             raise
 
     async def _parse_svg(self, file_path: Path) -> Dict[str, Any]:
-        """Parse SVG files."""
         try:
+            from aichemist_codex.utils import AsyncFileIO
+
             tree = ET.parse(file_path)
             root = tree.getroot()
-
             width = root.get("width", "unknown")
             height = root.get("height", "unknown")
             viewBox = root.get("viewBox", "unknown")
-
             elements = {
                 "path": len(root.findall(".//{*}path")),
                 "rect": len(root.findall(".//{*}rect")),
@@ -659,10 +503,9 @@ class VectorParser(BaseParser):
                 "text": len(root.findall(".//{*}text")),
                 "group": len(root.findall(".//{*}g")),
             }
-
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
-
+            content = await AsyncFileIO.read(file_path)
+            if content.startswith("# "):
+                return {"error": content, "preview": content, "metadata": {}}
             return {
                 "content": content,
                 "preview": f"SVG image ({width}x{height}) with {sum(elements.values())} elements",
@@ -683,26 +526,16 @@ class VectorParser(BaseParser):
 
 
 class ArchiveParser(BaseParser):
-    """Parser for archive files (ZIP, TAR, RAR, 7Z).
-
-    This parser extracts a list of contained files from the archive.
-    """
-
     async def parse(self, file_path: Path) -> Dict[str, Any]:
-        """Parse the archive file and return its contents and metadata.
-
-        Args:
-            file_path (Path): The path to the archive file.
-
-        Returns:
-            Dict[str, Any]: A dictionary containing the list of file names and count.
-
-        Raises:
-            Exception: If parsing fails or the archive format is unsupported.
-        """
         try:
+            from aichemist_codex.utils import AsyncFileIO
+
+            if not await AsyncFileIO.exists(file_path):
+                raise FileNotFoundError(f"Archive file not found: {file_path}")
+
             suffix = file_path.suffix.lower()
             files_list = []
+
             if suffix == ".zip":
                 with zipfile.ZipFile(file_path, "r") as archive:
                     files_list = archive.namelist()
@@ -723,38 +556,19 @@ class ArchiveParser(BaseParser):
                     files_list = archive.getnames()
             else:
                 raise ValueError(f"Unsupported archive format: {suffix}")
+
             return {"files": files_list, "count": len(files_list)}
         except Exception as e:
             logger.error(f"Archive parsing failed for {file_path}: {e}", exc_info=True)
             raise
 
     def get_preview(self, parsed_data: Dict[str, Any], max_length: int = 1000) -> str:
-        """Generate a preview of the archive contents.
-
-        Args:
-            parsed_data (Dict[str, Any]): The parsed archive data.
-            max_length (int): Maximum length of the preview text.
-
-        Returns:
-            str: A string preview of the archive file names.
-        """
         files = parsed_data.get("files", [])
         preview = "\n".join(files)
-        if len(preview) > max_length:
-            preview = preview[:max_length] + "..."
-        return preview
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
 def get_parser_for_mime_type(mime_type: str) -> Optional[BaseParser]:
-    """
-    Factory function to get the appropriate parser for a MIME type.
-
-    Args:
-        mime_type: The MIME type of the file
-
-    Returns:
-        An instance of the appropriate parser, or None if no parser is available
-    """
     parsers = {
         "text/plain": TextParser(),
         "text/markdown": TextParser(),

@@ -1,10 +1,10 @@
 """Generates and manages project file trees."""
 
 import asyncio
-import json
 import logging
 from pathlib import Path
 
+from aichemist_codex.utils.async_io import AsyncFileIO
 from aichemist_codex.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ class FileTreeGenerator:
         tree = {}
         try:
             for entry in sorted(directory.iterdir(), key=lambda e: e.name.lower()):
-                # ✅ Ensure correct path handling
                 if SafeFileHandler.should_ignore(entry):
                     logger.info(f"Skipping ignored path: {entry}")
                     continue
@@ -44,5 +43,8 @@ def generate_file_tree(directory: Path, output_file: Path):
     """Generates and saves the file tree as JSON."""
     generator = FileTreeGenerator()
     file_tree = asyncio.run(generator.generate(directory))
-    output_file.write_text(json.dumps(file_tree, indent=4), encoding="utf-8")
-    logger.info(f"File tree saved to {output_file}")
+    success = asyncio.run(AsyncFileIO.write_json(output_file, file_tree))
+    if success:
+        logger.info(f"File tree saved to {output_file}")
+    else:
+        logger.error(f"Failed to save file tree to {output_file}")

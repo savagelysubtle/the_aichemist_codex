@@ -1,6 +1,5 @@
 import pytest
-
-from project_reader.file_tree import FileTreeGenerator
+from project_manager.file_tree import FileTreeGenerator
 
 
 @pytest.mark.asyncio

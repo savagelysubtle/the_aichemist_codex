@@ -1,6 +1,5 @@
 """
 File reading and parsing module for The Aichemist Codex.
-
 This module provides functionality for reading and parsing various file types,
 including text files, documents, spreadsheets, code files, and more.
 """
@@ -11,13 +10,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import aiofiles
 import magic
+
+from aichemist_codex.utils import AsyncFileIO
 
 from .file_metadata import FileMetadata
 from .parsers import get_parser_for_mime_type
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 
@@ -79,7 +78,10 @@ class FileReader:
         results = []
         for path in file_paths:
             try:
-                # Get file stats
+                # Use AsyncFileIO to check for file existence.
+                if not await AsyncFileIO.exists(path):
+                    raise FileNotFoundError(f"Cannot find the file: {path}")
+
                 stats = path.stat()
                 size = stats.st_size
                 mime_type = self.get_mime_type(path)
@@ -87,12 +89,16 @@ class FileReader:
                 # Generate preview for text files
                 preview = ""
                 if mime_type.startswith("text/"):
-                    async with aiofiles.open(path, "r") as f:
-                        content = await f.read()
-                        if len(content) > self.preview_length:
-                            preview = content[: self.preview_length] + "..."
-                        else:
-                            preview = content
+                    content = await AsyncFileIO.read(path)
+                    if content.startswith("# "):  # Error message or skipped file
+                        error_msg = content[2:]  # Remove "# " prefix
+                        raise RuntimeError(error_msg)
+
+                    preview = (
+                        content[: self.preview_length] + "..."
+                        if len(content) > self.preview_length
+                        else content
+                    )
 
                 metadata = FileMetadata(
                     path=path,
@@ -133,7 +139,8 @@ class FileReader:
             FileMetadata: Metadata and preview information for the file
         """
         try:
-            if not file_path.exists():
+            # Use AsyncFileIO to check file existence.
+            if not await AsyncFileIO.exists(file_path):
                 raise FileNotFoundError(f"File not found: {file_path}")
 
             # Run MIME detection in thread pool to avoid blocking
@@ -144,7 +151,7 @@ class FileReader:
             metadata = FileMetadata(
                 path=file_path,
                 mime_type=mime_type,
-                size=file_path.stat().size,
+                size=file_path.stat().st_size,
                 extension=file_path.suffix.lower(),
                 parsed_data=None,
             )
@@ -154,13 +161,11 @@ class FileReader:
                 preview, parsed_data = await self._get_preview_and_data(
                     file_path, mime_type
                 )
-                metadata.preview = (
-                    preview if preview else ""
-                )  # Ensure preview is never None
+                metadata.preview = preview if preview else ""
                 metadata.parsed_data = parsed_data
             except Exception as e:
                 metadata.error = f"Preview generation failed: {str(e)}"
-                metadata.preview = ""  # Set empty string instead of None
+                metadata.preview = ""
                 logger.warning(f"Failed to generate preview for {file_path}: {e}")
 
             return metadata
@@ -174,7 +179,7 @@ class FileReader:
                 size=-1,
                 extension=file_path.suffix.lower(),
                 error=error_msg,
-                preview="",  # Set empty string instead of None
+                preview="",
             )
 
     async def _get_preview_and_data(
@@ -198,7 +203,7 @@ class FileReader:
                 preview = parser.get_preview(parsed_data, self.preview_length)
                 return preview, parsed_data
             except Exception as e:
-                logger.warning(f"Parser failed for {file_path}: {e}")
+                self.logger.warning(f"Parser failed for {file_path}: {e}")
                 # Fall back to basic text preview if parser fails
                 return await self._read_text_preview(file_path), None
 
@@ -206,36 +211,24 @@ class FileReader:
         return f"[Binary file of type: {mime_type}]", None
 
     async def _read_text_preview(self, file_path: Path) -> str:
-        """
-        Read a preview of a text file.
+        """Read a text preview of a file.
 
         Args:
-            file_path: Path to the text file
+            file_path: Path to the file
 
         Returns:
-            str: Preview of the text file contents
+            A string preview of the file content
         """
         try:
-            content = await asyncio.get_event_loop().run_in_executor(
-                self.executor,
-                lambda: open(file_path, "r", encoding="utf-8").read(
-                    self.preview_length
-                ),
+            content = await AsyncFileIO.read(file_path)
+            if content.startswith("# "):  # Error message or skipped file
+                return f"[Preview error: {content[2:]}]"
+
+            return (
+                content[: self.preview_length] + "..."
+                if len(content) > self.preview_length
+                else content
             )
-
-            if len(content) == self.preview_length:
-                content += "..."
-            return content
-
-        except UnicodeDecodeError:
-            # Try with a different encoding if UTF-8 fails
-            try:
-                with open(file_path, "r", encoding="latin-1") as f:
-                    content = f.read(self.preview_length)
-                    if len(content) == self.preview_length:
-                        content += "..."
-                    return content
-            except Exception as e:
-                raise ValueError(
-                    f"Failed to read file with both UTF-8 and Latin-1 encodings: {e}"
-                )
+        except Exception as e:
+            self.logger.error(f"Error reading text preview from {file_path}: {e}")
+            return f"[Error reading preview: {e}]"

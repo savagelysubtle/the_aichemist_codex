@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 class OCRParser:
     """Parser for performing OCR on image files using kreuzberg.
-
     This parser extracts text from image files.
     """
 
@@ -26,7 +25,11 @@ class OCRParser:
             Exception: If the image cannot be read or OCR fails.
         """
         try:
-            result = await extract_file(str(file_path))
+            from aichemist_codex.utils import AsyncFileIO
+
+            # Read the image file as binary data.
+            binary_data = await AsyncFileIO.read_binary(file_path)
+            result = await extract_file(binary_data)
             return {"content": result.content}
         except Exception as e:
             logger.error(f"OCR parsing failed for {file_path}: {e}", exc_info=True)
