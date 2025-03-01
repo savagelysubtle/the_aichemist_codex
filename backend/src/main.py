@@ -9,9 +9,9 @@ from tkinter import filedialog, messagebox
 # Ensure correct package resolution
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from aichemist_codex.file_manager.file_tree import generate_file_tree
-from aichemist_codex.ingest import generate_digest
-from aichemist_codex.project_reader.code_summary import summarize_project
+from file_manager.file_tree import generate_file_tree
+from ingest import generate_digest
+from project_reader.code_summary import summarize_project
 
 logger = logging.getLogger(__name__)
 

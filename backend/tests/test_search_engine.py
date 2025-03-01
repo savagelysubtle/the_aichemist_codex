@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from aichemist_codex.file_reader.file_metadata import FileMetadata
-from aichemist_codex.search.search_engine import SearchEngine
+from backend.src.file_reader.file_metadata import FileMetadata
+from backend.src.search.search_engine import SearchEngine
 
 # Test directories
 TEST_INDEX_DIR = Path("test_search_index")

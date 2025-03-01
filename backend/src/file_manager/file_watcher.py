@@ -7,10 +7,10 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from aichemist_codex.config.config_loader import config
-from aichemist_codex.file_manager.file_mover import FileMover
-from aichemist_codex.file_manager.sorter import RuleBasedSorter
-from aichemist_codex.utils.safety import SafeFileHandler
+from config.config_loader import config
+from file_manager.file_mover import FileMover
+from file_manager.sorter import RuleBasedSorter
+from utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

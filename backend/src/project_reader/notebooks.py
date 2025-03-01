@@ -4,8 +4,8 @@ import json
 import logging
 from pathlib import Path
 
-from aichemist_codex.utils import AsyncFileIO
-from aichemist_codex.utils.errors import NotebookProcessingError
+from utils import AsyncFileIO
+from utils.errors import NotebookProcessingError
 
 logger = logging.getLogger(__name__)
 

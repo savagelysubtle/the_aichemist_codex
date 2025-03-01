@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from aichemist_codex.ingest import generate_digest
+from backend.src.ingest import generate_digest
 
 
 def test_generate_digest_with_empty_dir(tmp_path: Path) -> None:

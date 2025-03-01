@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 
-from aichemist_codex.file_manager.file_mover import FileMover
+from backend.src.file_manager.file_mover import FileMover
 
 
 def test_auto_folder_structure(tmp_path: Path):

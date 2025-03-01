@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import FrozenSet, NewType, Tuple, Union, cast
 
-from aichemist_codex.project_reader.version import InvalidVersion, Version
+from project_reader.version import InvalidVersion, Version
 
 BuildTag = Union[Tuple[()], Tuple[int, str]]
 NormalizedName = NewType("NormalizedName", str)
@@ -25,9 +25,7 @@ class InvalidSdistFilename(ValueError):
 
 
 _canonicalize_regex = re.compile(r"[-_.]+")
-_build_tag_regex = re.compile(
-    r"(\d+)(.*)"
-)  # PEP 427: The build number must start with a digit.
+_build_tag_regex = re.compile(r"(\d+)(.*)")  # PEP 427: The build number must start with a digit.
 
 
 def canonicalize_name(name: str) -> NormalizedName:
@@ -73,16 +71,12 @@ def parse_wheel_filename(
 ) -> Tuple[NormalizedName, Version, BuildTag, FrozenSet]:
     """Parses a valid wheel filename according to PEP 427."""
     if not filename.endswith(".whl"):
-        raise InvalidWheelFilename(
-            f"Invalid wheel filename (must end in '.whl'): {filename}"
-        )
+        raise InvalidWheelFilename(f"Invalid wheel filename (must end in '.whl'): {filename}")
 
     filename = filename[:-4]
     dashes = filename.count("-")
     if dashes not in (4, 5):
-        raise InvalidWheelFilename(
-            f"Invalid wheel filename (wrong number of parts): {filename}"
-        )
+        raise InvalidWheelFilename(f"Invalid wheel filename (wrong number of parts): {filename}")
 
     parts = filename.split("-", dashes - 2)
     name_part = parts[0]
@@ -97,9 +91,7 @@ def parse_wheel_filename(
         build_part = parts[2]
         build_match = _build_tag_regex.match(build_part)
         if build_match is None:
-            raise InvalidWheelFilename(
-                f"Invalid build number: {build_part} in '{filename}'"
-            )
+            raise InvalidWheelFilename(f"Invalid build number: {build_part} in '{filename}'")
         build = cast(BuildTag, (int(build_match.group(1)), build_match.group(2)))
     else:
         build = ()
@@ -120,9 +112,7 @@ def parse_sdist_filename(filename: str) -> Tuple[NormalizedName, Version]:
     elif filename.endswith(".zip"):
         file_stem = filename[: -len(".zip")]
     else:
-        raise InvalidSdistFilename(
-            f"Invalid sdist filename (must be '.tar.gz' or '.zip'): {filename}"
-        )
+        raise InvalidSdistFilename(f"Invalid sdist filename (must be '.tar.gz' or '.zip'): {filename}")
 
     name_part, sep, version_part = file_stem.rpartition("-")
     if not sep:
@@ -155,7 +145,7 @@ def summarize_for_gpt(text, max_sentences=10, max_length=1000):
     return summary[:max_length].strip()
 
 
-### 🔹 File Management Utilities ###
+# 🔹 File Management Utilities ###
 def setup_logging(log_dir, log_file_name="file_events.log"):
     """
     Sets up logging with a specified directory and file name.

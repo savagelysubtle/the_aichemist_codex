@@ -7,8 +7,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from src.config.settings import DATA_DIR
-from src.utils.safety import SafeFileHandler
+from config.settings import DATA_DIR
+from utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +99,7 @@ class RollbackManager:
         # Load any existing entries from file into memory. (Optional, or we can keep them on disk.)
         self._load_from_file()
 
-    def record_operation(
-        self, operation: str, source: str, destination: Optional[str] = None
-    ) -> None:
+    def record_operation(self, operation: str, source: str, destination: Optional[str] = None) -> None:
         """
         Records a new file operation for rollback. Clears the redo stack (since we have a new branch).
 
@@ -114,9 +112,7 @@ class RollbackManager:
         self._undo_stack.append(op)
         self._redo_stack.clear()
 
-        logger.info(
-            f"Recorded operation: {op.operation} | {op.source} -> {op.destination}"
-        )
+        logger.info(f"Recorded operation: {op.operation} | {op.source} -> {op.destination}")
 
         # Append to the rollback.json file
         self._append_to_file(op)
@@ -183,18 +179,12 @@ class RollbackManager:
             original_count = len(data)
 
             # Filter out old entries
-            new_data = [
-                entry for entry in data if entry.get("timestamp", 0) >= cutoff_time
-            ]
+            new_data = [entry for entry in data if entry.get("timestamp", 0) >= cutoff_time]
             removed_count = original_count - len(new_data)
 
             # Overwrite file
-            self.rollback_log.write_text(
-                json.dumps(new_data, indent=2), encoding="utf-8"
-            )
-            logger.info(
-                f"Cleaned up {removed_count} old rollback entries older than {retention_days} days."
-            )
+            self.rollback_log.write_text(json.dumps(new_data, indent=2), encoding="utf-8")
+            logger.info(f"Cleaned up {removed_count} old rollback entries older than {retention_days} days.")
         except Exception as e:
             logger.error(f"Error cleaning rollback entries: {e}")
 

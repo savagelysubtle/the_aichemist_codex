@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from aichemist_codex.config.settings import DEFAULT_IGNORE_PATTERNS
+from config.settings import DEFAULT_IGNORE_PATTERNS
 
 logger = logging.getLogger(__name__)
 

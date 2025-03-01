@@ -3,10 +3,10 @@ import datetime
 import logging
 from pathlib import Path
 
-from aichemist_codex.config.rules_engine import rules_engine
-from aichemist_codex.file_manager import directory_manager
-from aichemist_codex.utils import AsyncFileIO
-from aichemist_codex.utils.safety import SafeFileHandler
+from config.rules_engine import rules_engine
+from file_manager import directory_manager
+from utils import AsyncFileIO
+from utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,7 @@ class FileMover:
             return
         try:
             # Ensure destination directory exists asynchronously.
-            await directory_manager.DirectoryManager.ensure_directory(
-                destination.parent
-            )
+            await directory_manager.DirectoryManager.ensure_directory(destination.parent)
             if await AsyncFileIO.copy(source, destination):
                 # Remove the source file in a non-blocking way.
                 await asyncio.to_thread(source.unlink)
@@ -37,10 +35,7 @@ class FileMover:
 
     async def apply_rules(self, file_path: Path):
         for rule in rules_engine.rules:
-            if any(
-                file_path.suffix.lower() == ext.lower()
-                for ext in rule.get("extensions", [])
-            ):
+            if any(file_path.suffix.lower() == ext.lower() for ext in rule.get("extensions", [])):
                 target_dir = Path(rule["target_dir"])
                 if not target_dir.is_absolute():
                     target_dir = self.base_directory / target_dir

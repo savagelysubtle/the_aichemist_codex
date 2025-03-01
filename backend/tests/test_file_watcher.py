@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 
-from aichemist_codex.file_manager.file_mover import FileMover
-from aichemist_codex.file_manager.file_watcher import FileEventHandler
+from backend.src.file_manager.file_mover import FileMover
+from backend.src.file_manager.file_watcher import FileEventHandler
 
 
 # Dummy event class to simulate watchdog events.

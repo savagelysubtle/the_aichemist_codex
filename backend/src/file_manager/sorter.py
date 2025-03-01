@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from aichemist_codex.file_manager import directory_manager, file_mover
-from aichemist_codex.utils import AsyncFileIO
+from file_manager import directory_manager, file_mover
+from utils import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 

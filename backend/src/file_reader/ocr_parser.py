@@ -25,7 +25,7 @@ class OCRParser:
             Exception: If the image cannot be read or OCR fails.
         """
         try:
-            from aichemist_codex.utils import AsyncFileIO
+            from utils import AsyncFileIO
 
             # Read the image file as binary data.
             binary_data = await AsyncFileIO.read_binary(file_path)

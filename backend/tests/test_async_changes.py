@@ -5,16 +5,16 @@ from pathlib import Path
 import pytest
 import yaml
 
-from aichemist_codex.file_manager.directory_manager import DirectoryManager
-from aichemist_codex.file_manager.duplicate_detector import DuplicateDetector
-from aichemist_codex.file_manager.file_mover import FileMover
-from aichemist_codex.file_manager.file_tree import generate_file_tree  # now async
-from aichemist_codex.file_manager.sorter import RuleBasedSorter
-from aichemist_codex.file_reader.file_reader import FileReader
-from aichemist_codex.file_reader.parsers import JsonParser, TextParser
+from backend.src.file_manager.directory_manager import DirectoryManager
+from backend.src.file_manager.duplicate_detector import DuplicateDetector
+from backend.src.file_manager.file_mover import FileMover
+from backend.src.file_manager.file_tree import generate_file_tree  # now async
+from backend.src.file_manager.sorter import RuleBasedSorter
+from backend.src.file_reader.file_reader import FileReader
+from backend.src.file_reader.parsers import JsonParser, TextParser
 
 # Import updated modules (adjust paths as needed)
-from aichemist_codex.utils import AsyncFileIO
+from backend.src.utils import AsyncFileIO
 
 
 # --- Helper for YAML reading ---

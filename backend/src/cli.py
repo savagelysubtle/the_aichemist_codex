@@ -3,19 +3,19 @@ import asyncio
 import logging
 from pathlib import Path
 
-from aichemist_codex.file_manager.duplicate_detector import DuplicateDetector
-from aichemist_codex.file_manager.file_tree import FileTreeGenerator
-from aichemist_codex.file_manager.file_watcher import FileEventHandler
-from aichemist_codex.file_manager.sorter import RuleBasedSorter
-from aichemist_codex.file_reader.file_reader import FileReader
-from aichemist_codex.ingest.aggregator import aggregate_digest
-from aichemist_codex.ingest.scanner import scan_directory
-from aichemist_codex.output_formatter.json_writer import save_as_json_async
-from aichemist_codex.output_formatter.markdown_writer import save_as_markdown
-from aichemist_codex.project_reader.code_summary import summarize_project
-from aichemist_codex.project_reader.notebooks import NotebookConverter
-from aichemist_codex.project_reader.token_counter import TokenAnalyzer
-from aichemist_codex.search.search_engine import SearchEngine
+from file_manager.duplicate_detector import DuplicateDetector
+from file_manager.file_tree import FileTreeGenerator
+from file_manager.file_watcher import FileEventHandler
+from file_manager.sorter import RuleBasedSorter
+from file_reader.file_reader import FileReader
+from ingest.aggregator import aggregate_digest
+from ingest.scanner import scan_directory
+from output_formatter.json_writer import save_as_json_async
+from output_formatter.markdown_writer import save_as_markdown
+from project_reader.code_summary import summarize_project
+from project_reader.notebooks import NotebookConverter
+from project_reader.token_counter import TokenAnalyzer
+from search.search_engine import SearchEngine
 
 logger = logging.getLogger(__name__)
 

@@ -3,46 +3,86 @@ name = "the_aichemist_codex"
 version = "0.1.0"
 description = "A modular file and project management system."
 readme = "README.md"
-requires-python = ">=3.12.3"
+requires-python = ">=3.13.0"
 dependencies = [
-    "aiofiles>=24.1.0",             # Async file I/O
-    "tiktoken>=0.5.1",               # Token counting
-    "tomli>=2.0.1",                 # Config parsing
-    "nbformat>=5.10.4",             # Notebook validation
-    "watchdog>=3.0.0",              # File system monitoring
-    "pytest>=8.3.4",                # Testing framework
-    "pytest-asyncio>=0.25.3",       # Async test support
-    "rich>=13.6.0",                 # CLI output formatting
-    "python-magic>=0.4.27",         # MIME type detection
-    "python-magic-bin>=0.4.14; sys_platform == 'win32'",  # Windows compatibility
-    "pandas>=2.0.0",                # For CSV and Excel file handling
-    "PyYAML>=6.0.1",                # YAML file parsing
-    "lxml>=4.9.3",                  # XML parsing
-    "opencv-python>=4.9.0",         # For OCR support
-    "Kreuzberg>=0.1.0",             # OCR integration
-    "py7zr>=0.20.5",                # Archive handling (7z)
-    "rarfile>=4.0",                 # Archive handling (RAR)
-    "pypdf>=3.17.1",                # PDF parsing
-    "python-docx>=0.8.11",          # Word document parsing
-    "odfpy>=1.4.1",                 # Open Document format
-    "EbookLib>=0.17.1",             # E-book parsing
-    "xmltodict>=0.13.0",            # XML parsing
-    "ezdxf>=1.0.0",                 # CAD file parsing
-    "svglib>=1.5.1",                # SVG parsing
-    "reportlab>=4.0.4",             # Required by svglib
-    "openpyxl>=3.1.0",              # Excel file handling
-    "pydantic>=2.10.6",             # Data validation
-    "structlog>=25.1.0",            # Structured logging
-    "dynaconf>=3.2.10",             # Configuration management
-    "python-dotenv>=1.0.1",         # Environment variable handling
-    "psutil>=7.0.0",                # System monitoring
-    "tenacity>=9.0.0",              # Retry logic
+  "aiofiles>=24.1.0",
+  "annotated-types>=0.7.0",
+  "attrs>=25.1.0",
+  "click>=8.1.8",
+  "colorama>=0.4.6",
+  "dynaconf>=3.2.10",
+  "fastjsonschema>=2.21.1",
+  "importlib_metadata>=8.6.1",
+  "iniconfig>=2.0.0",
+  "jsonschema>=4.23.0",
+  "jsonschema-specifications>=2024.10.1",
+  "jupyter_core>=5.7.2",
+  "nbformat>=5.10.4",
+  "packaging>=24.2",
+  "platformdirs>=4.3.6",
+  "pluggy>=1.5.0",
+  "psutil>=7.0.0",
+  "pydantic>=2.10.6",
+  "pydantic_core>=2.27.2",
+  "python-dotenv>=1.0.1",
+  "python-magic>=0.4.27",
+  "python-magic-bin>=0.4.14; sys_platform == 'win32'",
+  "referencing>=0.36.2",
+  "rpds-py>=0.23.1",
+  "setuptools>=75.8.0",
+  "structlog>=25.1.0",
+  "tenacity>=9.0.0",
+  "tiktoken>=0.5.1",
+  "tomli>=2.0.1",
+  "traitlets>=5.14.3",
+  "typing_extensions>=4.12.2",
+  "watchdog>=3.0.0",
+  "zipp>=3.21.0",
+  "pypdf>=3.17.1",
+  "python-docx>=0.8.11",
+  "odfpy>=1.4.1",
+  "EbookLib>=0.17.1",
+  "pandas>=2.0.0",
+  "openpyxl>=3.1.0",
+  "PyYAML>=6.0.1",
+  "xmltodict>=0.13.0",
+  "lxml>=4.9.3",
+  "ezdxf>=1.0.0",
+  "svglib>=1.5.1",
+  "reportlab>=4.0.4",
+  "py7zr>=0.20.5",
+  "rarfile>=4.0",
+  "opencv-python>=4.9.0",
+  "Kreuzberg>=0.1.0",
+  "rich>=13.6.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest-cov>=6.0.0",            # Test coverage
-    "pytest-mock>=3.14.0",          # Test mocking
+  "build>=1.2.1",
+  "twine>=5.1.0",
+  "setuptools>=73.0.1",
+  "virtualenv>=20.26.3",
+  "ipython>=8.18.1",
+  "ipykernel>=6.29.5",
+  "ruff>=0.6.2",
+  "black>=24.8.0",
+  "isort>=5.13.2",
+  "pre-commit>=3.8.0",
+  "nbqa>=1.8.7",
+  "mypy>=1.11.1",
+  "mypy-extensions>=1.0.0",
+  "pytest>=8.3.4",
+  "pytest-asyncio>=0.25.3",
+  "pytest-cov>=6.0.0",
+  "pytest-mock>=3.14.0",
+  "pytest-benchmark>=4.0.0",
+  "codecov>=2.1.13",
+  "mkdocs>=1.6.0",
+  "mkdocstrings>=0.25.2",
+  "mkdocs-material>=9.5.33",
+  "mkdocstrings-python>=1.10.8",
+  "Pygments>=2.18.0",
 ]
 
 [project.scripts]
@@ -53,7 +93,7 @@ requires = ["setuptools>=75.8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["backend", "frontend"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -63,79 +103,47 @@ tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
 
+[tool.uv]
+virtualenvs.in-project = true
+sync-deps = true
+
+[tool.black]
+target-version = ["py313"]
+line-length = 120
+skip-string-normalization = true
+skip-magic-trailing-comma = true
+force-exclude = "/(docs|setup\\.py)/"
+
+[tool.isort]
+py_version = 313
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+default_section = "THIRDPARTY"
+known_third_party = []
+known_first_party = []
+known_local_folder = []
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 120
+split_on_trailing_comma = true
+lines_after_imports = 2
+force_single_line = true
+skip_glob = ["docs/*", "setup.py"]
+filter_files = true
+
 [tool.ruff]
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-]
-
-# Same as Black.
-line-length = 88
+target-version = "py313"
+line-length = 120
 indent-width = 4
-
+extend-exclude = ["docs", "test", "tests"]
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
-select = ["E4", "E7", "E9", "F"]
-ignore = []
-
-# Allow fix for all enabled rules (when `--fix`) is provided.
+select = ["F", "E"]
+extend-select = ["W", "C90", "I", "N", "B", "A", "C4", "PERF", "RUF"]
+ignore = ["I001"]
 fixable = ["ALL"]
 unfixable = []
-
-# Allow unused variables when underscore-prefixed.
+preview = true
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
-[tool.ruff.format]
-# Like Black, use double quotes for strings.
-quote-style = "double"
-
-# Like Black, indent with spaces, rather than tabs.
-indent-style = "space"
-
-# Like Black, respect magic trailing commas.
-skip-magic-trailing-comma = false
-
-# Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
-
-# Enable auto-formatting of code examples in docstrings. Markdown,
-# reStructuredText code/literal blocks and doctests are all supported.
-#
-# This is currently disabled by default, but it is planned for this
-# to be opt-out in the future.
-docstring-code-format = false
-
-# Set the line length limit used when formatting code snippets in
-# docstrings.
-#
-# This only has an effect when the `docstring-code-format` setting is
-# enabled.
-docstring-code-line-length = "dynamic"
