@@ -3,12 +3,15 @@ import datetime
 import logging
 from pathlib import Path
 
-from config.rules_engine import rules_engine
-from file_manager import directory_manager
-from utils import AsyncFileIO
-from utils.safety import SafeFileHandler
+from src.config.rules_engine import rules_engine
+from src.rollback.rollback_manager import RollbackManager
+from src.utils import AsyncFileIO
+from src.utils.safety import SafeFileHandler
+
+from .directory_manager import directory_manager
 
 logger = logging.getLogger(__name__)
+rollback_manager = RollbackManager()
 
 
 class FileMover:
@@ -23,11 +26,15 @@ class FileMover:
             return
         try:
             # Ensure destination directory exists asynchronously.
-            await directory_manager.DirectoryManager.ensure_directory(destination.parent)
+            await directory_manager.DirectoryManager.ensure_directory(
+                destination.parent
+            )
             if await AsyncFileIO.copy(source, destination):
                 # Remove the source file in a non-blocking way.
                 await asyncio.to_thread(source.unlink)
                 logger.info(f"Moved {source} -> {destination}")
+                # Record the move operation for potential rollback.
+                rollback_manager.record_operation("move", str(source), str(destination))
             else:
                 logger.error(f"Failed to copy {source} to {destination}")
         except Exception as e:
@@ -35,7 +42,10 @@ class FileMover:
 
     async def apply_rules(self, file_path: Path):
         for rule in rules_engine.rules:
-            if any(file_path.suffix.lower() == ext.lower() for ext in rule.get("extensions", [])):
+            if any(
+                file_path.suffix.lower() == ext.lower()
+                for ext in rule.get("extensions", [])
+            ):
                 target_dir = Path(rule["target_dir"])
                 if not target_dir.is_absolute():
                     target_dir = self.base_directory / target_dir
