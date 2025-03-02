@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.project_reader.code_summary import process_file
+from src.project_reader.code_summary import process_file
 
 
 @pytest.mark.asyncio

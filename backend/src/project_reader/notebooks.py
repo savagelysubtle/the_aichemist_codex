@@ -4,8 +4,8 @@ import json
 import logging
 from pathlib import Path
 
-from utils import AsyncFileIO
-from utils.errors import NotebookProcessingError
+from src.utils import AsyncFileIO
+from src.utils.errors import NotebookProcessingError
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +40,11 @@ class NotebookConverter:
         except json.JSONDecodeError as e:
             error_msg = f"Invalid notebook format in {notebook_path}: {e}"
             logger.error(error_msg)
-            raise NotebookProcessingError(error_msg)
+            raise NotebookProcessingError(error_msg) from e
         except Exception as e:
             error_msg = f"Error processing notebook {notebook_path}: {e}"
             logger.error(error_msg)
-            raise NotebookProcessingError(error_msg)
+            raise NotebookProcessingError(error_msg) from e
 
     @staticmethod
     def to_script(notebook_path: Path) -> str:

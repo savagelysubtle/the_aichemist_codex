@@ -5,16 +5,16 @@ from pathlib import Path
 import pytest
 import yaml
 
-from backend.src.file_manager.directory_manager import DirectoryManager
-from backend.src.file_manager.duplicate_detector import DuplicateDetector
-from backend.src.file_manager.file_mover import FileMover
-from backend.src.file_manager.file_tree import generate_file_tree  # now async
-from backend.src.file_manager.sorter import RuleBasedSorter
-from backend.src.file_reader.file_reader import FileReader
-from backend.src.file_reader.parsers import JsonParser, TextParser
+from src.file_manager.directory_manager import DirectoryManager
+from src.file_manager.duplicate_detector import DuplicateDetector
+from src.file_manager.file_mover import FileMover
+from src.file_manager.file_tree import generate_file_tree  # now async
+from src.file_manager.sorter import RuleBasedSorter
+from src.file_reader.file_reader import FileReader
+from src.file_reader.parsers import JsonParser, TextParser
 
 # Import updated modules (adjust paths as needed)
-from backend.src.utils import AsyncFileIO
+from src.utils import AsyncFileIO
 
 
 # --- Helper for YAML reading ---

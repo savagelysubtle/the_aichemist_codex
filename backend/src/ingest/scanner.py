@@ -25,7 +25,7 @@ Type Hints:
 from pathlib import Path
 from typing import List, Optional, Set
 
-from aichemist_codex.utils.safety import SafeFileHandler
+from src.utils.safety import SafeFileHandler
 
 
 def scan_directory(

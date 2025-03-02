@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from config.settings import DEFAULT_IGNORE_PATTERNS
+from src.config.settings import DEFAULT_IGNORE_PATTERNS
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,8 @@ class SafeFileHandler:
             if file_path.match(pattern):
                 logger.info(f"Skipping ignored file: {file_path} (matched {pattern})")
                 return True
-            if any(
-                part == pattern for part in file_path.parts
-            ):  # Check parent directories
-                logger.info(
-                    f"Skipping ignored directory: {file_path} (matched {pattern})"
-                )
+            if any(part == pattern for part in file_path.parts):  # Check parent directories
+                logger.info(f"Skipping ignored directory: {file_path} (matched {pattern})")
                 return True
         return False
 

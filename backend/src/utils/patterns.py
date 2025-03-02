@@ -3,7 +3,7 @@
 import fnmatch
 import os
 
-from config.config_loader import config
+from src.config.config_loader import config
 
 
 class PatternMatcher:

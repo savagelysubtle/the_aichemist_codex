@@ -8,7 +8,7 @@ from src.rollback.rollback_manager import RollbackManager
 from src.utils import AsyncFileIO
 from src.utils.safety import SafeFileHandler
 
-from .directory_manager import directory_manager
+from .directory_manager import DirectoryManager as directory_manager
 
 logger = logging.getLogger(__name__)
 rollback_manager = RollbackManager()

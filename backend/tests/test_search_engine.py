@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.file_reader.file_metadata import FileMetadata
-from backend.src.search.search_engine import SearchEngine
+from src.file_reader.file_metadata import FileMetadata
+from src.search.search_engine import SearchEngine
 
 # Test directories
 TEST_INDEX_DIR = Path("test_search_index")

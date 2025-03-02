@@ -1,8 +1,11 @@
 # src/project_reader/version.py
 
+
 class InvalidVersion(Exception):
     """Raised when an invalid version string is encountered."""
+
     pass
+
 
 class Version:
     def __init__(self, version_str: str):

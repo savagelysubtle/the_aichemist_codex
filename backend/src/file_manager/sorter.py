@@ -5,8 +5,9 @@ from pathlib import Path
 
 import yaml
 
-from file_manager import directory_manager, file_mover
-from utils import AsyncFileIO
+from src.file_manager.directory_manager import DirectoryManager as directory_manager
+from src.file_manager.file_mover import FileMover as file_mover
+from src.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 

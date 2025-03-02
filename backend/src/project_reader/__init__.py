@@ -7,10 +7,10 @@ from .token_counter import TokenAnalyzer
 from .version import InvalidVersion, Version
 
 __all__ = [
-    "summarize_project",
+    "InvalidVersion",
     "NotebookConverter",
-    "parse_tag",
     "TokenAnalyzer",
     "Version",
-    "InvalidVersion",
+    "parse_tag",
+    "summarize_project",
 ]

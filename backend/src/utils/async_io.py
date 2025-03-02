@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import aiofiles
-from utils.safety import SafeFileHandler
+
+from src.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

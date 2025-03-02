@@ -1,16 +1,26 @@
-# src/aichemist_codex/rollback/rollback_manager.py
+# backend/src/rollback/rollback_manager.py
 
-import json
+import asyncio
 import logging
-import shutil
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from src.config.settings import DATA_DIR
-from src.utils.safety import SafeFileHandler
+from src.config.settings import (
+    DATA_DIR,  # Ensure settings provide configurable options if desired.
+)
+from src.utils.async_io import AsyncFileIO  # :contentReference[oaicite:1]{index =1}
 
 logger = logging.getLogger(__name__)
+
+# Define directories for trash and backup
+TRASH_DIR = Path("trash")
+TRASH_DIR.mkdir(exist_ok=True)
+BACKUP_DIR = Path("backup/rollback_temp")
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+ROLLBACK_LOG_FILE = DATA_DIR / "rollback.json"
+
 
 # This file will store our rollback history in JSON form. Each entry represents one operation.
 # Example entry structure:
@@ -22,10 +32,6 @@ logger = logging.getLogger(__name__)
 # }
 #
 # Additional fields (e.g., "old_name", "new_name", "deleted", "created") can be included for rename, delete, create, etc.
-
-ROLLBACK_LOG_FILE = DATA_DIR / "rollback.json"
-
-
 class RollbackOperation:
     """
     Represents a single file operation that can be undone.
@@ -36,7 +42,8 @@ class RollbackOperation:
         operation: str,
         source: str,
         destination: Optional[str] = None,
-        timestamp: float = None,
+        timestamp: Optional[float] = None,
+        backup: Optional[str] = None,
     ):
         """
         Args:
@@ -49,6 +56,7 @@ class RollbackOperation:
         self.source = source
         self.destination = destination
         self.timestamp = timestamp or time.time()
+        self.backup = backup
 
     def to_dict(self) -> Dict:
         return {
@@ -56,6 +64,7 @@ class RollbackOperation:
             "operation": self.operation,
             "source": self.source,
             "destination": self.destination,
+            "backup": self.backup,
         }
 
     @staticmethod
@@ -65,253 +74,303 @@ class RollbackOperation:
             source=data["source"],
             destination=data.get("destination"),
             timestamp=data.get("timestamp"),
+            backup=data.get("backup"),
         )
 
 
 class RollbackManager:
     """
-    Manages tracking of file operations and provides undo/redo functionality.
+    Manages file operations for rollback and redo functionality.
 
-    Usage:
-        # 1) Record new operation:
-        rollback_manager.record_operation("move", "/path/old.txt", "/path/new.txt")
-
-        # 2) Undo the last operation:
-        rollback_manager.undo_last_operation()
-
-        # 3) Redo an undone operation:
-        rollback_manager.redo_last_undone()
-
-        # 4) Periodically clean up old entries beyond a retention threshold (e.g., 7 days):
-        rollback_manager.cleanup_old_entries(retention_days=7)
+    Enhancements include:
+      • Asynchronous backup, move, and deletion operations using AsyncFileIO.
+      • A singleton design to share one rollback manager instance across the project.
+      • Enhanced logging with retry details and configurable options.
+      • Configurable trash retention for cleanup.
     """
+
+    _instance = None
+
+    @staticmethod
+    def get_instance():
+        if RollbackManager._instance is None:
+            RollbackManager._instance = RollbackManager()
+        return RollbackManager._instance
 
     def __init__(self, rollback_log: Path = ROLLBACK_LOG_FILE):
         self.rollback_log = rollback_log
         self._undo_stack: List[RollbackOperation] = []
         self._redo_stack: List[RollbackOperation] = []
-
-        # Ensure the rollback log file/directory exists.
         self.rollback_log.parent.mkdir(parents=True, exist_ok=True)
         if not self.rollback_log.exists():
             self.rollback_log.write_text("[]", encoding="utf-8")
+        self.max_retries = 3  # Configurable max retry attempts.
+        self.trash_retention = 604800  # Default: 7 days in seconds.
+        # Load any existing operations asynchronously.
+        asyncio.run(self._load_from_file_async())
 
-        # Load any existing entries from file into memory. (Optional, or we can keep them on disk.)
-        self._load_from_file()
+    async def _load_from_file_async(self):
+        data = await AsyncFileIO.read_json(self.rollback_log)
+        if not isinstance(data, list):
+            data = []
+        for entry in data:
+            op = RollbackOperation.from_dict(entry)
+            self._undo_stack.append(op)
+        logger.info(f"Loaded {len(data)} rollback entries into memory.")
 
-    def record_operation(self, operation: str, source: str, destination: Optional[str] = None) -> None:
+    async def _append_to_file(self, op: RollbackOperation):
+        data = await AsyncFileIO.read_json(self.rollback_log)
+        if not isinstance(data, list):
+            data = []
+        data.append(op.to_dict())
+        await AsyncFileIO.write_json(self.rollback_log, data)
+
+    async def _backup_file(self, file_path: Path) -> Optional[Path]:
         """
-        Records a new file operation for rollback. Clears the redo stack (since we have a new branch).
-
-        Args:
-            operation: The type of operation, e.g. "move", "delete", "create", or "rename".
-            source: The path of the file or directory before the operation.
-            destination: The path of the file or directory after the operation (if applicable).
+        Creates an asynchronous backup copy of the file using AsyncFileIO.
         """
-        op = RollbackOperation(operation, source, destination)
+        if not file_path.exists():
+            logger.warning(f"Backup failed: Source file {file_path} does not exist.")
+            return None
+        try:
+            backup_file = BACKUP_DIR / f"{file_path.name}.{int(time.time())}.bak"
+            success = await AsyncFileIO.copy(file_path, backup_file)
+            if success:
+                logger.info(f"Backup created for {file_path} at {backup_file}")
+                return backup_file
+            else:
+                logger.error(f"Backup failed for {file_path}")
+                return None
+        except Exception as e:
+            logger.error(f"Error backing up file {file_path}: {e}")
+            return None
+
+    async def record_operation(
+        self, operation: str, source: str, destination: Optional[str] = None
+    ) -> None:
+        """
+        Records a new file operation for rollback. For deletion and modification,
+        a backup copy is stored asynchronously.
+        """
+        op_type = operation.lower()
+        backup = None
+        src_path = Path(source)
+        if op_type in ("delete", "modify"):
+            backup_obj = await self._backup_file(src_path)
+            backup = str(backup_obj) if backup_obj else None
+        op = RollbackOperation(operation, source, destination, backup=backup)
         self._undo_stack.append(op)
         self._redo_stack.clear()
+        logger.info(
+            f"Recorded operation: {op.operation} | {op.source} -> {op.destination}"
+        )
+        await self._append_to_file(op)
 
-        logger.info(f"Recorded operation: {op.operation} | {op.source} -> {op.destination}")
-
-        # Append to the rollback.json file
-        self._append_to_file(op)
-
-    def undo_last_operation(self) -> bool:
+    async def restore_from_trash(self, file_name: str) -> bool:
         """
-        Undo the most recent operation from the undo stack.
-        Returns True if an operation was undone, False otherwise.
+        Asynchronously restores a file from the trash directory to the current working directory.
+        """
+        trashed_file = TRASH_DIR / file_name
+        if not trashed_file.exists():
+            logger.error(f"Restore failed: {trashed_file} does not exist in trash.")
+            return False
+        restore_path = Path.cwd() / file_name
+        try:
+            # For move, we simulate by copying then deleting the trashed file.
+            success = await AsyncFileIO.copy(trashed_file, restore_path)
+            if success:
+                await asyncio.to_thread(trashed_file.unlink)
+                logger.info(f"Restored {trashed_file} to {restore_path}")
+                return True
+            else:
+                logger.error(f"Failed to restore {trashed_file} from trash.")
+                return False
+        except Exception as e:
+            logger.error(f"Error restoring {trashed_file}: {e}")
+            return False
+
+    async def clear_trash(self) -> None:
+        """
+        Empties the trash directory by deleting files older than the configured retention period.
+        """
+        now = time.time()
+
+        async def _delete_file(file: Path):
+            if file.is_file() and now - file.stat().st_mtime > self.trash_retention:
+                try:
+                    await asyncio.to_thread(file.unlink)
+                    logger.info(f"Deleted trashed file: {file}")
+                except Exception as e:
+                    logger.error(f"Error deleting {file} from trash: {e}")
+
+        tasks = [_delete_file(file) for file in TRASH_DIR.iterdir()]
+        await asyncio.gather(*tasks)
+
+    async def undo_last_operation(self) -> bool:
+        """
+        Asynchronously undoes the most recent operation using retry logic.
         """
         if not self._undo_stack:
             logger.warning("No operations to undo.")
             return False
 
         op = self._undo_stack.pop()
-        logger.info(f"Attempting to undo operation: {op.operation} (src={op.source}).")
+        logger.info(f"Attempting to undo operation: {op.operation} on {op.source}")
+        attempt = 0
+        while attempt < self.max_retries:
+            try:
+                await self._reverse_operation(op)
+                self._redo_stack.append(op)
+                logger.info(f"Undo successful for {op.operation} on {op.source}")
+                return True
+            except Exception as e:
+                attempt += 1
+                logger.error(
+                    f"Error reversing operation {op.operation} (attempt {attempt}): {e}"
+                )
+                await asyncio.sleep(1)
+        logger.error(
+            f"Failed to reverse operation after {self.max_retries} attempts: {op.operation} on {op.source}"
+        )
+        self._undo_stack.append(op)
+        return False
 
-        try:
-            self._reverse_operation(op)
-            # Put the reversed op into the redo stack so we can redo if needed
-            self._redo_stack.append(op)
-            logger.info(f"Undo successful for {op.operation} on {op.source}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to undo operation on {op.source}: {e}")
-            # If undo failed, push it back so we don't lose it
-            self._undo_stack.append(op)
-            return False
-
-    def redo_last_undone(self) -> bool:
+    async def redo_last_undone(self) -> bool:
         """
-        Re-applies the last undone operation.
-        Returns True if a redo was performed, False otherwise.
+        Asynchronously redoes the last undone operation.
         """
         if not self._redo_stack:
             logger.warning("No operations to redo.")
             return False
 
         op = self._redo_stack.pop()
-        logger.info(f"Attempting to redo operation: {op.operation} (src={op.source}).")
-
+        logger.info(f"Attempting to redo operation: {op.operation} on {op.source}")
         try:
-            self._apply_operation(op)
-            # Put it back onto the undo stack
-            self._undo_stack.append(op)
-            logger.info(f"Redo successful for {op.operation} on {op.source}")
-            return True
+            if op.operation.lower() == "modify":
+                backup_path = Path(op.backup) if op.backup else None
+                if backup_path and backup_path.exists():
+                    success = await AsyncFileIO.copy(backup_path, Path(op.source))
+                    if success:
+                        self._undo_stack.append(op)
+                        logger.info(
+                            f"Redo: Restored file {op.source} from backup {backup_path}"
+                        )
+                        return True
+                    else:
+                        logger.error("No backup available for redo.")
+                        return False
+                else:
+                    logger.error("No backup available for redo.")
+                    return False
+            else:
+                await self._apply_operation(op)
+                self._undo_stack.append(op)
+                logger.info(f"Redo successful for {op.operation} on {op.source}")
+                return True
         except Exception as e:
-            logger.error(f"Failed to redo operation on {op.source}: {e}")
+            logger.error(f"Redo failed for {op.source}: {e}")
             self._redo_stack.append(op)
             return False
 
-    def cleanup_old_entries(self, retention_days: float = 7.0) -> None:
+    async def cleanup_old_entries(self, retention_days: float = 7.0) -> None:
         """
-        Removes rollback entries older than retention_days from the rollback_log.json.
-        Adjust as needed for large logs or compliance regulations.
-
-        Args:
-            retention_days: Number of days to keep rollback entries.
+        Asynchronously removes rollback log entries older than the retention period.
         """
         cutoff_time = time.time() - (retention_days * 86400)
+        data = await AsyncFileIO.read_json(self.rollback_log)
+        if not isinstance(data, list):
+            data = []
+        new_data = [entry for entry in data if entry.get("timestamp", 0) >= cutoff_time]
+        await AsyncFileIO.write_json(self.rollback_log, new_data)
+        logger.info(f"Cleaned up rollback entries older than {retention_days} days.")
 
-        try:
-            data = self._read_all_from_file()
-            original_count = len(data)
-
-            # Filter out old entries
-            new_data = [entry for entry in data if entry.get("timestamp", 0) >= cutoff_time]
-            removed_count = original_count - len(new_data)
-
-            # Overwrite file
-            self.rollback_log.write_text(json.dumps(new_data, indent=2), encoding="utf-8")
-            logger.info(f"Cleaned up {removed_count} old rollback entries older than {retention_days} days.")
-        except Exception as e:
-            logger.error(f"Error cleaning rollback entries: {e}")
-
-    # ---------------------------
-    # Internal Helpers
-    # ---------------------------
-
-    def _reverse_operation(self, op: RollbackOperation) -> None:
+    async def _move(self, source: Path, destination: Path) -> None:
         """
-        Given an operation, do the inverse.
+        An asynchronous helper to move a file by copying it via AsyncFileIO and then deleting the source.
         """
-        operation = op.operation.lower()
-        src = Path(op.source)
-        dest = Path(op.destination) if op.destination else None
-
-        if operation == "move" or operation == "rename":
-            # Move it back from dest -> source
-            if dest and dest.exists():
-                logger.debug(f"Undoing move. Moving {dest} back to {src}")
-                self._safe_move(dest, src)
-        elif operation == "delete":
-            # If file was deleted, we can't trivially restore it unless we physically store it in a backup
-            # or send it to trash. If we had a "trash" or backup system, we’d restore from there.
-            # For now, log a warning that undo is incomplete.
-            logger.warning("Undo for 'delete' not implemented (no backup).")
-        elif operation == "create":
-            # If file was newly created, remove it
-            if src.exists():
-                logger.debug(f"Undoing create. Deleting {src}")
-                self._safe_delete(src)
-        else:
-            logger.warning(f"No reverse logic implemented for operation '{operation}'.")
-
-    def _apply_operation(self, op: RollbackOperation) -> None:
-        """
-        Re-do the operation as it was recorded.
-        """
-        operation = op.operation.lower()
-        src = Path(op.source)
-        dest = Path(op.destination) if op.destination else None
-
-        if operation == "move" or operation == "rename":
-            if src.exists() and dest is not None:
-                logger.debug(f"Re-doing move. Moving {src} -> {dest}")
-                self._safe_move(src, dest)
-        elif operation == "delete":
-            # If we truly want to re-delete, we can remove src if it still exists
-            if src.exists():
-                logger.debug(f"Re-doing delete. Deleting {src}")
-                self._safe_delete(src)
-        elif operation == "create":
-            # We do not store the file’s contents, so redoing 'create' is partial or not feasible unless we do
-            logger.warning("Cannot redo 'create' unless we store original file data.")
-        else:
-            logger.warning(f"No apply logic implemented for operation '{operation}'.")
-
-    def _safe_move(self, source: Path, destination: Path) -> None:
-        """
-        Moves files or directories, ensuring no path is ignored or outside safe scope.
-        """
-        if SafeFileHandler.should_ignore(source):
-            logger.warning(f"Ignoring move for file {source}, marked as ignored.")
-            return
-
-        try:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(source), str(destination))
+        success = await AsyncFileIO.copy(source, destination)
+        if success:
+            await asyncio.to_thread(source.unlink)
             logger.info(f"Moved {source} -> {destination}")
-        except Exception as e:
-            logger.error(f"Failed to move {source} -> {destination}: {e}")
-            raise
-
-    def _safe_delete(self, file_path: Path) -> None:
-        """
-        Deletes a file or directory safely.
-        """
-        if SafeFileHandler.should_ignore(file_path):
-            logger.warning(f"Ignoring delete for file {file_path}, marked as ignored.")
-            return
-
-        if file_path.is_dir():
-            try:
-                shutil.rmtree(file_path)
-                logger.info(f"Deleted directory: {file_path}")
-            except Exception as e:
-                logger.error(f"Failed to delete directory {file_path}: {e}")
-                raise
         else:
-            try:
-                file_path.unlink()
-                logger.info(f"Deleted file: {file_path}")
-            except Exception as e:
-                logger.error(f"Failed to delete file {file_path}: {e}")
-                raise
+            raise Exception(f"Failed to move {source} to {destination}")
 
-    def _load_from_file(self):
+    async def _reverse_operation(self, op: RollbackOperation) -> None:
         """
-        Loads existing rollback operations from disk into the internal undo stack.
-        You can adjust this logic if you prefer not to fully load them at startup.
+        Asynchronously reverses an operation with proper error handling and verification.
         """
-        try:
-            data = self._read_all_from_file()
-            for entry in data:
-                op = RollbackOperation.from_dict(entry)
-                self._undo_stack.append(op)
-            logger.info(f"Loaded {len(data)} rollback entries into memory.")
-        except Exception as e:
-            logger.error(f"Error loading rollback log: {e}")
+        op_type = op.operation.lower()
+        src = Path(op.source)
+        dest = Path(op.destination) if op.destination else None
 
-    def _append_to_file(self, op: RollbackOperation):
-        """
-        Appends a single operation to the rollback file.
-        """
-        try:
-            data = self._read_all_from_file()
-            data.append(op.to_dict())
-            self.rollback_log.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except Exception as e:
-            logger.error(f"Error writing rollback entry to file: {e}")
+        if op_type == "delete":
+            if src.exists():
+                trashed_file = TRASH_DIR / src.name
+                await self._move(src, trashed_file)
+                logger.info(f"Moved deleted file {src} to trash at {trashed_file}")
+            else:
+                logger.info(f"File {src} not found; may have already been moved.")
+        elif op_type in ("move", "rename"):
+            if dest and dest.exists():
+                await self._move(dest, src)
+                if src.exists():
+                    logger.info(
+                        f"Reversed {op_type} operation: Moved {dest} back to {src}"
+                    )
+                else:
+                    raise Exception(
+                        "Verification failed: File not found at source after move."
+                    )
+            else:
+                logger.warning(
+                    f"Destination {dest} does not exist; cannot reverse {op_type} operation."
+                )
+        elif op_type == "modify":
+            backup_path = Path(op.backup) if op.backup else None
+            if backup_path and backup_path.exists():
+                success = await AsyncFileIO.copy(backup_path, src)
+                if success:
+                    logger.info(
+                        f"Restored modified file {src} from backup {backup_path}"
+                    )
+                else:
+                    raise Exception(
+                        f"Failed to restore file {src} from backup {backup_path}"
+                    )
+            else:
+                logger.warning(f"No backup found for modified file {src}")
+        elif op_type == "create":
+            if src.exists():
+                await asyncio.to_thread(src.unlink)
+                logger.info(f"Reversed creation by deleting file {src}")
+            else:
+                logger.info(f"File {src} already deleted.")
+        else:
+            raise Exception(f"No reverse logic implemented for operation '{op_type}'.")
 
-    def _read_all_from_file(self) -> List[Dict]:
+    async def _apply_operation(self, op: RollbackOperation) -> None:
         """
-        Reads the entire rollback JSON log and returns it as a list of dicts.
+        Asynchronously re-applies an operation as recorded.
         """
-        try:
-            raw = self.rollback_log.read_text(encoding="utf-8")
-            return json.loads(raw)
-        except Exception as e:
-            logger.error(f"Error reading rollback log JSON: {e}")
-            return []
+        op_type = op.operation.lower()
+        src = Path(op.source)
+        dest = Path(op.destination) if op.destination else None
+
+        if op_type in ("move", "rename"):
+            if src.exists() and dest is not None:
+                await self._move(src, dest)
+                logger.info(f"Re-applied move: {src} -> {dest}")
+        elif op_type == "delete":
+            if src.exists():
+                await asyncio.to_thread(src.unlink)
+                logger.info(f"Re-applied delete on {src}")
+        elif op_type == "create":
+            raise Exception(
+                "Redo for 'create' operation is not supported without stored file data."
+            )
+        else:
+            raise Exception(f"No apply logic implemented for operation '{op_type}'.")
+
+
+# Create a singleton instance for the entire project.
+rollback_manager = RollbackManager.get_instance()

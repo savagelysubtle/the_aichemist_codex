@@ -2,7 +2,7 @@ import hashlib
 import logging
 from pathlib import Path
 
-from aichemist_codex.utils import AsyncFileIO
+from src.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 

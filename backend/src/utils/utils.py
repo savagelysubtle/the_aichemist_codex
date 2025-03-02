@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import FrozenSet, NewType, Tuple, Union, cast
 
-from project_reader.version import InvalidVersion, Version
+from src.project_reader.version import InvalidVersion, Version
 
 BuildTag = Union[Tuple[()], Tuple[int, str]]
 NormalizedName = NewType("NormalizedName", str)

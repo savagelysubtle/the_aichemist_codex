@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from backend.src.utils.safety import SafeFileHandler
+from src.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

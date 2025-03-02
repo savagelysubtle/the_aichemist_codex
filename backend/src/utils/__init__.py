@@ -9,10 +9,10 @@ from .validator import get_project_name
 __all__ = [
     "AsyncFileIO",
     "AsyncFileReader",
-    "pattern_matcher",
     "CodexError",
     "MaxTokenError",
     "NotebookProcessingError",
     "SafeFileHandler",
     "get_project_name",
+    "pattern_matcher",
 ]

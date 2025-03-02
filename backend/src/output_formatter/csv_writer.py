@@ -3,7 +3,7 @@ import io
 import logging
 from pathlib import Path
 
-from utils.async_io import AsyncFileIO  # Adjust import as needed
+from src.utils.async_io import AsyncFileIO  # Adjust import as needed
 
 logger = logging.getLogger(__name__)
 

@@ -3,8 +3,8 @@
 import logging
 from pathlib import Path
 
-from utils.async_io import AsyncFileIO
-from utils.safety import SafeFileHandler
+from src.utils.async_io import AsyncFileIO
+from src.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 MAX_DEPTH = 10  # Prevent infinite recursion

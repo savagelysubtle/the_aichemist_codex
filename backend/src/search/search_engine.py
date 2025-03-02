@@ -4,8 +4,8 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from aichemist_codex.file_reader.file_metadata import FileMetadata
-from aichemist_codex.utils import AsyncFileIO
+from src.file_reader.file_metadata import FileMetadata
+from src.utils import AsyncFileIO
 
 try:
     import whoosh.analysis

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from utils.async_io import AsyncFileIO  # Adjust import as needed
+from src.utils.async_io import AsyncFileIO  # Adjust import as needed
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ async def save_as_html(
             html_content += (
                 f"<p><b>Summary:</b> {data.get(file, 'No summary available.')}</p>"
             )
+
             html_content += "<ul>"
             for func in functions:
                 html_content += f"<li><b>{func['type'].capitalize()}</b>: {func['name']} (Line {func['lineno']})"
