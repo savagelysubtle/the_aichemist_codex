@@ -1,7 +1,7 @@
-```
 # **The Aichemist Codex**
 
 ## **Overview**
+
 The Aichemist Codex is an automated project analysis and organization tool designed to:
 
 - Generate file tree structures dynamically.
@@ -14,12 +14,14 @@ The Aichemist Codex is an automated project analysis and organization tool desig
 ## **Installation**
 
 ### **Prerequisites**
+
 Ensure you have the following installed:
 
 - **Python 3.12.3** or higher
 - **pip** package manager
 
 ### **Clone the Repository**
+
 ```sh
 git clone https://github.com/savagelysubtle/the_aichemist_codex.git
 cd the_aichemist_codex
@@ -36,53 +38,17 @@ venv\Scripts\activate     # Windows
 ### **Install Dependencies**
 
 ```sh
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ---
 
 ## **Usage**
 
-### **Generate a File Tree**
+### **Large CLI Tool**
 
 ```sh
-python src/project_reader/main.py --tree path/to/project
-```
-
-### **Summarize Codebase**
-
-```sh
-python src/project_reader/main.py --code path/to/project
-```
-
-### **Run GUI for Directory Selection**
-
-```sh
-python scripts/run_analysis.py --gui
-```
-
-### **Batch File Management**
-
-```sh
-python src/file_manager/file_manager.py path/to/move_files.json
-```
-
----
-
-## **Project Structure**
-
-```plaintext
-the_aichemist_codex/
-│── src/
-│   ├── common/              # Shared utilities and config
-│   ├── file_manager/        # Handles file organization
-│   ├── project_reader/      # Code parsing and tree generation
-│── templates/               # Sample project structures
-│── docs/                    # Documentation
-│── tests/                   # Unit tests
-│── scripts/                 # Standalone execution scripts
-│── pyproject.toml           # Project metadata
-│── requirements.txt         # Dependencies
+python backend/src/cli.py --code path/to/project
 ```
 
 ---

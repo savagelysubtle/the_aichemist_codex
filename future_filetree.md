@@ -8,7 +8,7 @@
 │   │   ├── file_reader.py         # Existing file reading/parsing logic
 │   │   ├── file_metadata.py       # Metadata class (existing)
 │   │   ├── parsers.py             # Various file parsers
-│   │   └── ocr_parser.py          # [New] OCR support (integrate Kreuzberg or Tesseract via pytesseract)
+│   │   └── ocr_parser.py          # [New] OCR support (integrate Kreuzberg)
 │   │
 │   ├── file_manager/
 │   │   ├── file_mover.py          # Existing file mover/organizer using os, shutil, pathlib
