@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import magic
 
-from src.utils import AsyncFileIO
+from utils import AsyncFileIO
 
 from .file_metadata import FileMetadata
 from .parsers import get_parser_for_mime_type
