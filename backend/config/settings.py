@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Any, Dict
 
 # Base directories
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -246,6 +247,7 @@ FEATURES = {
     "enable_async_processing": True,
     "enable_regex_search": True,  # Enable regex search functionality
     "enable_similarity_search": True,  # Enable similarity search functionality
+    "enable_semantic_search": False,  # Disable semantic search by default
 }
 
 # Metadata Extraction Settings
@@ -255,3 +257,18 @@ METADATA_MAX_CONCURRENT = 5  # Maximum concurrent metadata extraction tasks
 METADATA_CONFIDENCE_THRESHOLD = (
     0.5  # Minimum confidence threshold for metadata extraction
 )
+
+
+def get_settings() -> Dict[str, Any]:
+    """
+    Get all settings as a dictionary.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing all settings from this module
+    """
+    settings = {}
+    for key, value in globals().items():
+        # Only include uppercase variables and not built-ins
+        if key.isupper() and not key.startswith("_"):
+            settings[key] = value
+    return settings

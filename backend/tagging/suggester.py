@@ -1,16 +1,16 @@
 """
-Tag suggester for suggesting tags for files based on multiple strategies.
+Tag suggestion system for automated tagging based on file content.
 
-This module provides the TagSuggester class, which combines multiple
-tag suggestion strategies to provide comprehensive tag recommendations
-for files.
+This module provides functionality to suggest tags for files based on
+their content, metadata, and similarity to previously tagged files.
 """
 
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from ...file_reader.file_metadata import FileMetadata
+from backend.file_reader.file_metadata import FileMetadata
+
 from .classifier import TagClassifier
 from .manager import TagManager
 
@@ -236,7 +236,7 @@ class TagSuggester:
         Returns:
             Dict[str, List[Tuple[str, float]]]: Mapping of file paths to suggested tags
         """
-        from ...file_reader.file_reader import FileReader
+        from backend.file_reader.file_reader import FileReader
 
         results = {}
 
@@ -290,7 +290,7 @@ class TagSuggester:
         Returns:
             Dict[str, List[Tuple[str, float]]]: Mapping of file paths to suggested tags
         """
-        from ..file_reader.file_reader import FileReader
+        from backend.file_reader.file_reader import FileReader
 
         results = {}
 

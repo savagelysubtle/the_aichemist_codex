@@ -64,12 +64,25 @@ class SearchEngine:
             self.regex_provider = None
 
         # Initialize semantic search components.
-        self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.embedding_model = None
         self.semantic_index = None  # FAISS index instance.
         self.semantic_mapping: List[str] = []  # Maps vector IDs to file paths.
 
+        # Only initialize embedding model if semantic search is enabled
+        if FEATURES.get("enable_semantic_search", False):
+            try:
+                logger.info("Initializing embedding model for semantic search...")
+                self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+                logger.info("Embedding model initialized successfully.")
+            except Exception as e:
+                logger.warning(f"Failed to initialize embedding model: {e}")
+                logger.warning("Semantic search will be disabled.")
+
         # Initialize similarity provider if enabled
-        if FEATURES.get("enable_similarity_search", False):
+        if (
+            FEATURES.get("enable_similarity_search", False)
+            and self.embedding_model is not None
+        ):
             self.similarity_provider = SimilarityProvider(
                 embedding_model=self.embedding_model,
                 vector_index=self.semantic_index,
@@ -255,6 +268,12 @@ class SearchEngine:
         :param top_k: Number of nearest neighbors to return.
         :return: List of file paths for the top matching documents.
         """
+        if self.embedding_model is None:
+            logger.warning(
+                "Semantic search is disabled or model initialization failed. Cannot perform semantic search."
+            )
+            return []
+
         if self.semantic_index is None or self.semantic_index.ntotal == 0:
             logger.warning(
                 "Semantic index is empty. No semantic search can be performed."
@@ -303,7 +322,7 @@ class SearchEngine:
     async def regex_search_async(
         self,
         pattern: str,
-        file_paths: Optional[List[Path]] = None,
+        file_paths: List[Path] = None,
         case_sensitive: bool = False,
         whole_word: bool = False,
     ) -> List[str]:
@@ -331,6 +350,11 @@ class SearchEngine:
             sql = "SELECT path FROM files"
             rows = await self.async_db.fetchall(sql)
             file_paths = [Path(row[0]) for row in rows]
+            logger.info(
+                f"Retrieved {len(file_paths)} files from the database for regex search"
+            )
+
+        logger.info(f"Performing regex search on {len(file_paths)} files")
 
         # Perform regex search
         try:
@@ -341,9 +365,7 @@ class SearchEngine:
                 case_sensitive=case_sensitive,
                 whole_word=whole_word,
             )
-            logger.debug(
-                f"Regex search for '{pattern}' returned {len(results)} results"
-            )
+            logger.info(f"Regex search for '{pattern}' returned {len(results)} results")
             return results
         except Exception as e:
             logger.error(f"Error in regex search: {e}")

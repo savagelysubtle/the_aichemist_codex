@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Callable, List, TypeVar
+from typing import Any, Awaitable, Callable, List, TypeVar
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -14,7 +14,7 @@ class BatchProcessor:
     @staticmethod
     async def process_batch(
         items: List[Any],
-        operation: Callable[[Any], asyncio.coroutine],
+        operation: Callable[[Any], Awaitable[Any]],
         batch_size: int = 10,
         timeout: int = 30,
     ) -> List[Any]:

@@ -11,6 +11,31 @@ from backend.utils.safety import SafeFileHandler
 logger = logging.getLogger(__name__)
 
 
+class FileTreeGenerator:
+    """Class to generate and manage file trees."""
+
+    async def generate(
+        self,
+        directory_path: Path,
+        max_depth: int = 10,
+        use_cache: bool = True,
+        cache_ttl: int = 300,  # 5 minutes cache TTL
+    ) -> Dict:
+        """
+        Generate a hierarchical representation of files and directories.
+
+        Args:
+            directory_path: Root directory to process
+            max_depth: Maximum directory depth to traverse
+            use_cache: Whether to use caching
+            cache_ttl: Cache time-to-live in seconds
+
+        Returns:
+            Dict representation of the file tree
+        """
+        return await generate_file_tree(directory_path, max_depth, use_cache, cache_ttl)
+
+
 async def generate_file_tree(
     directory_path: Path,
     max_depth: int = 10,

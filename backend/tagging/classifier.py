@@ -22,7 +22,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.svm import LinearSVC
 
-from ...file_reader.file_metadata import FileMetadata
+from backend.file_reader.file_metadata import FileMetadata
 
 logger = logging.getLogger(__name__)
 

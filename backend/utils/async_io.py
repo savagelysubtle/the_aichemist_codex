@@ -243,9 +243,7 @@ class AsyncFileIO:
 
     @staticmethod
     async def read_chunked(
-        file_path: Path,
-        chunk_size: int = 8192,
-        buffer_limit: Optional[int] = None
+        file_path: Path, chunk_size: int = 8192, buffer_limit: Optional[int] = None
     ) -> AsyncGenerator[bytes, None]:
         """
         Read a file in chunks to limit memory usage.
@@ -286,7 +284,7 @@ class AsyncFileIO:
     async def write_chunked(
         file_path: Path,
         content_iterator: AsyncIterable[bytes],
-        buffer_limit: Optional[int] = None
+        buffer_limit: Optional[int] = None,
     ) -> bool:
         """
         Write content to a file in chunks to limit memory usage.
@@ -325,7 +323,7 @@ class AsyncFileIO:
         source: Path,
         destination: Path,
         chunk_size: int = 8192,
-        buffer_limit: Optional[int] = None
+        buffer_limit: Optional[int] = None,
     ) -> bool:
         """
         Copy a file in chunks to limit memory usage.
@@ -369,7 +367,7 @@ class AsyncFileIO:
         file_path: Path,
         processor: callable,
         chunk_size: int = 8192,
-        buffer_limit: Optional[int] = None
+        buffer_limit: Optional[int] = None,
     ) -> bool:
         """
         Process a large file in chunks with a custom processor function.
@@ -415,7 +413,7 @@ class AsyncFileIO:
     async def stream_append(
         file_path: Path,
         content_iterator: AsyncIterable[bytes],
-        buffer_limit: Optional[int] = None
+        buffer_limit: Optional[int] = None,
     ) -> bool:
         """
         Append content to a file in streaming fashion.
@@ -450,5 +448,6 @@ class AsyncFileIO:
             return False
 
 
-# For backward compatibility
+# Create aliases for backward compatibility
+AsyncFileTools = AsyncFileIO
 AsyncFileReader = AsyncFileIO

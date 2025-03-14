@@ -61,11 +61,16 @@ class RegexSearchProvider:
             List of file paths containing matches
         """
         if not query or not file_paths:
+            logger.warning(
+                f"Empty query or file paths list: query='{query}', file_paths='{file_paths}'"
+            )
             return []
 
         # Check cache first
-        cache_key = f"regex:{query}:{case_sensitive}:{whole_word}:{','.join(str(p) for p in file_paths[:5])}"
         if self.cache_manager:
+            # Create a safe cache key without characters that are invalid in file paths
+            safe_query = query.replace("\\", "_").replace("/", "_").replace(":", "_")
+            cache_key = f"regex_{safe_query}_{case_sensitive}_{whole_word}"
             cached_result = await self.cache_manager.get(cache_key)
             if cached_result:
                 logger.debug(f"Cache hit for regex search: {query}")
@@ -74,20 +79,25 @@ class RegexSearchProvider:
         # Validate and compile the regex pattern
         try:
             pattern = self._prepare_pattern(query, case_sensitive, whole_word)
+            logger.info(f"Compiled regex pattern: {pattern.pattern}")
         except (re.error, ValueError) as e:
             logger.error(f"Invalid regex pattern '{query}': {e}")
             return []
 
         # Process files in batches
         start_time = time.time()
+        logger.info(f"Starting regex search on {len(file_paths)} files")
         results = await self._search_files(pattern, file_paths, max_results)
         elapsed = time.time() - start_time
-        logger.debug(
+        logger.info(
             f"Regex search for '{query}' completed in {elapsed:.2f}s with {len(results)} results"
         )
 
         # Cache the results
         if self.cache_manager:
+            # Create a safe cache key without characters that are invalid in file paths
+            safe_query = query.replace("\\", "_").replace("/", "_").replace(":", "_")
+            cache_key = f"regex_{safe_query}_{case_sensitive}_{whole_word}"
             await self.cache_manager.put(cache_key, results)
 
         return results[:max_results]
@@ -183,6 +193,10 @@ class RegexSearchProvider:
         """
         # Use a set to avoid duplicates
         matching_files: Set[str] = set()
+        logger.info(f"Searching {len(file_paths)} files for pattern: {pattern.pattern}")
+
+        # Check if the pattern is looking for file extensions
+        is_extension_search = pattern.pattern.endswith("$") and "." in pattern.pattern
 
         # Process files in batches
         async def process_file(file_path: Path) -> Optional[str]:
@@ -190,9 +204,18 @@ class RegexSearchProvider:
                 return None
 
             try:
-                # Skip binary files
+                # For extension searches, just check the filename
+                if is_extension_search and pattern.search(file_path.name):
+                    logger.debug(f"Found match in filename: {file_path}")
+                    return str(file_path)
+
+                # Skip binary files for content searches
                 if not self._is_text_file(file_path):
                     return None
+
+                # Log when processing a Markdown file
+                if file_path.suffix.lower() == ".md":
+                    logger.debug(f"Processing Markdown file: {file_path}")
 
                 # Read file in chunks to handle large files
                 async for chunk in AsyncFileIO.read_chunked(file_path):
@@ -201,6 +224,7 @@ class RegexSearchProvider:
                     # Use a timeout to prevent regex from hanging
                     match = await self._regex_search_with_timeout(pattern, chunk_str)
                     if match:
+                        logger.debug(f"Found match in file content: {file_path}")
                         return str(file_path)
 
             except Exception as e:
@@ -211,8 +235,9 @@ class RegexSearchProvider:
         # Process files in parallel
         batch_results = await self.batch_processor.process_batch(
             items=file_paths,
-            process_func=process_file,
-            max_workers=min(8, len(file_paths)),
+            operation=process_file,
+            batch_size=min(10, len(file_paths)),
+            timeout=30,
         )
 
         # Collect results
@@ -220,6 +245,7 @@ class RegexSearchProvider:
             if result and len(matching_files) < max_results:
                 matching_files.add(result)
 
+        logger.info(f"Found {len(matching_files)} matching files")
         return list(matching_files)
 
     async def _regex_search_with_timeout(self, pattern: re.Pattern, text: str) -> bool:

@@ -709,12 +709,24 @@ def main():
         cache_manager = CacheManager()
         search_engine = SearchEngine(args.directory, cache_manager=cache_manager)
 
-        # Handle different search methods
+        # Check if database is empty and index files if needed
         if args.method == "regex":
             logger.info(f"Performing regex search with pattern: {args.query}")
+
+            # Get all files in the directory
+            include_patterns = {"*"}
+            ignore_patterns = set()
+            files = scan_directory(args.directory, include_patterns, ignore_patterns)
+
+            # Convert to Path objects
+            file_paths = [Path(f) for f in files]
+            logger.info(f"Found {len(file_paths)} files to search through")
+
+            # Perform regex search directly on files
             results = asyncio.run(
                 search_engine.regex_search_async(
                     args.query,
+                    file_paths=file_paths,
                     case_sensitive=args.case_sensitive,
                     whole_word=args.whole_word,
                 )
@@ -811,7 +823,17 @@ def main():
         logger.info(f"Scanning directory: {args.directory}")
         files = scan_directory(args.directory, include_patterns, ignore_patterns)
         logger.info(f"Ingesting {len(files)} files")
-        content = aggregate_digest(files)
+
+        # Create a content map for the files
+        content_map = {}
+        for file_path in files:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content_map[file_path] = f.read()
+            except Exception as e:
+                logger.error(f"Error reading file {file_path}: {e}")
+
+        content = aggregate_digest(files, content_map)
         if args.output:
             asyncio.run(save_as_json_async(content, args.output))
             logger.info(f"Ingestion results saved to {args.output}")
