@@ -1,7 +1,7 @@
 # test_sqlasync_io.py
 import pytest
 
-from src.utils.sqlasync_io import AsyncSQL
+from backend.utils.sqlasync_io import AsyncSQL
 
 
 @pytest.mark.asyncio

@@ -4,17 +4,16 @@ from pathlib import Path
 
 import pytest
 import yaml
-
-from src.file_manager.directory_manager import DirectoryManager
-from src.file_manager.duplicate_detector import DuplicateDetector
-from src.file_manager.file_mover import FileMover
-from src.file_manager.file_tree import generate_file_tree  # now async
-from src.file_manager.sorter import RuleBasedSorter
-from src.file_reader.file_reader import FileReader
-from src.file_reader.parsers import JsonParser, TextParser
+from backend.file_manager.directory_manager import DirectoryManager
+from backend.file_manager.duplicate_detector import DuplicateDetector
+from backend.file_manager.file_mover import FileMover
+from backend.file_manager.file_tree import generate_file_tree  # now async
+from backend.file_manager.sorter import RuleBasedSorter
+from backend.file_reader.file_reader import FileReader
+from backend.file_reader.parsers import JsonParser, TextParser
 
 # Import updated modules (adjust paths as needed)
-from src.utils import AsyncFileIO
+from backend.utils import AsyncFileIO
 
 
 # --- Helper for YAML reading ---
@@ -49,9 +48,9 @@ async def test_json_parser():
 
         parser = JsonParser()
         parsed_data = await parser.parse(test_file)
-        assert (
-            parsed_data["content"] == data
-        ), "Parsed JSON does not match original data."
+        assert parsed_data["content"] == data, (
+            "Parsed JSON does not match original data."
+        )
         preview = parser.get_preview(parsed_data)
         assert "key" in preview, "Preview does not contain expected content."
 
@@ -81,9 +80,9 @@ async def test_file_reader_process_file():
         metadata = await file_reader.process_file(test_file)
         # Since 20 characters of sample_content is "This is a sample fil"
         expected_preview_start = "This is a sample fil"
-        assert metadata.preview.startswith(
-            expected_preview_start
-        ), f"FileReader preview incorrect. Expected to start with '{expected_preview_start}' but got '{metadata.preview}'"
+        assert metadata.preview.startswith(expected_preview_start), (
+            f"FileReader preview incorrect. Expected to start with '{expected_preview_start}' but got '{metadata.preview}'"
+        )
         # MIME type should be detected as text
         assert metadata.mime_type.startswith("text/"), "MIME type not detected as text."
 
@@ -93,9 +92,9 @@ async def test_directory_manager():
     with tempfile.TemporaryDirectory() as tmpdir:
         new_dir = Path(tmpdir) / "new_directory"
         await DirectoryManager.ensure_directory(new_dir)
-        assert (
-            new_dir.exists() and new_dir.is_dir()
-        ), "Directory was not created asynchronously."
+        assert new_dir.exists() and new_dir.is_dir(), (
+            "Directory was not created asynchronously."
+        )
 
 
 @pytest.mark.asyncio
@@ -109,9 +108,9 @@ async def test_duplicate_detector(tmp_path_factory):
     detector = DuplicateDetector()
     await detector.scan_directory(tmp_dir)
     duplicates = detector.get_duplicates()
-    assert any(
-        len(files) > 1 for files in duplicates.values()
-    ), "No duplicates detected when expected."
+    assert any(len(files) > 1 for files in duplicates.values()), (
+        "No duplicates detected when expected."
+    )
 
 
 @pytest.mark.asyncio
@@ -124,9 +123,9 @@ async def test_file_mover(tmp_path_factory):
     mover = FileMover(tmp_dir)
     await mover.move_file(source_file, dest_dir / source_file.name)
     assert not source_file.exists(), "Source file still exists after moving."
-    assert (
-        dest_dir / source_file.name
-    ).exists(), "Destination file not found after moving."
+    assert (dest_dir / source_file.name).exists(), (
+        "Destination file not found after moving."
+    )
 
 
 @pytest.mark.asyncio
@@ -172,6 +171,6 @@ async def test_sorter(tmp_path_factory, monkeypatch):
     assert not file_to_sort.exists(), "File was not moved by sorter."
     sorted_file = tmp_dir / "sorted" / "sort_me.txt"
     # Check asynchronously that the destination file exists.
-    assert await AsyncFileIO.exists(
-        sorted_file
-    ), "Sorted file not found in target directory."
+    assert await AsyncFileIO.exists(sorted_file), (
+        "Sorted file not found in target directory."
+    )

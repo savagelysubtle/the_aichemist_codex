@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 
-from src.file_manager.file_mover import FileMover
-from src.file_manager.file_watcher import FileEventHandler
+from backend.file_manager.file_mover import FileMover
+from backend.file_manager.file_watcher import FileEventHandler
 
 
 # Dummy event class to simulate watchdog events.

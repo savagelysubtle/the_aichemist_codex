@@ -1,7 +1,7 @@
 # test_settings.py
 from pathlib import Path
 
-from backend.src.config.settings import (
+from backend.config.settings import (
     DEFAULT_IGNORE_PATTERNS,
     LOG_DIR,
     MAX_FILE_SIZE,

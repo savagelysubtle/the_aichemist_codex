@@ -1,5 +1,5 @@
 # test_ingest_reader.py
-from src.ingest.reader import convert_notebook, read_full_file
+from backend.ingest.reader import convert_notebook, read_full_file
 
 
 def test_read_full_file(tmp_path):

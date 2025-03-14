@@ -1,5 +1,5 @@
 # test_patterns.py
-from src.utils.patterns import pattern_matcher
+from backend.utils.patterns import pattern_matcher
 
 
 def test_pattern_matcher_should_ignore():

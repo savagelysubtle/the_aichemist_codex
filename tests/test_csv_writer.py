@@ -1,7 +1,7 @@
 # test_csv_writer.py
 import csv
 
-from backend.src.output_formatter.csv_writer import save_as_csv
+from backend.output_formatter.csv_writer import save_as_csv
 
 
 def test_csv_writer(tmp_path):

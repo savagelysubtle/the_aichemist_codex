@@ -1,5 +1,5 @@
 # test_utils.py
-from backend.src.utils.utils import (
+from backend.utils.utils import (
     add,
 )  # Adjust if your actual utility function is different.
 

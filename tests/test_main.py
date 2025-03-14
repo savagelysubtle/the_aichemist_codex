@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from src.main import select_directory
+from backend.main import select_directory
 
 
 # Fake implementations for GUI functions to bypass actual dialogs.

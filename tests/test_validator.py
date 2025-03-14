@@ -1,6 +1,6 @@
 # test_validator.py
 import pytest
-from src.utils.validator import (
+from backend.utils.validator import (
     get_project_name,
 )  # For example, if this function validates a project name.
 

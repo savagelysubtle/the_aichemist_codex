@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from src.cli import main, validate_directory
+from backend.cli import main, validate_directory
 
 
 def test_validate_directory(tmp_path):

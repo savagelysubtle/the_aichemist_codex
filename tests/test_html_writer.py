@@ -1,5 +1,5 @@
 # test_html_writer.py
-from src.output_formatter.html_writer import save_as_html
+from backend.output_formatter.html_writer import save_as_html
 
 
 def test_html_writer(tmp_path):

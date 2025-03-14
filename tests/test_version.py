@@ -1,5 +1,5 @@
 # test_version.py
-from src.project_reader.version import InvalidVersion, Version
+from backend.project_reader.version import InvalidVersion, Version
 
 
 def test_valid_version():

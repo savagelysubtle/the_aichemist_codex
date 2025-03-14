@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.file_reader.parsers import ArchiveParser
+from backend.file_reader.parsers import ArchiveParser
 
 
 @pytest.fixture

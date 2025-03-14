@@ -1,5 +1,5 @@
 # test_config_loader.py
-from src.config.config_loader import CodexConfig
+from backend.config.config_loader import CodexConfig
 
 
 def test_default_config(tmp_path, monkeypatch):
@@ -10,7 +10,7 @@ def test_default_config(tmp_path, monkeypatch):
     config_file.write_text("", encoding="utf-8")
 
     # Override the CONFIG_FILE variable in config_loader.
-    monkeypatch.setattr("backend.src.config.config_loader.CONFIG_FILE", config_file)
+    monkeypatch.setattr("backend.config.config_loader.CONFIG_FILE", config_file)
 
     config = CodexConfig()
     # Check that essential default settings are present.

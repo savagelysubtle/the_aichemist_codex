@@ -5,7 +5,7 @@ import shutil
 import pytest
 from pathlib import Path
 
-from src.rollback.rollback_manager import RollbackManager, RollbackOperation
+from backend.rollback.rollback_manager import RollbackManager, RollbackOperation
 
 @pytest.fixture
 def rollback_manager_setup():

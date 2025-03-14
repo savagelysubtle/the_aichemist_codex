@@ -1,7 +1,7 @@
 # test_file_metadata.py
 from pathlib import Path
 
-from src.file_reader.file_metadata import FileMetadata
+from backend.file_reader.file_metadata import FileMetadata
 
 
 def test_file_metadata_instantiation():

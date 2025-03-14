@@ -1,6 +1,6 @@
 # test_errors.py
 import pytest
-from src.utils.errors import NotebookProcessingError
+from backend.utils.errors import NotebookProcessingError
 
 
 def test_notebook_processing_error():

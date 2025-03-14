@@ -1,4 +1,4 @@
-from src.project_reader.token_counter import TokenAnalyzer
+from backend.project_reader.token_counter import TokenAnalyzer
 
 
 def test_token_estimation():

@@ -2,7 +2,7 @@
 import pytest
 from jsonschema import ValidationError, validate
 
-from src.config.schemas import code_summary_schema, file_tree_schema
+from backend.config.schemas import code_summary_schema, file_tree_schema
 
 
 def test_file_tree_schema_valid():

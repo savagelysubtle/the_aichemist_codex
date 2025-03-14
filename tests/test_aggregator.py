@@ -1,5 +1,5 @@
 # test_aggregator.py
-from src.ingest.aggregator import aggregate_digest
+from backend.ingest.aggregator import aggregate_digest
 
 
 def test_aggregate_digest(tmp_path):

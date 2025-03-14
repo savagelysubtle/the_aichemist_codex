@@ -1,6 +1,6 @@
 import json
 
-from src.project_reader.notebooks import NotebookConverter
+from backend.project_reader.notebooks import NotebookConverter
 
 
 def test_notebook_conversion(tmp_path):

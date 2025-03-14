@@ -1,5 +1,5 @@
 # test_tags.py
-from src.project_reader.tags import parse_tag
+from backend.project_reader.tags import parse_tag
 
 
 def test_parse_tag():
