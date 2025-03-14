@@ -4,12 +4,11 @@ import base64
 import json
 import logging
 import os
+import platform
 from pathlib import Path
 from typing import Any, Dict
 
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from backend.config.settings import DATA_DIR
 
@@ -54,21 +53,53 @@ class SecureConfigManager:
 
         # Generate new key
         logger.info("Generating new encryption key")
-        salt = os.urandom(16)
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-        )
-        key = base64.urlsafe_b64encode(kdf.derive(os.urandom(32)))
+        key = Fernet.generate_key()
 
         # Save new key
         try:
             key_file.parent.mkdir(parents=True, exist_ok=True)
             with open(key_file, "wb") as f:
                 f.write(key)
-            os.chmod(key_file, 0o600)  # Secure permissions
+
+            # Set secure permissions if not on Windows
+            if platform.system() != "Windows":
+                os.chmod(key_file, 0o600)  # Secure permissions
+            else:
+                # On Windows, we can't easily set 0o600 equivalent
+                # but we can try to make it readable only by the current user
+                try:
+                    import ntsecuritycon as con
+                    import win32con
+                    import win32security
+
+                    # Get current user SID
+                    username = os.environ.get("USERNAME")
+                    if username:
+                        sd = win32security.GetFileSecurity(
+                            str(key_file), win32security.DACL_SECURITY_INFORMATION
+                        )
+                        dacl = win32security.ACL()
+
+                        # Add current user with read/write access
+                        user_sid, _, _ = win32security.LookupAccountName(None, username)
+                        dacl.AddAccessAllowedAce(
+                            win32security.ACL_REVISION,
+                            con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
+                            user_sid,
+                        )
+
+                        # Set the DACL
+                        sd.SetSecurityDescriptorDacl(1, dacl, 0)
+                        win32security.SetFileSecurity(
+                            str(key_file), win32security.DACL_SECURITY_INFORMATION, sd
+                        )
+                except ImportError:
+                    logger.warning(
+                        "pywin32 not installed, cannot set Windows file permissions"
+                    )
+                except Exception as e:
+                    logger.error(f"Error setting Windows file permissions: {e}")
+
         except Exception as e:
             logger.error(f"Error saving key file: {e}")
 
@@ -101,7 +132,10 @@ class SecureConfigManager:
             self.config_file.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_file, "wb") as f:
                 f.write(encrypted_data)
-            os.chmod(self.config_file, 0o600)  # Secure permissions
+
+            # Set secure permissions if not on Windows
+            if platform.system() != "Windows":
+                os.chmod(self.config_file, 0o600)  # Secure permissions
         except Exception as e:
             logger.error(f"Error saving secure configuration: {e}")
 
@@ -165,7 +199,7 @@ class SecureConfigManager:
         current_config = self._config.copy()
 
         # Generate new key
-        self._key = base64.urlsafe_b64encode(os.urandom(32))
+        self._key = Fernet.generate_key()
         self._fernet = Fernet(self._key)
 
         # Save new key
@@ -173,7 +207,10 @@ class SecureConfigManager:
         try:
             with open(key_file, "wb") as f:
                 f.write(self._key)
-            os.chmod(key_file, 0o600)
+
+            # Set secure permissions if not on Windows
+            if platform.system() != "Windows":
+                os.chmod(key_file, 0o600)
         except Exception as e:
             logger.error(f"Error saving new key file: {e}")
             return
