@@ -194,6 +194,19 @@ MAX_SEARCH_RESULTS = 1000
 SEARCH_CACHE_TTL = 300  # 5 minutes
 MIN_SEARCH_TERM_LENGTH = 3
 
+# Regex search settings
+REGEX_MAX_COMPLEXITY = 1000  # Maximum complexity score for regex patterns
+REGEX_TIMEOUT_MS = 500  # Timeout for regex search operations in milliseconds
+REGEX_CACHE_TTL = 300  # 5 minutes
+REGEX_MAX_RESULTS = 100  # Maximum number of results to return
+
+# Similarity search settings
+SIMILARITY_THRESHOLD = 0.75  # Minimum similarity score (0.0-1.0)
+SIMILARITY_MAX_RESULTS = 50  # Maximum number of similar files to return
+SIMILARITY_CACHE_TTL = 300  # 5 minutes
+SIMILARITY_MIN_GROUP_SIZE = 2  # Minimum number of files to form a group
+SIMILARITY_GROUP_THRESHOLD = 0.8  # Threshold for group membership
+
 # Security settings
 PASSWORD_MIN_LENGTH = 12
 PASSWORD_COMPLEXITY = {
@@ -231,4 +244,6 @@ FEATURES = {
     "enable_rate_limiting": True,
     "enable_batch_processing": True,
     "enable_async_processing": True,
+    "enable_regex_search": True,  # Enable regex search functionality
+    "enable_similarity_search": True,  # Enable similarity search functionality
 }

@@ -1,10 +1,12 @@
 import shutil
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from backend.file_reader.file_metadata import FileMetadata
+from backend.search.providers.regex_provider import RegexSearchProvider
 from backend.search.search_engine import SearchEngine
 
 # Test directories
@@ -37,7 +39,7 @@ def sample_files(tmp_path):
     # ✅ Ensure text files contain searchable content
     files[0].write_text("This is a test file for full-text search indexing.")
     files[1].write_text("Another document with some searchable content.")
-    files[2].write_bytes(b"\xFF\xD8\xFF")  # Simulating a JPG file
+    files[2].write_bytes(b"\xff\xd8\xff")  # Simulating a JPG file
 
     return [
         FileMetadata(
@@ -235,3 +237,139 @@ def test_whoosh_recovery_on_corruption(setup_search_engine):
     assert (
         search_engine.index is not None
     ), "Search engine should recover from index corruption."
+
+
+@pytest.mark.asyncio
+async def test_regex_search(self, search_engine, temp_dir):
+    """Test regex search functionality."""
+    # Create test files with regex patterns
+    file1 = temp_dir / "regex_test1.txt"
+    file1.write_text("This file contains a pattern: ABC-123-XYZ")
+
+    file2 = temp_dir / "regex_test2.txt"
+    file2.write_text("Another file with pattern: DEF-456-UVW")
+
+    file3 = temp_dir / "regex_test3.txt"
+    file3.write_text("This file has no pattern")
+
+    # Index the files
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file1,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file1.read_text(),
+        )
+    )
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file2,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file2.read_text(),
+        )
+    )
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file3,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file3.read_text(),
+        )
+    )
+
+    # Enable regex search provider
+    from backend.config.settings import FEATURES
+
+    FEATURES["enable_regex_search"] = True
+    search_engine.regex_provider = RegexSearchProvider()
+
+    # Test regex search
+    results = await search_engine.regex_search_async(r"[A-Z]{3}-\d{3}-[A-Z]{3}")
+    assert len(results) == 2
+    assert str(file1) in results
+    assert str(file2) in results
+    assert str(file3) not in results
+
+    # Test case sensitive search
+    file4 = temp_dir / "regex_test4.txt"
+    file4.write_text("This file has lowercase pattern: abc-123-xyz")
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file4,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file4.read_text(),
+        )
+    )
+
+    results = await search_engine.regex_search_async(
+        r"[A-Z]{3}-\d{3}-[A-Z]{3}", case_sensitive=True
+    )
+    assert len(results) == 2
+    assert str(file4) not in results
+
+    # Test with case insensitive
+    results = await search_engine.regex_search_async(
+        r"[A-Z]{3}-\d{3}-[A-Z]{3}", case_sensitive=False
+    )
+    assert len(results) == 3
+    assert str(file4) in results
+
+
+@pytest.mark.asyncio
+async def test_search_method_dispatch(self, search_engine, temp_dir):
+    """Test that the search method correctly dispatches to different search types."""
+    # Create test files
+    file1 = temp_dir / "dispatch_test1.txt"
+    file1.write_text("This is a test file for dispatch testing")
+
+    file2 = temp_dir / "dispatch_test2.txt"
+    file2.write_text("Another file with different content")
+
+    # Index the files
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file1,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file1.read_text(),
+        )
+    )
+    await search_engine.add_to_index_async(
+        FileMetadata(
+            path=file2,
+            mime_type="text/plain",
+            size=100,
+            extension=".txt",
+            preview=file2.read_text(),
+        )
+    )
+
+    # Test filename search
+    with patch.object(search_engine, "search_filename_async") as mock_filename_search:
+        mock_filename_search.return_value = [str(file1)]
+        results = search_engine.search("dispatch_test1", method="filename")
+        mock_filename_search.assert_called_once_with("dispatch_test1")
+        assert len(results) == 1
+        assert results[0]["path"] == str(file1)
+
+    # Test fuzzy search
+    with patch.object(search_engine, "fuzzy_search_async") as mock_fuzzy_search:
+        mock_fuzzy_search.return_value = [str(file2)]
+        results = search_engine.search("dispatch", method="fuzzy")
+        mock_fuzzy_search.assert_called_once_with("dispatch")
+        assert len(results) == 1
+        assert results[0]["path"] == str(file2)
+
+    # Test fulltext search
+    with patch.object(search_engine, "full_text_search") as mock_fulltext_search:
+        mock_fulltext_search.return_value = [str(file1), str(file2)]
+        results = search_engine.search("test", method="fulltext")
+        mock_fulltext_search.assert_called_once_with("test")
+        assert len(results) == 2

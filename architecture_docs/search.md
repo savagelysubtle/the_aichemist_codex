@@ -4,7 +4,7 @@ Here's the updated content for modules/search.md:
 # Search Package Documentation
 
 ## Overview
-The Search package provides comprehensive search capabilities using multiple search technologies. It implements full-text search with Whoosh, fuzzy matching with RapidFuzz, metadata search with SQLite, and semantic search using FAISS and sentence-transformers, all with asynchronous operations support.
+The Search package provides comprehensive search capabilities using multiple search technologies. It implements full-text search with Whoosh, fuzzy matching with RapidFuzz, metadata search with SQLite, semantic search using FAISS and sentence-transformers, and regex pattern matching, all with asynchronous operations support.
 
 ## Components
 
@@ -16,15 +16,30 @@ The Search package provides comprehensive search capabilities using multiple sea
   - Index management
   - Metadata tracking
   - Semantic search
+  - Regex search
 - Example usage:
   ```python
   search_engine = SearchEngine(index_dir=Path("search_index"))
-  
+
   # Different search types
   filename_results = await search_engine.search_filename_async("example")
   fuzzy_results = await search_engine.fuzzy_search_async("exmple")
   full_text_results = search_engine.full_text_search("searchable")
   semantic_results = await search_engine.semantic_search_async("document text")
+  regex_results = await search_engine.regex_search_async("pattern\d+")
+  ```
+
+### Search Providers (providers/)
+- Modular search implementation
+- Protocol-based interface
+- Specialized providers for different search types
+- Extensible architecture for adding new search methods
+- Example:
+  ```python
+  @runtime_checkable
+  class SearchProvider(Protocol):
+      async def search(self, query: str, **kwargs) -> List[str]:
+          ...
   ```
 
 ## Search Technologies
@@ -93,6 +108,26 @@ The Search package provides comprehensive search capabilities using multiple sea
   - FAISS index
   - Vector mapping
 
+### 5. Regex Search (RegexSearchProvider)
+
+- Features:
+  - Pattern-based content matching
+  - Case sensitivity options
+  - Whole word matching
+  - Streaming file reading
+  - Parallel processing
+  - Result caching
+  - Timeout protection
+  - Binary file detection
+- Example:
+  ```python
+  results = await search_engine.regex_search_async(
+      pattern=r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+      case_sensitive=True,
+      whole_word=True
+  )
+  ```
+
 ## Implementation Details
 
 ### Database Schema
@@ -123,6 +158,46 @@ CREATE TABLE files (
 - Thread management
 - Error handling
 - Result ranking
+
+### Regex Pattern Validation
+
+```python
+def _estimate_complexity(self, pattern: str) -> int:
+    """
+    Estimate the complexity of a regex pattern.
+
+    Args:
+        pattern: The regex pattern string
+
+    Returns:
+        Complexity score (higher is more complex)
+    """
+    # Simple heuristic for pattern complexity
+    complexity = len(pattern) * 2
+
+    # Penalize potentially expensive operations
+    complexity += pattern.count("*") * 10
+    complexity += pattern.count("+") * 8
+    complexity += pattern.count("{") * 10
+    complexity += pattern.count("?") * 5
+    complexity += pattern.count("|") * 15
+    complexity += pattern.count("[") * 5
+    complexity += pattern.count("(") * 8
+
+    # Nested groups are particularly expensive
+    depth = 0
+    max_depth = 0
+    for char in pattern:
+        if char == "(":
+            depth += 1
+            max_depth = max(max_depth, depth)
+        elif char == ")":
+            depth = max(0, depth - 1)
+
+    complexity += max_depth * 20
+
+    return complexity
+```
 
 ## Integration Points
 
@@ -211,9 +286,45 @@ except Exception as e:
 4. Caching system
 5. Plugin architecture
 
+## Regex Search Provider
+
+The regex search provider enables powerful pattern matching within file contents using regular expressions. It includes the following features:
+
+- **Pattern Validation**: Validates regex patterns to prevent catastrophic backtracking
+- **Streaming File Reading**: Processes large files efficiently by reading in chunks
+- **Parallel Processing**: Searches multiple files concurrently for better performance
+- **Caching**: Caches search results to improve performance for repeated searches
+- **Case Sensitivity**: Supports both case-sensitive and case-insensitive searches
+- **Whole Word Matching**: Option to match only whole words rather than substrings
+- **Binary File Handling**: Automatically skips binary files to avoid errors
+- **Timeout Protection**: Implements timeouts to prevent hanging on complex patterns
+
+### Configuration
+
+Regex search behavior can be configured through settings:
+
+```python
+# In backend/config/settings.py
+REGEX_MAX_COMPLEXITY = 1000  # Maximum complexity score for regex patterns
+REGEX_TIMEOUT_MS = 500       # Timeout for regex search operations in milliseconds
+REGEX_CACHE_TTL = 300        # Cache TTL for regex search results (5 minutes)
+REGEX_MAX_RESULTS = 100      # Maximum number of results to return
 ```
 
-This documentation accurately reflects the current implementation while providing clear examples and usage patterns. It covers all major components and their interactions, making it easier for developers to understand and use the search system effectively.
+## CLI Usage
+
+The search functionality is also available through the command-line interface:
+
+```bash
+# Basic search
+python -m backend.cli search /path/to/directory "query" --method fulltext
+
+# Regex search
+python -m backend.cli search /path/to/directory "pattern\d+" --method regex --case-sensitive --whole-word
+
+# Save results to file
+python -m backend.cli search /path/to/directory "query" --method fuzzy --output results.json
+```
 
 ## Future Roadmap
 

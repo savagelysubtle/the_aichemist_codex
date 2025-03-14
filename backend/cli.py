@@ -3,10 +3,7 @@
 import argparse
 import asyncio
 import logging
-import time
 from pathlib import Path
-
-from watchdog.observers import Observer
 
 from backend.file_manager.duplicate_detector import DuplicateDetector
 from backend.file_manager.file_tree import FileTreeGenerator
@@ -22,6 +19,7 @@ from backend.project_reader.notebooks import NotebookConverter
 from backend.project_reader.token_counter import TokenAnalyzer
 from backend.rollback.rollback_manager import RollbackManager
 from backend.search.search_engine import SearchEngine
+from backend.utils.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +144,73 @@ def main():
     search_parser.add_argument("query", type=str, help="Search query.")
     search_parser.add_argument(
         "--method",
-        choices=["filename", "fulltext", "fuzzy"],
+        choices=["filename", "fulltext", "fuzzy", "regex"],
         default="fulltext",
         help="Search method to use.",
     )
     search_parser.add_argument(
         "--output", type=Path, help="Output file for search results."
+    )
+    search_parser.add_argument(
+        "--case-sensitive",
+        action="store_true",
+        help="Enable case-sensitive search (for regex and fulltext).",
+    )
+    search_parser.add_argument(
+        "--whole-word",
+        action="store_true",
+        help="Match whole words only (for regex search).",
+    )
+
+    # Add similarity search commands
+    similarity_parser = subparsers.add_parser(
+        "similarity", help="Find similar files using vector embeddings."
+    )
+    similarity_subparsers = similarity_parser.add_subparsers(
+        dest="similarity_command", required=True
+    )
+
+    # Command to find files similar to a given file
+    similar_parser = similarity_subparsers.add_parser(
+        "find", help="Find files similar to a given file."
+    )
+    similar_parser.add_argument(
+        "file", type=Path, help="File to find similar files for."
+    )
+    similar_parser.add_argument(
+        "directory", type=validate_directory, help="Directory to search in."
+    )
+    similar_parser.add_argument(
+        "--threshold", type=float, help="Minimum similarity score (0.0-1.0)."
+    )
+    similar_parser.add_argument(
+        "--max-results",
+        type=int,
+        default=20,
+        help="Maximum number of results to return.",
+    )
+    similar_parser.add_argument(
+        "--output", type=Path, help="Output file for similarity results."
+    )
+
+    # Command to find groups of similar files
+    groups_parser = similarity_subparsers.add_parser(
+        "groups", help="Find groups of similar files."
+    )
+    groups_parser.add_argument(
+        "directory", type=validate_directory, help="Directory to analyze."
+    )
+    groups_parser.add_argument(
+        "--threshold", type=float, help="Similarity threshold for group membership."
+    )
+    groups_parser.add_argument(
+        "--min-group-size",
+        type=int,
+        default=2,
+        help="Minimum number of files to form a group.",
+    )
+    groups_parser.add_argument(
+        "--output", type=Path, help="Output file for group results."
     )
 
     ingest_parser = subparsers.add_parser("ingest", help="Scan and ingest files.")
@@ -292,17 +351,106 @@ def main():
     elif args.command == "search":
         output_file = args.output
         logger.info(f"Searching for '{args.query}' in {args.directory}")
-        search_engine = SearchEngine(args.directory)
-        results = search_engine.search(args.query, method=args.method)
+
+        # Initialize search engine with cache manager for better performance
+        cache_manager = CacheManager()
+        search_engine = SearchEngine(args.directory, cache_manager=cache_manager)
+
+        # Handle different search methods
+        if args.method == "regex":
+            logger.info(f"Performing regex search with pattern: {args.query}")
+            results = asyncio.run(
+                search_engine.regex_search_async(
+                    args.query,
+                    case_sensitive=args.case_sensitive,
+                    whole_word=args.whole_word,
+                )
+            )
+            # Format results for display
+            formatted_results = [{"path": path, "score": 1.0} for path in results]
+        else:
+            # Use existing search methods
+            results = search_engine.search(
+                args.query,
+                method=args.method,
+                case_sensitive=(
+                    args.case_sensitive if args.method == "fulltext" else False
+                ),
+            )
+            formatted_results = results
+
         if output_file:
-            asyncio.run(save_as_json_async(results, output_file))
+            asyncio.run(save_as_json_async(formatted_results, output_file))
             logger.info(f"Search results saved to {output_file}")
         else:
-            for result in results:
-                print(f"{result['path']} - Score: {result['score']}")
+            for result in formatted_results:
+                print(f"{result['path']} - Score: {result.get('score', 1.0)}")
                 if result.get("snippet"):
                     print(f"  {result['snippet']}")
                 print()
+
+    elif args.command == "similarity":
+        # Initialize search engine with cache manager for better performance
+        cache_manager = CacheManager()
+        search_engine = SearchEngine(args.directory, cache_manager=cache_manager)
+
+        # Handle similarity search commands
+        if args.similarity_command == "find":
+            file_path = args.file
+            output_file = args.output
+
+            if not file_path.exists():
+                logger.error(f"File does not exist: {file_path}")
+                return
+
+            logger.info(f"Finding files similar to: {file_path}")
+
+            # Find similar files
+            similar_files = asyncio.run(
+                search_engine.find_similar_files_async(
+                    file_path=file_path,
+                    threshold=args.threshold,
+                    max_results=args.max_results,
+                )
+            )
+
+            if output_file:
+                asyncio.run(save_as_json_async(similar_files, output_file))
+                logger.info(f"Similarity results saved to {output_file}")
+            else:
+                if not similar_files:
+                    print(f"No similar files found for {file_path}")
+                else:
+                    print(f"Found {len(similar_files)} files similar to {file_path}:")
+                    for result in similar_files:
+                        similarity = result["similarity"] * 100  # Convert to percentage
+                        print(f"{result['path']} - Similarity: {similarity:.2f}%")
+                    print()
+
+        elif args.similarity_command == "groups":
+            output_file = args.output
+            logger.info(f"Finding groups of similar files in: {args.directory}")
+
+            # Find file groups
+            file_groups = asyncio.run(
+                search_engine.find_file_groups_async(
+                    threshold=args.threshold, min_group_size=args.min_group_size
+                )
+            )
+
+            if output_file:
+                asyncio.run(save_as_json_async(file_groups, output_file))
+                logger.info(f"File groups saved to {output_file}")
+            else:
+                if not file_groups:
+                    print("No groups of similar files found")
+                else:
+                    print(f"Found {len(file_groups)} groups of similar files:")
+                    for i, group in enumerate(file_groups, 1):
+                        print(f"\nGroup {i} ({len(group)} files):")
+                        for file_path in group:
+                            print(f"  {file_path}")
+                    print()
 
     elif args.command == "ingest":
         include_patterns = set(args.include) if args.include else {"*"}

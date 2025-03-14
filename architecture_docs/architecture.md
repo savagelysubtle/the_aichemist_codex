@@ -45,6 +45,15 @@ The Aichemist Codex is a sophisticated Python-based project analysis and organiz
 - Token counting and metrics
 - Jupyter notebook processing
 
+#### Search Module
+
+- Multiple search methods (search_engine.py)
+- Filename, fuzzy, full-text, metadata, semantic, and regex search
+- Provider-based architecture for extensibility
+- Caching for improved performance
+- Streaming file operations for large files
+- Parallel processing for search operations
+
 #### Output Formatter Module
 
 - Multiple format support (JSON, Markdown, HTML, CSV)

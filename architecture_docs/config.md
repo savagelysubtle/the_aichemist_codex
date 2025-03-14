@@ -117,13 +117,28 @@ The Configuration package provides essential configuration management, logging s
   - MAX_TOKENS: 8000
   - CACHE_TTL: 3600 seconds (1 hour)
   - THREAD_POOL_SIZE: Based on CPU count
+- Search settings:
+  - MAX_SEARCH_RESULTS: 1000
+  - SEARCH_CACHE_TTL: 300 seconds (5 minutes)
+  - MIN_SEARCH_TERM_LENGTH: 3
+- Regex search settings:
+  - REGEX_MAX_COMPLEXITY: 1000 (complexity score limit)
+  - REGEX_TIMEOUT_MS: 500 (timeout for regex operations)
+  - REGEX_CACHE_TTL: 300 seconds (5 minutes)
+  - REGEX_MAX_RESULTS: 100
 - Security settings:
   - PASSWORD_MIN_LENGTH: 12 characters
   - PASSWORD_COMPLEXITY: Requirements for different character types
   - TOKEN_EXPIRY: 3600 seconds (1 hour)
   - MAX_LOGIN_ATTEMPTS: 5 attempts
   - LOGIN_COOLDOWN: 300 seconds (5 minutes)
-- Feature flags for enabling/disabling functionality
+- Feature flags for enabling/disabling functionality:
+  - enable_caching
+  - enable_compression
+  - enable_rate_limiting
+  - enable_batch_processing
+  - enable_async_processing
+  - enable_regex_search
 
 ## Implementation Details
 

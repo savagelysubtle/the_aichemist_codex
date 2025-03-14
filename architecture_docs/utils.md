@@ -16,16 +16,22 @@ The Utils package provides essential utilities and helper functions used through
   - File copying
   - Directory management
   - Error handling
+  - Chunked file reading and writing
+  - Streaming operations for large files
 - Example usage:
   ```python
   # Read file
   content = await AsyncFileIO.read(file_path)
-  
+
   # Write JSON
   success = await AsyncFileIO.write_json(file_path, data)
-  
+
   # Copy file
   success = await AsyncFileIO.copy(source, destination)
+
+  # Read large file in chunks
+  async for chunk in AsyncFileIO.read_chunked(file_path, chunk_size=8192):
+      process_chunk(chunk)
   ```
 
 ### 2. Safety Handler (safety.py)
@@ -41,10 +47,10 @@ The Utils package provides essential utilities and helper functions used through
   ```python
   # Check path safety
   is_safe = SafeFileHandler.is_safe_path(target, base)
-  
+
   # Check ignore patterns
   should_skip = SafeFileHandler.should_ignore(file_path)
-  
+
   # Check binary file
   is_binary = SafeFileHandler.is_binary_file(file_path)
   ```
@@ -95,12 +101,93 @@ The Utils package provides essential utilities and helper functions used through
 
   ```python
   db = AsyncSQL(db_path)
-  
+
   # Execute query
   await db.execute(query, params, commit=True)
-  
+
   # Fetch results
   rows = await db.fetchall(query, params)
+  ```
+
+### 6. Cache Manager (cache_manager.py)
+
+- Efficient caching system
+- Features:
+  - In-memory LRU cache
+  - Disk-based persistent cache
+  - Time-to-live (TTL) support
+  - Automatic cache invalidation
+  - Thread-safe operations
+- Example usage:
+
+  ```python
+  cache = CacheManager()
+
+  # Store in cache
+  await cache.put("key", data, ttl=300)
+
+  # Retrieve from cache
+  cached_data = await cache.get("key")
+
+  # Invalidate cache entry
+  cache.invalidate("key")
+
+  # Get cache statistics
+  stats = cache.get_stats()
+  ```
+
+### 7. Batch Processor (batch_processor.py)
+
+- Parallel batch processing
+- Features:
+  - Concurrent task execution
+  - Configurable batch size
+  - Error handling for individual items
+  - Progress tracking
+  - Resource management
+- Example usage:
+
+  ```python
+  batch_processor = BatchProcessor()
+
+  async def process_item(item):
+      # Process single item
+      return result
+
+  # Process items in parallel batches
+  results = await batch_processor.process_batch(
+      items=items_list,
+      process_func=process_item,
+      batch_size=20
+  )
+  ```
+
+### 8. Concurrency (concurrency.py)
+
+- Enhanced async threading capabilities
+- Features:
+  - Task prioritization
+  - Rate limiting
+  - Task queue management
+  - Graceful shutdown
+- Example usage:
+
+  ```python
+  executor = AsyncThreadPoolExecutor()
+
+  # Submit task with priority
+  result = await executor.submit(
+      func=process_data,
+      args=(data,),
+      priority=TaskPriority.HIGH
+  )
+
+  # Process batch with rate limiting
+  results = await executor.submit_batch(
+      items=items_list,
+      process_func=process_item,
+      max_rate=10  # items per second
+  )
   ```
 
 ## Implementation Details

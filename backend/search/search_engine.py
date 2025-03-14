@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import rapidfuzz
 import whoosh.analysis
@@ -9,9 +9,13 @@ from whoosh.fields import ID, TEXT, Schema
 from whoosh.index import create_in, open_dir
 from whoosh.qparser import QueryParser
 
+from backend.config.settings import FEATURES, REGEX_MAX_RESULTS, SIMILARITY_MAX_RESULTS
 from backend.file_reader.file_metadata import FileMetadata
+from backend.search.providers.regex_provider import RegexSearchProvider
+from backend.search.providers.similarity_provider import SimilarityProvider
 from backend.utils import AsyncFileIO
 from backend.utils.batch_processor import BatchProcessor
+from backend.utils.cache_manager import CacheManager
 from backend.utils.sqlasync_io import AsyncSQL
 
 # Import FAISS and SentenceTransformer for semantic search.
@@ -36,7 +40,12 @@ class SearchEngine:
     Semantic search is implemented using FAISS and sentence-transformers.
     """
 
-    def __init__(self, index_dir: Path, db_path: Path = Path(SEARCH_DB)):
+    def __init__(
+        self,
+        index_dir: Path,
+        db_path: Path = Path(SEARCH_DB),
+        cache_manager: Optional[CacheManager] = None,
+    ):
         self.index_dir = index_dir
         self.db_path = db_path
         self.schema = Schema(
@@ -46,11 +55,29 @@ class SearchEngine:
         self._initialize_index()
         self._initialize_database_sync()
         self.async_db = AsyncSQL(db_path)  # Async SQL utility
+        self.cache_manager = cache_manager
+
+        # Initialize search providers
+        if FEATURES.get("enable_regex_search", False):
+            self.regex_provider = RegexSearchProvider(cache_manager=cache_manager)
+        else:
+            self.regex_provider = None
 
         # Initialize semantic search components.
         self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
         self.semantic_index = None  # FAISS index instance.
         self.semantic_mapping: List[str] = []  # Maps vector IDs to file paths.
+
+        # Initialize similarity provider if enabled
+        if FEATURES.get("enable_similarity_search", False):
+            self.similarity_provider = SimilarityProvider(
+                embedding_model=self.embedding_model,
+                vector_index=self.semantic_index,
+                path_mapping=self.semantic_mapping,
+                cache_manager=cache_manager,
+            )
+        else:
+            self.similarity_provider = None
 
     def _initialize_index(self):
         """Ensure Whoosh full-text search index is initialized correctly."""
@@ -272,6 +299,180 @@ class SearchEngine:
 
         # Filter out None values from failed operations
         return [result for result in results if result is not None]
+
+    async def regex_search_async(
+        self,
+        pattern: str,
+        file_paths: Optional[List[Path]] = None,
+        case_sensitive: bool = False,
+        whole_word: bool = False,
+    ) -> List[str]:
+        """
+        Perform regex pattern search on file contents.
+
+        Args:
+            pattern: The regex pattern to search for
+            file_paths: Optional list of file paths to search (if None, uses all indexed files)
+            case_sensitive: Whether the search should be case sensitive
+            whole_word: Whether to match whole words only
+
+        Returns:
+            List of file paths containing matches
+        """
+        if not FEATURES.get("enable_regex_search", False) or not self.regex_provider:
+            logger.warning("Regex search is disabled or provider not initialized")
+            return []
+
+        if not pattern:
+            return []
+
+        # If no file paths provided, get all indexed files
+        if file_paths is None:
+            sql = "SELECT path FROM files"
+            rows = await self.async_db.fetchall(sql)
+            file_paths = [Path(row[0]) for row in rows]
+
+        # Perform regex search
+        try:
+            results = await self.regex_provider.search(
+                query=pattern,
+                file_paths=file_paths,
+                max_results=REGEX_MAX_RESULTS,
+                case_sensitive=case_sensitive,
+                whole_word=whole_word,
+            )
+            logger.debug(
+                f"Regex search for '{pattern}' returned {len(results)} results"
+            )
+            return results
+        except Exception as e:
+            logger.error(f"Error in regex search: {e}")
+            return []
+
+    def search(
+        self, query: str, method: str = "fulltext", case_sensitive: bool = False
+    ) -> List[Dict]:
+        """
+        Unified search method that dispatches to the appropriate search function based on method.
+
+        Args:
+            query: The search query
+            method: The search method to use (filename, fulltext, fuzzy, regex)
+            case_sensitive: Whether the search should be case sensitive (for fulltext)
+
+        Returns:
+            List of dictionaries containing search results with path and score
+        """
+        if not query:
+            return []
+
+        try:
+            if method == "filename":
+                # Run filename search asynchronously
+                paths = asyncio.run(self.search_filename_async(query))
+                return [{"path": path, "score": 1.0} for path in paths]
+
+            elif method == "fuzzy":
+                # Run fuzzy search asynchronously
+                paths = asyncio.run(self.fuzzy_search_async(query))
+                return [{"path": path, "score": 0.8} for path in paths]
+
+            elif method == "fulltext":
+                # Fulltext search is synchronous
+                # TODO: Add case sensitivity support to fulltext search
+                paths = self.full_text_search(query)
+                return [{"path": path, "score": 0.9} for path in paths]
+
+            else:
+                logger.warning(f"Unsupported search method: {method}")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error in search ({method}): {e}")
+            return []
+
+    async def find_similar_files_async(
+        self,
+        file_path: Path,
+        threshold: float = None,
+        max_results: int = SIMILARITY_MAX_RESULTS,
+    ) -> List[Dict[str, Union[str, float]]]:
+        """
+        Find files that are similar to the given file using vector embeddings.
+
+        Args:
+            file_path: The file to find similar files for
+            threshold: Minimum similarity score (0.0-1.0), defaults to settings.SIMILARITY_THRESHOLD
+            max_results: Maximum number of results to return
+
+        Returns:
+            List of dictionaries containing paths and similarity scores
+        """
+        if (
+            not FEATURES.get("enable_similarity_search", False)
+            or not self.similarity_provider
+        ):
+            logger.warning("Similarity search is disabled or provider not initialized")
+            return []
+
+        if not file_path.exists():
+            logger.warning(f"File not found: {file_path}")
+            return []
+
+        try:
+            # Find similar files
+            similar_files = await self.similarity_provider.find_similar_files(
+                file_path=file_path, threshold=threshold, max_results=max_results
+            )
+
+            # Format results
+            results = [
+                {"path": path, "similarity": score} for path, score in similar_files
+            ]
+
+            logger.debug(f"Found {len(results)} files similar to {file_path}")
+            return results
+        except Exception as e:
+            logger.error(f"Error finding similar files: {e}")
+            return []
+
+    async def find_file_groups_async(
+        self,
+        file_paths: Optional[List[Path]] = None,
+        threshold: float = None,
+        min_group_size: int = None,
+    ) -> List[List[str]]:
+        """
+        Find groups of similar files using hierarchical clustering.
+
+        Args:
+            file_paths: List of file paths to group (if None, uses all indexed files)
+            threshold: Similarity threshold for group membership
+            min_group_size: Minimum number of files to form a group
+
+        Returns:
+            List of file path groups where each group contains similar files
+        """
+        if (
+            not FEATURES.get("enable_similarity_search", False)
+            or not self.similarity_provider
+        ):
+            logger.warning("Similarity search is disabled or provider not initialized")
+            return []
+
+        try:
+            # Find file groups
+            groups = await self.similarity_provider.find_file_groups(
+                file_paths=file_paths,
+                threshold=threshold,
+                min_group_size=min_group_size,
+            )
+
+            logger.debug(f"Found {len(groups)} groups of similar files")
+            return groups
+        except Exception as e:
+            logger.error(f"Error finding file groups: {e}")
+            return []
 
 
 # Example Usage:
