@@ -54,6 +54,8 @@ dependencies = [
   "whoosh>=2.7.4",
   "xmltodict>=0.13.0",
   "zipp>=3.21.0",
+  "anyio>=4.8.0",
+
   # AI & NLP
   "sentence-transformers>=2.2.2",
   "faiss-cpu>=1.7.4",
@@ -130,9 +132,8 @@ include = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 pythonpath = ["backend/src"]
-asyncio_mode = "auto"
 tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
