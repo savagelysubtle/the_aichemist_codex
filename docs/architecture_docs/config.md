@@ -48,6 +48,7 @@ The Configuration package provides essential configuration management, logging s
 - Uses standardized log format
 - Automatically creates log directories
 - Configuration:
+
   ```python
   format="%(asctime)s - %(levelname)s - %(message)s"
   handlers=[
@@ -62,6 +63,7 @@ The Configuration package provides essential configuration management, logging s
 - Implements pattern matching logic
 - Provides safe file handling rules
 - Example:
+
   ```python
   from rules_engine import rules_engine
   if rules_engine.should_ignore(file_path):
