@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import FrozenSet, NewType, Tuple, Union, cast
 
@@ -159,27 +158,29 @@ def summarize_for_gpt(text, max_sentences=10, max_length=1000):
 def setup_logging(log_dir, log_file_name="file_events.log"):
     """
     Sets up logging with a specified directory and file name.
+    DEPRECATED: Use backend.config.logging_config.setup_logging() instead.
 
     :param log_dir: Directory where logs will be stored.
     :param log_file_name: Name of the log file.
     :return: Path to the log file.
     """
-    try:
-        os.makedirs(log_dir, exist_ok=True)
-    except Exception as e:
-        print(f"Error creating log directory: {e}")
-        sys.exit(1)
+    import warnings
 
-    log_file_path = os.path.join(log_dir, log_file_name)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file_path),
-            logging.StreamHandler(sys.stdout),
-        ],
+    from backend.config.logging_config import setup_logging as central_setup_logging
+
+    warnings.warn(
+        "This function is deprecated. Use backend.config.logging_config.setup_logging() instead.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    logging.info(f"Log file initialized at: {log_file_path}")
+
+    # Use the central logging system
+    central_setup_logging()
+
+    # Still return a path for backward compatibility
+    from backend.config.settings import LOG_DIR
+
+    log_file_path = LOG_DIR / "project.log"
     return log_file_path
 
 

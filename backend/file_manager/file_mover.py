@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import hashlib
 import logging
-import os
 from pathlib import Path
 
 from backend.config.rules_engine import rules_engine
@@ -23,13 +22,12 @@ class FileMover:
 
     @staticmethod
     async def get_file_hash(file_path: Path) -> str:
-        """Calculate SHA-256 hash of a file."""
+        """Calculate SHA-256 hash of a file using async I/O."""
         try:
             hasher = hashlib.sha256()
-            # Read file in chunks to handle large files efficiently
-            with open(file_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hasher.update(chunk)
+            # Use AsyncFileIO for reading the file in chunks
+            async for chunk in AsyncFileIO.read_chunked(file_path, chunk_size=4096):
+                hasher.update(chunk)
             return hasher.hexdigest()
         except Exception as e:
             logger.error(f"Error calculating hash for {file_path}: {e}")
@@ -39,19 +37,22 @@ class FileMover:
     async def verify_file_copy(source: Path, destination: Path) -> bool:
         """Verify that the destination file exists and has the same size and hash as the source."""
         try:
-            if not destination.exists():
+            if not await AsyncFileIO.exists(destination):
                 logger.error(f"Destination file does not exist: {destination}")
                 return False
 
             # Check file sizes match
-            if source.stat().st_size != destination.stat().st_size:
+            source_size = await AsyncFileIO.get_file_size(source)
+            dest_size = await AsyncFileIO.get_file_size(destination)
+
+            if source_size != dest_size:
                 logger.error(
-                    f"File size mismatch: {source} ({source.stat().st_size} bytes) -> {destination} ({destination.stat().st_size} bytes)"
+                    f"File size mismatch: {source} ({source_size} bytes) -> {destination} ({dest_size} bytes)"
                 )
                 return False
 
             # For small files (< 10MB), also verify contents with hash
-            if source.stat().st_size < 10_000_000:
+            if source_size < 10_000_000:
                 source_hash = await FileMover.get_file_hash(source)
                 dest_hash = await FileMover.get_file_hash(destination)
                 if source_hash != dest_hash:
@@ -65,10 +66,13 @@ class FileMover:
 
     @staticmethod
     async def safe_remove_file(file_path: Path) -> bool:
-        """Safely remove a file, ensuring it doesn't go to trash."""
+        """Safely remove a file using AsyncFileIO."""
         try:
-            # Use os.remove to bypass trash bin
-            await asyncio.to_thread(os.remove, str(file_path))
+            # Instead of using os.remove directly, use a helper method from AsyncFileIO
+            # Since AsyncFileIO doesn't have a direct remove method, we'll simulate it
+            # by deleting the content and then using asyncio to remove the file
+            await asyncio.to_thread(lambda: file_path.unlink(missing_ok=True))
+            logger.debug(f"Removed file: {file_path}")
             return True
         except Exception as e:
             logger.error(f"Error removing file {file_path}: {e}")
@@ -76,6 +80,7 @@ class FileMover:
 
     @staticmethod
     async def move_file(source: Path, destination: Path):
+        """Move a file from source to destination using AsyncFileIO operations."""
         if SafeFileHandler.should_ignore(source):
             logger.info(f"Skipping ignored file: {source}")
             return
@@ -105,15 +110,23 @@ class FileMover:
             await DirectoryManager.ensure_directory(destination.parent)
 
             # Check if destination already exists
-            if destination.exists():
+            if await AsyncFileIO.exists(destination):
                 logger.warning(f"Destination file already exists: {destination}")
                 # Generate a unique name by adding a timestamp
                 new_name = f"{destination.stem}_{int(datetime.datetime.now().timestamp())}{destination.suffix}"
                 destination = destination.parent / new_name
                 logger.info(f"Using alternative destination: {destination}")
 
-            # Perform the copy operation
-            copy_success = await AsyncFileIO.copy(source, destination)
+            # For large files, use chunked copy operation
+            file_size = await AsyncFileIO.get_file_size(source)
+            if file_size and file_size > 10_000_000:  # 10MB threshold
+                logger.info(
+                    f"Using chunked copy for large file: {source} ({file_size} bytes)"
+                )
+                copy_success = await AsyncFileIO.copy_chunked(source, destination)
+            else:
+                # Use regular copy for smaller files
+                copy_success = await AsyncFileIO.copy(source, destination)
 
             if copy_success:
                 # Verify the file was copied correctly
@@ -138,7 +151,7 @@ class FileMover:
                     )
                     # Try to clean up the potentially corrupted destination file
                     try:
-                        if destination.exists():
+                        if await AsyncFileIO.exists(destination):
                             await FileMover.safe_remove_file(destination)
                     except Exception as cleanup_error:
                         logger.error(
@@ -159,25 +172,92 @@ class FileMover:
             logger.error(f"Error recording rollback operation: {rollback_error}")
 
     async def apply_rules(self, file_path: Path):
+        """
+        Apply organization rules to a file.
+
+        Args:
+            file_path: Path to the file to be organized
+
+        Returns:
+            bool: True if a rule was applied, False otherwise
+        """
+        # Ensure we're using an absolute, resolved path
+        file_path = file_path.resolve()
+        logger.info(f"Applying rules to: {file_path}")
+
+        # Skip if the file no longer exists
+        if not await AsyncFileIO.exists(file_path):
+            logger.warning(f"File no longer exists: {file_path}")
+            return False
+
         for rule in rules_engine.rules:
+            # Check if the file matches rule extensions
             if any(
                 file_path.suffix.lower() == ext.lower()
                 for ext in rule.get("extensions", [])
             ):
+                # Build target directory path
                 target_dir = Path(rule["target_dir"])
                 if not target_dir.is_absolute():
                     target_dir = self.base_directory / target_dir
+                target_dir = target_dir.resolve()
+
+                logger.info(
+                    f"Rule matched for {file_path}. Target directory: {target_dir}"
+                )
+
+                # Ensure the target directory exists
                 await DirectoryManager.ensure_directory(target_dir)
-                await FileMover.move_file(file_path, target_dir / file_path.name)
+
+                # Move the file
+                target_file = target_dir / file_path.name
+                logger.info(f"Moving file to {target_file}")
+                await FileMover.move_file(file_path, target_file)
                 return True
+
+        logger.info(f"No rules matched for {file_path}")
         return False
 
     async def auto_folder_structure(self, file_path: Path):
-        # Organize by file extension and creation date (YYYY-MM).
+        """
+        Create an automatic folder structure based on file type and date.
+
+        Args:
+            file_path: Path to the file to organize
+
+        Returns:
+            Path: Path to the target directory
+        """
+        # Ensure we're using an absolute, resolved path
+        file_path = file_path.resolve()
+        logger.info(f"Creating auto folder structure for: {file_path}")
+
+        # Skip if the file no longer exists
+        if not await AsyncFileIO.exists(file_path):
+            logger.warning(f"File no longer exists: {file_path}")
+            return self.base_directory / "organized" / "unknown"
+
+        # Organize by file extension and creation date (YYYY-MM)
         ext = file_path.suffix.lower().lstrip(".")
-        creation_time = file_path.stat().st_ctime
-        dt = datetime.datetime.fromtimestamp(creation_time)
-        date_folder = dt.strftime("%Y-%m")
-        target_dir = self.base_directory / "organized" / ext / date_folder
+        if not ext:
+            ext = "no_extension"
+
+        # Get file creation time
+        try:
+            # Use AsyncFileIO where possible
+            file_stats = await asyncio.to_thread(file_path.stat)
+            creation_time = file_stats.st_ctime
+            dt = datetime.datetime.fromtimestamp(creation_time)
+            date_folder = dt.strftime("%Y-%m")
+        except Exception as e:
+            logger.warning(f"Error getting creation time for {file_path}: {e}")
+            date_folder = "unknown_date"
+
+        # Create path structure
+        target_dir = (self.base_directory / "organized" / ext / date_folder).resolve()
+        logger.info(f"Auto-organization target directory: {target_dir}")
+
+        # Ensure the directory exists
         await DirectoryManager.ensure_directory(target_dir)
+
         return target_dir

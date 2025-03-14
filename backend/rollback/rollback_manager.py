@@ -14,10 +14,10 @@ from backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
-# Define directories for trash and backup
-TRASH_DIR = Path("trash")
+# Define directories for trash and backup using centralized data directory
+TRASH_DIR = DATA_DIR / "trash"
 TRASH_DIR.mkdir(exist_ok=True)
-BACKUP_DIR = Path("backup/rollback_temp")
+BACKUP_DIR = DATA_DIR / "backup/rollback_temp"
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 ROLLBACK_LOG_FILE = DATA_DIR / "rollback.json"
