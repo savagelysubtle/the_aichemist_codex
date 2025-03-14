@@ -12,10 +12,11 @@ from output.markdown_writer import save_as_markdown
 from project_reader.code_summary import summarize_code
 from utils.validator import get_project_name
 
-# ✅ Setup logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+# ✅ Use the central logging system
+from backend.config.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 def select_directory(prompt: str) -> Path:
@@ -39,12 +40,12 @@ def main(
 ):
     """Runs file tree and/or code summary analysis."""
     if not directory.exists():
-        logging.error(f"Directory '{directory}' does not exist.")
+        logger.error(f"Directory '{directory}' does not exist.")
         messagebox.showerror("Error", f"Directory '{directory}' does not exist.")
         return
 
     if not output_directory.exists():
-        logging.error(f"Output directory '{output_directory}' does not exist.")
+        logger.error(f"Output directory '{output_directory}' does not exist.")
         messagebox.showerror(
             "Error", f"Output directory '{output_directory}' does not exist."
         )
@@ -56,7 +57,7 @@ def main(
         file_tree_output = output_directory / f"{project_name}_file_tree.json"
         file_tree = generate_file_tree(directory)
         file_tree_output.write_text(json.dumps(file_tree, indent=4), encoding="utf-8")
-        logging.info(f"File tree saved to {file_tree_output}")
+        logger.info(f"File tree saved to {file_tree_output}")
 
         markdown_output_file = output_directory / f"{project_name}_file_tree.md"
         save_as_markdown(markdown_output_file, file_tree, {}, "File Tree")
@@ -67,7 +68,7 @@ def main(
         code_summary_output.write_text(
             json.dumps(code_summaries, indent=4), encoding="utf-8"
         )
-        logging.info(f"Code summary saved to {code_summary_output}")
+        logger.info(f"Code summary saved to {code_summary_output}")
 
         markdown_output_file = output_directory / f"{project_name}_code_summary.md"
         save_as_markdown(markdown_output_file, code_summaries, {}, "Code Summary")
