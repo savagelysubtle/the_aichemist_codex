@@ -97,7 +97,9 @@ dev = [
   "pytest-cov>=6.0.0",
   "pytest-mock>=3.14.0",
   "pytest>=8.3.4",
-  "ruff>=0.6.2",
+  "pytest-asyncio>=0.25.3",
+
+  "ruff>=0.1.13",
   "setuptools>=73.0.1",
   "sphinx-autodoc-typehints>=1.22.0",
   "sphinx-copybutton>=0.5.2",
@@ -116,7 +118,7 @@ requires = ["setuptools>=75.8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["backend/src"]
+where = ["backend"]
 include = [
   "file_reader*",
   "file_manager*",
@@ -132,11 +134,12 @@ include = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
-pythonpath = ["backend/src"]
+testpaths = ["tests"]
+pythonpath = ["backend"]
 tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
+markers = ["asyncio: mark a test as an asyncio test"]
 
 
 [tool.ruff]
@@ -175,8 +178,6 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.9
-target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
@@ -192,6 +193,3 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
-
-[dependency-groups]
-dev = ["pytest>=8.3.4", "python-magic-bin>=0.4.14"]

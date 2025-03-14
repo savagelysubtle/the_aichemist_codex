@@ -1,12 +1,15 @@
 """Asynchronous file operations for The Aichemist Codex."""
 
+import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional
 
 import aiofiles
-from src.utils.safety import SafeFileHandler
+import aiofiles.os
+
+from backend.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +239,214 @@ class AsyncFileIO:
                 return False
         except Exception as e:
             logger.error(f"Error copying {source} to {destination}: {e}")
+            return False
+
+    @staticmethod
+    async def read_chunked(
+        file_path: Path,
+        chunk_size: int = 8192,
+        buffer_limit: Optional[int] = None
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        Read a file in chunks to limit memory usage.
+
+        Args:
+            file_path: Path to the file to read
+            chunk_size: Size of each chunk in bytes
+            buffer_limit: Maximum number of chunks to buffer (None for no limit)
+
+        Yields:
+            Chunks of file content as bytes
+        """
+        if SafeFileHandler.should_ignore(file_path):
+            logger.info(f"Skipping ignored file: {file_path}")
+            return
+
+        try:
+            if buffer_limit:
+                semaphore = asyncio.Semaphore(buffer_limit)
+
+            async with aiofiles.open(file_path, "rb") as f:
+                while True:
+                    if buffer_limit:
+                        await semaphore.acquire()
+
+                    chunk = await f.read(chunk_size)
+                    if not chunk:
+                        break
+
+                    yield chunk
+
+                    if buffer_limit:
+                        semaphore.release()
+        except Exception as e:
+            logger.error(f"Error reading {file_path} in chunks: {e}")
+
+    @staticmethod
+    async def write_chunked(
+        file_path: Path,
+        content_iterator: AsyncIterable[bytes],
+        buffer_limit: Optional[int] = None
+    ) -> bool:
+        """
+        Write content to a file in chunks to limit memory usage.
+
+        Args:
+            file_path: Path where the file should be written
+            content_iterator: Async iterator yielding content chunks
+            buffer_limit: Maximum number of chunks to buffer (None for no limit)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(file_path.parent, exist_ok=True)
+
+            if buffer_limit:
+                semaphore = asyncio.Semaphore(buffer_limit)
+
+            async with aiofiles.open(file_path, "wb") as f:
+                async for chunk in content_iterator:
+                    if buffer_limit:
+                        await semaphore.acquire()
+
+                    await f.write(chunk)
+
+                    if buffer_limit:
+                        semaphore.release()
+            return True
+        except Exception as e:
+            logger.error(f"Error writing chunks to {file_path}: {e}")
+            return False
+
+    @staticmethod
+    async def copy_chunked(
+        source: Path,
+        destination: Path,
+        chunk_size: int = 8192,
+        buffer_limit: Optional[int] = None
+    ) -> bool:
+        """
+        Copy a file in chunks to limit memory usage.
+
+        Args:
+            source: Source file path
+            destination: Destination file path
+            chunk_size: Size of each chunk in bytes
+            buffer_limit: Maximum number of chunks to buffer (None for no limit)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Ensure destination directory exists
+            os.makedirs(destination.parent, exist_ok=True)
+
+            if not await AsyncFileIO.exists(source):
+                logger.error(f"Source file {source} does not exist")
+                return False
+
+            if not source.is_file():
+                logger.error(f"Source {source} is not a file")
+                return False
+
+            async for chunk in AsyncFileIO.read_chunked(
+                source, chunk_size, buffer_limit
+            ):
+                if not await AsyncFileIO.write_chunked(
+                    destination, [chunk], buffer_limit
+                ):
+                    return False
+
+            return True
+        except Exception as e:
+            logger.error(f"Error copying {source} to {destination}: {e}")
+            return False
+
+    @staticmethod
+    async def process_large_file(
+        file_path: Path,
+        processor: callable,
+        chunk_size: int = 8192,
+        buffer_limit: Optional[int] = None
+    ) -> bool:
+        """
+        Process a large file in chunks with a custom processor function.
+
+        Args:
+            file_path: Path to the file to process
+            processor: Async function that processes each chunk
+            chunk_size: Size of each chunk in bytes
+            buffer_limit: Maximum number of chunks to buffer (None for no limit)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            async for chunk in AsyncFileIO.read_chunked(
+                file_path, chunk_size, buffer_limit
+            ):
+                await processor(chunk)
+            return True
+        except Exception as e:
+            logger.error(f"Error processing {file_path}: {e}")
+            return False
+
+    @staticmethod
+    async def get_file_size(file_path: Path) -> Optional[int]:
+        """
+        Get file size without reading the entire file.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            File size in bytes or None if error
+        """
+        try:
+            stats = await aiofiles.os.stat(file_path)
+            return stats.st_size
+        except Exception as e:
+            logger.error(f"Error getting size of {file_path}: {e}")
+            return None
+
+    @staticmethod
+    async def stream_append(
+        file_path: Path,
+        content_iterator: AsyncIterable[bytes],
+        buffer_limit: Optional[int] = None
+    ) -> bool:
+        """
+        Append content to a file in streaming fashion.
+
+        Args:
+            file_path: Path to the file
+            content_iterator: Async iterator yielding content chunks
+            buffer_limit: Maximum number of chunks to buffer (None for no limit)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(file_path.parent, exist_ok=True)
+
+            if buffer_limit:
+                semaphore = asyncio.Semaphore(buffer_limit)
+
+            async with aiofiles.open(file_path, "ab") as f:
+                async for chunk in content_iterator:
+                    if buffer_limit:
+                        await semaphore.acquire()
+
+                    await f.write(chunk)
+
+                    if buffer_limit:
+                        semaphore.release()
+            return True
+        except Exception as e:
+            logger.error(f"Error appending chunks to {file_path}: {e}")
             return False
 
 

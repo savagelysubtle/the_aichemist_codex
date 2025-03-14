@@ -11,6 +11,7 @@ from whoosh.qparser import QueryParser
 
 from backend.file_reader.file_metadata import FileMetadata
 from backend.utils import AsyncFileIO
+from backend.utils.batch_processor import BatchProcessor
 from backend.utils.sqlasync_io import AsyncSQL
 
 # Import FAISS and SentenceTransformer for semantic search.
@@ -242,6 +243,35 @@ class SearchEngine:
             if idx < len(self.semantic_mapping):
                 results.append(self.semantic_mapping[idx])
         return results
+
+    async def add_to_index_batch(
+        self, file_metadata_list: List[FileMetadata], batch_size: int = 20
+    ) -> List[Path]:
+        """
+        Add multiple files to the search index in batches.
+
+        Args:
+            file_metadata_list: List of file metadata objects to index
+            batch_size: Number of files to process in each batch
+
+        Returns:
+            List of successfully indexed file paths
+        """
+
+        async def index_single_file(metadata: FileMetadata) -> Optional[Path]:
+            try:
+                await self.add_to_index_async(metadata)
+                return metadata.path
+            except Exception as e:
+                logger.error(f"Error indexing file {metadata.path}: {e}")
+                return None
+
+        results = await BatchProcessor.process_batch(
+            file_metadata_list, index_single_file, batch_size=batch_size
+        )
+
+        # Filter out None values from failed operations
+        return [result for result in results if result is not None]
 
 
 # Example Usage:
