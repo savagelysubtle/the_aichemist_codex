@@ -20,10 +20,10 @@ The Rollback package provides a robust system for tracking, undoing, and redoing
   ```python
   # Record an operation
   await rollback_manager.record_operation("move", source_path, dest_path)
-  
+
   # Undo last operation
   success = await rollback_manager.undo_last_operation()
-  
+
   # Redo last undone operation
   success = await rollback_manager.redo_last_undone()
   ```
@@ -195,3 +195,4 @@ except Exception as e:
 ```
 
 This documentation accurately reflects the current implementation while providing clear examples and usage patterns. It covers all major components and their interactions, making it easier for developers to understand and use the rollback system effectively.
+

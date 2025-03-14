@@ -30,11 +30,13 @@ The Search package provides comprehensive search capabilities using multiple sea
   ```
 
 ### Search Providers (providers/)
+
 - Modular search implementation
 - Protocol-based interface
 - Specialized providers for different search types
 - Extensible architecture for adding new search methods
 - Example:
+
   ```python
   @runtime_checkable
   class SearchProvider(Protocol):
@@ -120,6 +122,7 @@ The Search package provides comprehensive search capabilities using multiple sea
   - Timeout protection
   - Binary file detection
 - Example:
+
   ```python
   results = await search_engine.regex_search_async(
       pattern=r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
@@ -329,18 +332,21 @@ python -m backend.cli search /path/to/directory "query" --method fuzzy --output 
 ## Future Roadmap
 
 ### Phase 2: Advanced Features
+
 - Enhanced semantic search
 - Regex pattern support
 - File similarity detection
 - Advanced metadata extraction
 
 ### Phase 3: AI Capabilities
+
 - ML-based search ranking
 - Context-aware search
 - Smart recommendations
 - Content classification
 
 ### Phase 4: Scalability
+
 - Distributed search
 - Load balancing
 - Sharding support

@@ -83,17 +83,32 @@ def main():
         help="Include Jupyter notebooks in the summary.",
     )
 
-    sort_parser = subparsers.add_parser("sort", help="Sort files according to rules.")
-    sort_parser.add_argument(
-        "directory", type=validate_directory, help="Directory containing files to sort."
+    sort_parser = subparsers.add_parser(
+        "sort", help="Sort files according to defined rules."
     )
     sort_parser.add_argument(
-        "--config", type=Path, help="Configuration file with sorting rules."
+        "directory", type=validate_directory, help="Directory to sort."
+    )
+    sort_parser.add_argument(
+        "--config", type=Path, help="Path to custom sorting rules YAML file."
     )
     sort_parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes.",
+        default=True,
+        help="Run in dry-run mode (no files will be moved). This is TRUE by default for safety.",
+    )
+    sort_parser.add_argument(
+        "--confirm",
+        action="store_false",
+        dest="dry_run",
+        help="Actually perform the file operations (override dry-run).",
+    )
+    sort_parser.add_argument(
+        "--backup",
+        action="store_true",
+        default=True,
+        help="Create backups of all files before moving them. Default is True.",
     )
 
     dupes_parser = subparsers.add_parser("duplicates", help="Find duplicate files.")
@@ -636,7 +651,40 @@ def main():
     elif args.command == "sort":
         logger.info(f"Sorting files in {args.directory}")
         sorter = RuleBasedSorter()
-        sorter.sort_directory_sync(args.directory)
+
+        # If a config file was provided, use it
+        if args.config and args.config.exists():
+            logger.info(f"Using sorting rules from: {args.config}")
+            sorter.config_file = args.config
+
+        # Add dry run option
+        if args.dry_run:
+            logger.info("Running in dry-run mode - no files will be moved")
+
+            # Create a custom sort method for dry run
+            async def dry_run_sort(directory):
+                rules = await sorter.load_rules()
+                for file in directory.rglob("*"):
+                    if file.is_file():
+                        for rule in rules:
+                            if await sorter.rule_matches_extended(file, rule):
+                                target_dir = Path(rule.get("target_dir"))
+                                if not target_dir.is_absolute():
+                                    target_dir = directory / target_dir
+                                target_file = target_dir / file.name
+                                if rule.get("preserve_path", False):
+                                    rel_path = file.relative_to(directory)
+                                    if len(rel_path.parts) > 1:
+                                        parent_dir = rel_path.parts[0]
+                                        new_filename = f"{parent_dir}_{file.name}"
+                                        target_file = target_dir / new_filename
+                                logger.info(f"Would move: {file} -> {target_file}")
+                                break
+
+            asyncio.run(dry_run_sort(args.directory))
+        else:
+            sorter.sort_directory_sync(args.directory)
+
         logger.info("File sorting completed")
 
     elif args.command == "duplicates":

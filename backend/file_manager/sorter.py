@@ -6,8 +6,8 @@ from pathlib import Path
 
 import yaml
 
-from backend.file_manager.directory_manager import DirectoryManager as directory_manager
-from backend.file_manager.file_mover import FileMover as file_mover
+from backend.file_manager.directory_manager import DirectoryManager
+from backend.file_manager.file_mover import FileMover
 from backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
@@ -24,18 +24,24 @@ class RuleBasedSorter:
         rules (list): A list of dictionaries, each representing a sorting rule.
     """
 
-    def __init__(self):
+    def __init__(self, config_file: Path = None):
         """
         * Initializes the sorter instance.
 
         ! By default, 'rules' is set to None. The actual rules are loaded asynchronously
         the first time 'sort_directory' is called, via 'load_rules'.
+
+        Args:
+            config_file (Path, optional): Path to a custom sorting rules YAML file.
+                                          If None, the default rules file will be used.
         """
         self.rules = None
+        self.config_file = config_file
 
     async def load_rules(self):
         """
-        Loads the sorting rules from 'sorting_rules.yaml' in the config directory.
+        Loads the sorting rules from 'sorting_rules.yaml' in the config directory
+        or from a custom config file if provided.
 
         * If the file is not found, it logs a warning and returns an empty list.
         * If the file is found, it attempts to parse the 'rules' key from the YAML.
@@ -43,8 +49,13 @@ class RuleBasedSorter:
         Returns:
             list: A list of rule dictionaries loaded from the YAML file.
         """
-        config_dir = Path(__file__).resolve().parent.parent / "config"
-        rules_file = config_dir / "sorting_rules.yaml"
+        if self.config_file:
+            rules_file = self.config_file
+        else:
+            # Use default config file
+            config_dir = Path(__file__).resolve().parent.parent / "config"
+            rules_file = config_dir / "sorting_rules.yaml"
+
         if not await AsyncFileIO.exists(rules_file):
             # ! Logging a warning because the rules file is missing.
             logger.warning(
@@ -54,6 +65,9 @@ class RuleBasedSorter:
         try:
             content = await AsyncFileIO.read(rules_file)
             rules_data = yaml.safe_load(content)
+            logger.info(
+                f"Loaded {len(rules_data.get('rules', []))} sorting rules from {rules_file}"
+            )
             return rules_data.get("rules", [])
         except Exception as e:
             # ? Catching any parsing or IO errors to prevent crash.
@@ -94,7 +108,7 @@ class RuleBasedSorter:
         * First, calls 'rule_matches' for basic pattern/extension checks.
         * Then, checks file size limits (min_size, max_size).
         * Next, checks file creation timestamps (created_after, created_before).
-        * Finally, searches for any keywords in the file’s text content.
+        * Finally, searches for any keywords in the file's text content.
 
         Args:
             file_path (Path): The path of the file to check.
@@ -176,7 +190,14 @@ class RuleBasedSorter:
             # ? Load the rules once if not already loaded.
             self.rules = await self.load_rules()
 
+        if not self.rules:
+            logger.warning("No sorting rules found. No files will be moved.")
+            return
+
         # * Walk through each file in the directory tree.
+        moved_count = 0
+        skipped_count = 0
+
         for file in directory.rglob("*"):
             if file.is_file():
                 # ? Check each rule in turn until one matches.
@@ -188,16 +209,61 @@ class RuleBasedSorter:
 
                         # ! Skip if the file is already in the target directory.
                         if file.parent == target_dir:
+                            skipped_count += 1
                             continue
 
-                        await directory_manager.DirectoryManager.ensure_directory(
-                            target_dir
-                        )
+                        # Add safety check: ensure target_dir exists and is a valid directory
+                        if not target_dir.exists():
+                            await DirectoryManager.ensure_directory(target_dir)
+                        elif not target_dir.is_dir():
+                            logger.error(
+                                f"Target path {target_dir} is not a directory. Skipping rule for {file}"
+                            )
+                            continue
+
                         logger.info(f"Applying rule {rule} to file {file}")
-                        await file_mover.FileMover(directory).move_file(
-                            file, target_dir / file.name
-                        )
+
+                        # Handle preserve_path flag if present in the rule
+                        if rule.get("preserve_path", False):
+                            # Get relative path from the base directory
+                            try:
+                                rel_path = file.relative_to(directory)
+                                # Use parent directory name as prefix for the filename
+                                if (
+                                    len(rel_path.parts) > 1
+                                ):  # If file is in a subdirectory
+                                    parent_dir = rel_path.parts[0]
+                                    new_filename = f"{parent_dir}_{file.name}"
+                                    target_file = target_dir / new_filename
+                                else:
+                                    target_file = target_dir / file.name
+                            except ValueError:
+                                # Handle case where file is not relative to directory
+                                logger.warning(
+                                    f"Could not determine relative path for {file}. Using original filename."
+                                )
+                                target_file = target_dir / file.name
+                        else:
+                            target_file = target_dir / file.name
+
+                        # Safety check: If target exists, generate a unique name
+                        if target_file.exists():
+                            timestamp = int(datetime.now().timestamp())
+                            target_file = (
+                                target_dir
+                                / f"{target_file.stem}_{timestamp}{target_file.suffix}"
+                            )
+                            logger.info(
+                                f"Target file already exists, using unique name: {target_file}"
+                            )
+
+                        await FileMover.move_file(file, target_file)
+                        moved_count += 1
                         break  # * Stop after the first matching rule.
+
+        logger.info(
+            f"Sort operation completed. Moved {moved_count} files, skipped {skipped_count} files."
+        )
 
     def sort_directory_sync(self, directory: Path):
         """

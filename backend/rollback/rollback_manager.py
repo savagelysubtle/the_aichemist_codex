@@ -1,6 +1,7 @@
 # backend/src/rollback/rollback_manager.py
 
 import asyncio
+import json
 import logging
 import time
 from pathlib import Path
@@ -46,11 +47,14 @@ class RollbackOperation:
         backup: Optional[str] = None,
     ):
         """
+        Initialize a rollback operation with tracking details.
+
         Args:
-            operation: The type of file operation, e.g. "move", "delete", "create", "rename".
-            source: The original path of the file or directory.
-            destination: The resulting path if the file was moved/renamed. For deletions, can be None.
-            timestamp: Time the operation occurred (epoch). Defaults to time.time().
+            operation: Type of operation (e.g., "move", "rename", "delete")
+            source: Source file or directory
+            destination: Target destination (if applicable)
+            timestamp: Operation time (defaults to now if None)
+            backup: Path to backup copy (if applicable)
         """
         self.operation = operation
         self.source = source
@@ -59,6 +63,7 @@ class RollbackOperation:
         self.backup = backup
 
     def to_dict(self) -> Dict:
+        """Convert to a dictionary for serialization."""
         return {
             "timestamp": self.timestamp,
             "operation": self.operation,
@@ -69,6 +74,7 @@ class RollbackOperation:
 
     @staticmethod
     def from_dict(data: Dict) -> "RollbackOperation":
+        """Create from a dictionary (for deserialization)."""
         return RollbackOperation(
             operation=data["operation"],
             source=data["source"],
@@ -90,14 +96,18 @@ class RollbackManager:
     """
 
     _instance = None
+    _initialized = False
 
-    @staticmethod
-    def get_instance():
-        if RollbackManager._instance is None:
-            RollbackManager._instance = RollbackManager()
-        return RollbackManager._instance
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(RollbackManager, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self, rollback_log: Path = ROLLBACK_LOG_FILE):
+        # Only initialize once
+        if RollbackManager._initialized:
+            return
+
         self.rollback_log = rollback_log
         self._undo_stack: List[RollbackOperation] = []
         self._redo_stack: List[RollbackOperation] = []
@@ -106,41 +116,56 @@ class RollbackManager:
             self.rollback_log.write_text("[]", encoding="utf-8")
         self.max_retries = 3  # Configurable max retry attempts.
         self.trash_retention = 604800  # Default: 7 days in seconds.
-        # Load any existing operations asynchronously.
-        asyncio.run(self._load_from_file_async())
+
+        # Initialize the operation stacks
+        try:
+            # Load operations synchronously during initialization
+            with open(self.rollback_log, "r") as f:
+                data = json.loads(f.read())
+                if isinstance(data, list):
+                    self._undo_stack = [RollbackOperation.from_dict(op) for op in data]
+        except Exception as e:
+            logger.error(f"Error loading rollback log: {e}")
+            self._undo_stack = []
+
+        RollbackManager._initialized = True
 
     async def _load_from_file_async(self):
-        data = await AsyncFileIO.read_json(self.rollback_log)
-        if not isinstance(data, list):
-            data = []
-        for entry in data:
-            op = RollbackOperation.from_dict(entry)
-            self._undo_stack.append(op)
-        logger.info(f"Loaded {len(data)} rollback entries into memory.")
+        """Load operations from the rollback log file asynchronously."""
+        try:
+            data = await AsyncFileIO.read_json(self.rollback_log)
+            if not isinstance(data, list):
+                data = []
+            self._undo_stack = [RollbackOperation.from_dict(op) for op in data]
+            logger.info(f"Loaded {len(self._undo_stack)} rollback entries into memory.")
+        except Exception as e:
+            logger.error(f"Error loading rollback entries: {e}")
+            self._undo_stack = []
 
     async def _append_to_file(self, op: RollbackOperation):
-        data = await AsyncFileIO.read_json(self.rollback_log)
-        if not isinstance(data, list):
-            data = []
-        data.append(op.to_dict())
-        await AsyncFileIO.write_json(self.rollback_log, data)
+        """Append an operation to the rollback log file."""
+        try:
+            data = await AsyncFileIO.read_json(self.rollback_log)
+            if not isinstance(data, list):
+                data = []
+            data.append(op.to_dict())
+            await AsyncFileIO.write_json(self.rollback_log, data)
+        except Exception as e:
+            logger.error(f"Error appending to rollback log: {e}")
 
     async def _backup_file(self, file_path: Path) -> Optional[Path]:
-        """
-        Creates an asynchronous backup copy of the file using AsyncFileIO.
-        """
-        if not file_path.exists():
-            logger.warning(f"Backup failed: Source file {file_path} does not exist.")
-            return None
+        """Create a backup copy of a file before modifying it."""
         try:
-            backup_file = BACKUP_DIR / f"{file_path.name}.{int(time.time())}.bak"
-            success = await AsyncFileIO.copy(file_path, backup_file)
-            if success:
-                logger.info(f"Backup created for {file_path} at {backup_file}")
-                return backup_file
-            else:
-                logger.error(f"Backup failed for {file_path}")
+            if not file_path.exists():
+                logger.warning(f"Cannot backup nonexistent file: {file_path}")
                 return None
+
+            BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+            timestamp = int(time.time())
+            backup_path = BACKUP_DIR / f"{file_path.name}.{timestamp}.bak"
+            await AsyncFileIO.copy(file_path, backup_path)
+            logger.info(f"Backed up {file_path} to {backup_path}")
+            return backup_path
         except Exception as e:
             logger.error(f"Error backing up file {file_path}: {e}")
             return None
@@ -152,19 +177,44 @@ class RollbackManager:
         Records a new file operation for rollback. For deletion and modification,
         a backup copy is stored asynchronously.
         """
-        op_type = operation.lower()
-        backup = None
-        src_path = Path(source)
-        if op_type in ("delete", "modify"):
-            backup_obj = await self._backup_file(src_path)
-            backup = str(backup_obj) if backup_obj else None
-        op = RollbackOperation(operation, source, destination, backup=backup)
-        self._undo_stack.append(op)
-        self._redo_stack.clear()
-        logger.info(
-            f"Recorded operation: {op.operation} | {op.source} -> {op.destination}"
-        )
-        await self._append_to_file(op)
+        try:
+            op_type = operation.lower()
+            backup = None
+            src_path = Path(source)
+            if op_type in ("delete", "modify"):
+                backup_obj = await self._backup_file(src_path)
+                backup = str(backup_obj) if backup_obj else None
+            op = RollbackOperation(operation, source, destination, backup=backup)
+            self._undo_stack.append(op)
+            self._redo_stack.clear()
+            logger.info(
+                f"Recorded operation: {op.operation} | {op.source} -> {op.destination}"
+            )
+            await self._append_to_file(op)
+        except Exception as e:
+            logger.error(f"Error recording operation: {e}")
+
+    # Synchronous version for backward compatibility
+    def record_operation_sync(
+        self, operation: str, source: str, destination: Optional[str] = None
+    ) -> None:
+        """
+        Synchronous version of record_operation for backward compatibility.
+        This should be avoided in favor of the async version when possible.
+        """
+        loop = asyncio.get_event_loop()
+        try:
+            if loop.is_running():
+                logger.warning(
+                    "Called record_operation_sync from an async context - this may cause issues"
+                )
+                asyncio.create_task(
+                    self.record_operation(operation, source, destination)
+                )
+            else:
+                asyncio.run(self.record_operation(operation, source, destination))
+        except Exception as e:
+            logger.error(f"Error in record_operation_sync: {e}")
 
     async def restore_from_trash(self, file_name: str) -> bool:
         """
@@ -373,4 +423,4 @@ class RollbackManager:
 
 
 # Create a singleton instance for the entire project.
-rollback_manager = RollbackManager.get_instance()
+rollback_manager = RollbackManager()

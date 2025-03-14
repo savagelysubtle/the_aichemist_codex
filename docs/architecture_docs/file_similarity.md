@@ -61,6 +61,7 @@ Stores and indexes vector embeddings for efficient similarity search, enabling f
 ### SimilarityProvider
 
 Orchestrates the similarity search process, including:
+
 - Text query to file search
 - File to file similarity comparison
 - Hierarchical clustering for file grouping
