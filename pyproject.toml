@@ -56,6 +56,11 @@ dependencies = [
   "zipp>=3.21.0",
   "anyio>=4.8.0",
 
+  # Graph & Visualization (for Relationship Mapping)
+  "networkx>=3.1",
+  "pydot>=1.4.2",
+  "matplotlib>=3.7.1",
+
   # AI & NLP
   "sentence-transformers>=2.2.2",
   "faiss-cpu>=1.7.4",
