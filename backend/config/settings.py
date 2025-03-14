@@ -247,3 +247,11 @@ FEATURES = {
     "enable_regex_search": True,  # Enable regex search functionality
     "enable_similarity_search": True,  # Enable similarity search functionality
 }
+
+# Metadata Extraction Settings
+ENABLE_ENHANCED_METADATA = True
+METADATA_CACHE_TTL = 3600  # 1 hour cache TTL for metadata
+METADATA_MAX_CONCURRENT = 5  # Maximum concurrent metadata extraction tasks
+METADATA_CONFIDENCE_THRESHOLD = (
+    0.5  # Minimum confidence threshold for metadata extraction
+)

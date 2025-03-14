@@ -12,6 +12,7 @@ from backend.file_manager.sorter import RuleBasedSorter
 from backend.file_reader.file_reader import FileReader
 from backend.ingest.aggregator import aggregate_digest
 from backend.ingest.scanner import scan_directory
+from backend.metadata.manager import MetadataManager
 from backend.output_formatter.json_writer import save_as_json_async
 from backend.output_formatter.markdown_writer import save_as_markdown
 from backend.project_reader.code_summary import summarize_project
@@ -251,6 +252,66 @@ def main():
     rollback_subparsers.add_parser("list", help="List recorded rollback operations.")
     rollback_subparsers.add_parser("redo", help="Redo the last undone operation.")
     rollback_subparsers.add_parser("clear", help="Clear all rollback history.")
+
+    # Add metadata extraction command
+    metadata_parser = subparsers.add_parser(
+        "metadata", help="Extract and analyze metadata from files."
+    )
+    metadata_subparsers = metadata_parser.add_subparsers(
+        dest="metadata_command", required=True
+    )
+
+    # Extract metadata from a single file
+    extract_parser = metadata_subparsers.add_parser(
+        "extract", help="Extract metadata from a single file."
+    )
+    extract_parser.add_argument(
+        "file", type=Path, help="File to extract metadata from."
+    )
+    extract_parser.add_argument(
+        "--output", type=Path, help="Output file to save metadata (JSON)."
+    )
+
+    # Extract metadata from all files in a directory
+    batch_parser = metadata_subparsers.add_parser(
+        "batch", help="Extract metadata from all files in a directory."
+    )
+    batch_parser.add_argument(
+        "directory", type=validate_directory, help="Directory to analyze."
+    )
+    batch_parser.add_argument(
+        "--output", type=Path, help="Output file to save results (JSON)."
+    )
+    batch_parser.add_argument(
+        "--recursive", action="store_true", help="Recursively process subdirectories."
+    )
+    batch_parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=5,
+        help="Maximum number of concurrent extraction tasks.",
+    )
+    batch_parser.add_argument(
+        "--pattern", type=str, help="Glob pattern to filter files (e.g., '*.py')."
+    )
+
+    # Analyze files and group by metadata properties
+    analyze_parser = metadata_subparsers.add_parser(
+        "analyze", help="Analyze files and group by metadata properties."
+    )
+    analyze_parser.add_argument(
+        "directory", type=validate_directory, help="Directory to analyze."
+    )
+    analyze_parser.add_argument(
+        "--output", type=Path, help="Output file to save results (JSON)."
+    )
+    analyze_parser.add_argument(
+        "--group-by",
+        type=str,
+        choices=["tags", "language", "type", "authors"],
+        default="tags",
+        help="Metadata property to group by.",
+    )
 
     args = parser.parse_args()
     rm = RollbackManager()
@@ -517,6 +578,220 @@ def main():
             rm._redo_stack.clear()
             rm.rollback_log.write_text("[]", encoding="utf-8")
             logger.info("Cleared all rollback operations.")
+
+    elif args.command == "metadata":
+        # Handle metadata extraction
+        cache_manager = CacheManager()
+        metadata_manager = MetadataManager(cache_manager)
+
+        if args.metadata_command == "extract":
+            file_path = args.file.resolve()
+            output_file = args.output
+
+            if not file_path.exists():
+                logger.error(f"File does not exist: {file_path}")
+                return
+
+            logger.info(f"Extracting metadata from: {file_path}")
+
+            # Extract metadata
+            file_metadata = asyncio.run(metadata_manager.extract_metadata(file_path))
+
+            # Convert metadata to dictionary
+            metadata_dict = {
+                k: v
+                for k, v in vars(file_metadata).items()
+                if not k.startswith("_") and v is not None
+            }
+
+            if output_file:
+                asyncio.run(save_as_json_async(metadata_dict, output_file))
+                logger.info(f"Metadata saved to {output_file}")
+            else:
+                # Print metadata in a readable format
+                print(f"\nMetadata for {file_path}:")
+                for key, value in metadata_dict.items():
+                    if isinstance(value, (list, dict)) and value:
+                        print(f"\n{key}:")
+                        if isinstance(value, list):
+                            for item in value:
+                                print(f"  - {item}")
+                        else:  # dict
+                            for k, v in value.items():
+                                print(f"  {k}: {v}")
+                    elif value:
+                        print(f"{key}: {value}")
+                print()
+
+        elif args.metadata_command == "batch":
+            directory = args.directory
+            output_file = args.output
+            pattern = args.pattern or "*"
+            max_concurrent = args.max_concurrent
+
+            logger.info(f"Extracting metadata from files in: {directory}")
+
+            # Get files to process
+            if args.recursive:
+                files = list(directory.glob(f"**/{pattern}"))
+            else:
+                files = list(directory.glob(pattern))
+
+            if not files:
+                logger.warning(
+                    f"No files matching pattern '{pattern}' found in {directory}"
+                )
+                return
+
+            logger.info(f"Found {len(files)} files to process")
+
+            # Extract metadata in batch
+            batch_results = asyncio.run(
+                metadata_manager.extract_batch(files, max_concurrent=max_concurrent)
+            )
+
+            # Convert to dictionary format for output
+            metadata_dicts = []
+            for result in batch_results:
+                metadata_dict = {
+                    k: v
+                    for k, v in vars(result).items()
+                    if not k.startswith("_") and v is not None
+                }
+                metadata_dicts.append(metadata_dict)
+
+            if output_file:
+                asyncio.run(save_as_json_async(metadata_dicts, output_file))
+                logger.info(f"Batch metadata saved to {output_file}")
+            else:
+                # Print summary
+                print(f"\nExtracted metadata from {len(metadata_dicts)} files:")
+                for i, metadata in enumerate(
+                    metadata_dicts[:5], 1
+                ):  # Show first 5 only
+                    print(f"\n{i}. {metadata.get('path')}")
+                    if metadata.get("tags"):
+                        print(f"   Tags: {', '.join(metadata.get('tags'))}")
+                    if metadata.get("mime_type"):
+                        print(f"   Type: {metadata.get('mime_type')}")
+                    if metadata.get("extraction_confidence"):
+                        print(
+                            f"   Confidence: {metadata.get('extraction_confidence'):.2f}"
+                        )
+
+                if len(metadata_dicts) > 5:
+                    print(f"\n... and {len(metadata_dicts) - 5} more files")
+                print()
+
+        elif args.metadata_command == "analyze":
+            directory = args.directory
+            output_file = args.output
+            group_by = args.group_by
+
+            logger.info(f"Analyzing metadata in {directory}, grouping by {group_by}")
+
+            # Get all files
+            files = list(directory.glob("**/*"))
+            files = [f for f in files if f.is_file()]
+
+            if not files:
+                logger.warning(f"No files found in {directory}")
+                return
+
+            logger.info(f"Found {len(files)} files to analyze")
+
+            # Extract metadata in batch
+            batch_results = asyncio.run(metadata_manager.extract_batch(files))
+
+            # Group by the selected property
+            groups = {}
+
+            for result in batch_results:
+                # Skip files with extraction errors
+                if result.error:
+                    continue
+
+                if group_by == "tags" and hasattr(result, "tags") and result.tags:
+                    # Group by tags (each file can belong to multiple groups)
+                    for tag in result.tags:
+                        if tag not in groups:
+                            groups[tag] = []
+                        groups[tag].append(str(result.path))
+
+                elif group_by == "language":
+                    # For code files
+                    language = None
+                    if hasattr(result, "code_language") and result.code_language:
+                        language = result.code_language
+                    # For text files
+                    elif hasattr(result, "language") and result.language:
+                        language = result.language
+                    # Fallback to extension or mime type
+                    else:
+                        language = result.extension or result.mime_type.split("/")[0]
+
+                    if language:
+                        if language not in groups:
+                            groups[language] = []
+                        groups[language].append(str(result.path))
+
+                elif group_by == "type":
+                    # Group by MIME type main category
+                    file_type = (
+                        result.mime_type.split("/")[0]
+                        if result.mime_type
+                        else "unknown"
+                    )
+                    if file_type not in groups:
+                        groups[file_type] = []
+                    groups[file_type].append(str(result.path))
+
+                elif (
+                    group_by == "authors"
+                    and hasattr(result, "authors")
+                    and result.authors
+                ):
+                    # Group by authors
+                    for author in result.authors:
+                        if author not in groups:
+                            groups[author] = []
+                        groups[author].append(str(result.path))
+
+            # Sort groups by size
+            sorted_groups = sorted(
+                groups.items(), key=lambda x: len(x[1]), reverse=True
+            )
+
+            # Format results
+            analysis_results = {
+                "group_by": group_by,
+                "total_files": len(batch_results),
+                "groups": {k: v for k, v in sorted_groups},
+            }
+
+            if output_file:
+                asyncio.run(save_as_json_async(analysis_results, output_file))
+                logger.info(f"Analysis results saved to {output_file}")
+            else:
+                # Print analysis results
+                print(f"\nFile analysis by {group_by}:")
+                print(f"Total files analyzed: {analysis_results['total_files']}")
+                print(f"Found {len(analysis_results['groups'])} groups:")
+
+                for group_name, files in list(analysis_results["groups"].items())[
+                    :10
+                ]:  # Show top 10
+                    print(f"\n{group_name} ({len(files)} files)")
+                    for file_path in files[:3]:  # Show first 3 files in each group
+                        print(f"  - {file_path}")
+                    if len(files) > 3:
+                        print(f"  ... and {len(files) - 3} more")
+
+                if len(analysis_results["groups"]) > 10:
+                    print(
+                        f"\n... and {len(analysis_results['groups']) - 10} more groups"
+                    )
+                print()
 
 
 if __name__ == "__main__":

@@ -12,7 +12,12 @@ from typing import Any, Dict, List, Optional, Union
 
 import magic
 
+from backend.config import settings
+
+# Import the metadata manager
+from backend.metadata.manager import MetadataManager
 from backend.utils.async_io import AsyncFileIO
+from backend.utils.cache_manager import CacheManager
 
 from .file_metadata import FileMetadata
 from .parsers import get_parser_for_mime_type
@@ -23,18 +28,28 @@ logger = logging.getLogger(__name__)
 class FileReader:
     """Main class for reading and parsing files with MIME type detection."""
 
-    def __init__(self, max_workers: int = 2, preview_length: int = 100):
+    def __init__(
+        self,
+        max_workers: int = 2,
+        preview_length: int = 100,
+        cache_manager: Optional[CacheManager] = None,
+    ):
         """Initialize FileReader.
 
         Args:
             max_workers (int): Maximum number of worker threads for concurrent operations
             preview_length (int): Maximum length of file previews
+            cache_manager (Optional[CacheManager]): Cache manager for caching extraction results
         """
         self.max_workers = max_workers
         self.preview_length = preview_length
         self.logger = logging.getLogger(__name__)
         self.mime = magic.Magic(mime=True)
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.cache_manager = cache_manager
+
+        # Initialize the metadata manager
+        self.metadata_manager = MetadataManager(cache_manager)
 
     def get_mime_type(self, file_path: Union[str, Path]) -> str:
         """
@@ -157,7 +172,8 @@ class FileReader:
                 error=None,  # Added error parameter
                 parsed_data=None,
             )
-            # Get preview if possible
+
+            # Get preview and basic parsed data if possible
             try:
                 preview, parsed_data = await self._get_preview_and_data(
                     file_path, mime_type
@@ -168,6 +184,35 @@ class FileReader:
                 metadata.error = f"Preview generation failed: {str(e)}"
                 metadata.preview = ""
                 logger.warning(f"Failed to generate preview for {file_path}: {e}")
+
+            # Extract enhanced metadata if the feature is enabled
+            if (
+                hasattr(settings, "ENABLE_ENHANCED_METADATA")
+                and settings.ENABLE_ENHANCED_METADATA
+            ):
+                try:
+                    # Get the file content if we don't have it already
+                    content = None
+                    if mime_type.startswith("text/"):
+                        content = await AsyncFileIO.read(file_path)
+
+                    # Extract enhanced metadata
+                    enhanced_metadata = await self.metadata_manager.extract_metadata(
+                        file_path=file_path,
+                        content=content,
+                        mime_type=mime_type,
+                        metadata=metadata,
+                    )
+
+                    # Use the enhanced metadata
+                    metadata = enhanced_metadata
+
+                    logger.debug(f"Enhanced metadata extracted for {file_path}")
+                except Exception as e:
+                    logger.warning(
+                        f"Enhanced metadata extraction failed for {file_path}: {e}"
+                    )
+                    # We still have the basic metadata, so continue
 
             return metadata
 

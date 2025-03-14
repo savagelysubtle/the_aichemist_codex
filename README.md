@@ -1,32 +1,25 @@
 # The Aichemist Codex
 
-A powerful file management and code analysis system with advanced search capabilities, batch processing, and secure configuration management.
+A modular file and project management system designed for developers, researchers, and data analysts.
 
 ## Features
 
-- **Advanced File Management**
-  - Asynchronous file operations
-  - Batch processing for efficient operations
-  - Streaming support for large files
-  - Automatic file organization
-
-- **Powerful Search Engine**
-  - Full-text search with Whoosh
-  - Fuzzy search with RapidFuzz
-  - Semantic search with FAISS and sentence-transformers
-  - Metadata-based filtering
-
-- **Performance Optimizations**
-  - LRU and disk-based caching
-  - Asynchronous I/O operations
-  - Concurrent processing with priority scheduling
-  - Memory-efficient streaming operations
-
-- **Security Features**
-  - Encrypted configuration storage
-  - Key rotation mechanism
-  - Secure file permissions
-  - Path validation and sanitization
+- Comprehensive file tree generation with detailed statistics
+- Code summarization for Python projects
+- Advanced regex-based search across multiple files
+- Semantic search using vector embeddings
+- Similarity search for finding related files
+- **Enhanced metadata extraction for files**:
+  - Text analysis (keywords, topics, entities)
+  - Code analysis (language, imports, functions, classes, complexity)
+  - Document analysis (authors, dates, version, statistics)
+- Metadata-based filtering
+- Rule-based file sorting and organization
+- Duplicate file detection
+- File change monitoring
+- Jupyter notebook conversion
+- Token counting for AI model inputs
+- Project digests for quick overviews
 
 ## Architecture
 
@@ -62,23 +55,97 @@ The Aichemist Codex is organized into several key packages:
 
 ### Usage
 
-```python
-from backend.file_manager.file_tree import generate_file_tree
-from backend.search_engine.search_engine import SearchEngine
-from backend.config.secure_config import secure_config
+### Command-line Interface
 
+The Aichemist Codex provides a comprehensive CLI for all its functionality:
+
+```bash
 # Generate a file tree
-file_tree = await generate_file_tree("/path/to/directory", use_cache=True)
+python -m backend.cli tree /path/to/directory --output tree.json
 
-# Initialize search engine
-search_engine = SearchEngine()
-await search_engine.add_directory("/path/to/directory")
+# Summarize Python code
+python -m backend.cli summarize /path/to/directory --output-format md
 
-# Search for files
-results = await search_engine.search("query")
+# Search files
+python -m backend.cli search /path/to/directory "search pattern"
 
-# Store sensitive configuration
-secure_config.set("api_key", "your-secret-api-key")
+# Extract metadata from a file
+python -m backend.cli metadata extract /path/to/file.py
+
+# Extract metadata from all files in a directory
+python -m backend.cli metadata batch /path/to/directory --recursive
+
+# Analyze files and group by metadata properties
+python -m backend.cli metadata analyze /path/to/directory --group-by tags
+
+# Sort files according to rules
+python -m backend.cli sort /path/to/directory --config sort_rules.json
+
+# Find duplicate files
+python -m backend.cli duplicates /path/to/directory
+
+# Find similar files
+python -m backend.cli similarity find /path/to/file.py /path/to/directory
+
+# Monitor file changes
+python -m backend.cli watch /path/to/directory
+
+# Convert Jupyter notebooks to Python
+python -m backend.cli notebooks convert /path/to/notebook.ipynb
+
+# Count tokens for AI models
+python -m backend.cli tokens /path/to/directory
+
+# Generate project digest
+python -m backend.cli ingest /path/to/directory
+```
+
+## Enhanced Metadata Extraction
+
+The Aichemist Codex includes a powerful metadata extraction system that provides rich information about your files. The system automatically selects the appropriate extractor based on file type:
+
+### Text Files
+
+For text files, the system extracts:
+- Language detection
+- Keywords and key phrases
+- Topic modeling
+- Entity extraction (URLs, emails, dates, etc.)
+- Automatic tagging
+
+### Code Files
+
+For code files, the system extracts:
+- Programming language detection
+- Imports and dependencies
+- Function and class definitions
+- Complexity metrics (line count, cyclomatic complexity, comment ratio)
+- Framework detection (e.g., Django, Flask, React)
+- Automatic tagging based on code properties
+
+### Documents
+
+For document files, the system extracts:
+- Authors and contributors
+- Creation and modification dates
+- Version information
+- Document statistics (word count, page count, section count)
+- Automatic tagging based on document properties
+
+### Usage Examples
+
+```bash
+# Extract metadata from a Python file
+python -m backend.cli metadata extract /path/to/file.py
+
+# Extract metadata from all Python files in a directory
+python -m backend.cli metadata batch /path/to/directory --pattern "*.py"
+
+# Group files by programming language
+python -m backend.cli metadata analyze /path/to/directory --group-by language
+
+# Group files by author
+python -m backend.cli metadata analyze /path/to/directory --group-by authors
 ```
 
 ## Development
@@ -118,6 +185,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - The project uses several open-source libraries and tools
 - Special thanks to all contributors
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ```
 
