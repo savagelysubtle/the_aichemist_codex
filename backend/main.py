@@ -1,5 +1,6 @@
 """Main execution script for The Aichemist Codex with Windows Tkinter GUI."""
 
+import asyncio
 import logging
 import sys
 import tkinter as tk
@@ -21,7 +22,7 @@ from backend.project_reader.code_summary import summarize_project
 logger = logging.getLogger(__name__)
 
 
-def select_directory(prompt: str) -> Path:
+def select_directory(prompt: str) -> Path | None:
     """Open a GUI file dialog to let the user select a directory."""
     root = tk.Tk()
     root.withdraw()
@@ -42,7 +43,7 @@ def ensure_directory_exists(directory: Path):
         messagebox.showerror("Error", f"Failed to create output directory: {e}")
 
 
-def run_analysis():
+async def run_analysis():
     """Handles file tree generation, code summarization, and full project ingestion via the Tkinter GUI."""
     input_directory = select_directory("Select the directory to analyze")
     if not input_directory:
@@ -65,12 +66,12 @@ def run_analysis():
     try:
         # Generate File Tree
         logger.info(f"Generating file tree for {input_directory}")
-        generate_file_tree(input_directory, output_tree_file)
+        await generate_file_tree(input_directory, max_depth=10)
         logger.info(f"File tree saved to {output_tree_file}")
 
         # Run Code Summarization
         logger.info(f"Summarizing code in {input_directory}")
-        summarize_project(input_directory, output_md_file, output_json_file)
+        await summarize_project(input_directory, output_md_file, output_json_file)
 
         # Generate Ingestible Digest using the new ingestion module
         logger.info(f"Generating project digest for {input_directory}")
@@ -102,4 +103,4 @@ def run_analysis():
 
 
 if __name__ == "__main__":
-    run_analysis()
+    asyncio.run(run_analysis())
