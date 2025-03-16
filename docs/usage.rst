@@ -91,6 +91,19 @@ Auto-Tag Files
 
 This automatically generates and applies tags based on file content.
 
+Get Tag Suggestions
+^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   aichemist tag --suggest [files]
+
+This generates tag suggestions without applying them, allowing you to review and select appropriate tags. The system uses multiple strategies:
+
+* Content-based suggestions based on file content and metadata
+* Collaborative filtering suggestions based on similar files
+* Machine learning-based classification suggestions
+
 Manual Tag Operations
 ^^^^^^^^^^^^^^^^^^^
 
@@ -104,6 +117,56 @@ Manual Tag Operations
 
    # List tags
    aichemist tag --list [files]
+
+Working with Tags in Python
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from backend.src.tagging import TagManager, TagSuggester
+   from pathlib import Path
+   import asyncio
+
+   async def manage_tags():
+       # Initialize tag manager (with database path)
+       db_path = Path(".aichemist/tags.db")
+       tag_manager = TagManager(db_path)
+       await tag_manager.initialize()
+
+       # Create or retrieve a tag
+       tag_id = await tag_manager.create_tag("important", "Important documents")
+
+       # Add tag to a file
+       file_path = Path("document.pdf")
+       await tag_manager.add_file_tag(file_path, tag_id=tag_id)
+
+       # Get tags for a file
+       tags = await tag_manager.get_file_tags(file_path)
+       print(f"Tags for {file_path}:")
+       for tag in tags:
+           print(f"- {tag['name']}")
+
+       # Get tag suggestions for a file
+       suggestions = await tag_manager.get_tag_suggestions(file_path)
+       print(f"Suggested tags:")
+       for suggestion in suggestions:
+           print(f"- {suggestion['name']} (Score: {suggestion['score']})")
+
+       # Using the TagSuggester for more advanced suggestions
+       from backend.src.file_reader import FileReader
+       file_reader = FileReader()
+       suggester = TagSuggester(tag_manager)
+
+       # Get file metadata
+       metadata = await file_reader.process_file(file_path)
+
+       # Get comprehensive suggestions
+       advanced_suggestions = await suggester.suggest_tags(metadata)
+       print("Advanced tag suggestions:")
+       for tag, confidence in advanced_suggestions:
+           print(f"- {tag} ({confidence:.2f})")
+
+   asyncio.run(manage_tags())
 
 Relationship Mapping
 ------------------
@@ -139,6 +202,7 @@ Basic Example
    from backend.src.file_reader import FileReader
    from backend.src.metadata import MetadataManager
    from backend.src.search import SearchEngine
+   from backend.src.tagging import TagManager, TagSuggester
    from pathlib import Path
    import asyncio
 
@@ -147,6 +211,9 @@ Basic Example
        reader = FileReader()
        metadata_mgr = MetadataManager()
        search = SearchEngine()
+       tag_manager = TagManager(Path(".aichemist/tags.db"))
+       await tag_manager.initialize()
+       suggester = TagSuggester(tag_manager)
 
        # Process a file
        file_path = Path("document.pdf")
@@ -154,6 +221,18 @@ Basic Example
 
        # Store metadata
        await metadata_mgr.add(metadata)
+
+       # Get tag suggestions
+       tag_suggestions = await suggester.suggest_tags(metadata)
+       print(f"Suggested tags for {file_path}:")
+       for tag, confidence in tag_suggestions:
+           print(f"- {tag} ({confidence:.2f})")
+
+       # Apply high-confidence tags automatically
+       high_confidence_tags = [(tag, conf) for tag, conf in tag_suggestions if conf > 0.8]
+       if high_confidence_tags:
+           await tag_manager.add_file_tags(file_path, high_confidence_tags)
+           print(f"Applied {len(high_confidence_tags)} high-confidence tags")
 
        # Search for content
        results = await search.search("important concept")

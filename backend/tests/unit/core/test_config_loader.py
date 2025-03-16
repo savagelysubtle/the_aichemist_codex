@@ -1,14 +1,13 @@
-import pytest
 # test_config_loader.py
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 
 from backend.src.config.config_loader import CodexConfig
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.core
 @pytest.mark.unit
 def test_default_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     # Create a temporary config directory with an empty config file.

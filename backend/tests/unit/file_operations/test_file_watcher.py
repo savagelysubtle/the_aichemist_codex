@@ -1,7 +1,7 @@
-import pytest
 import time
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 from watchdog.events import FileCreatedEvent
 
@@ -16,8 +16,7 @@ class DummyEvent(FileCreatedEvent):
         self.is_directory = is_directory
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
 @pytest.mark.unit
 def test_file_watcher_debounce(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     # Create a temporary directory to watch.
@@ -54,8 +53,7 @@ def test_file_watcher_debounce(monkeypatch: MonkeyPatch, tmp_path: Path) -> None
     assert "organized" in str(destination)  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
 @pytest.mark.unit
 def test_file_watcher_multiple_events(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     # Create a temporary directory and file.

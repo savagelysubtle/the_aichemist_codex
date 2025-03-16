@@ -26,12 +26,10 @@ async def read_yaml(path: Path) -> dict[str, Any]:
 # --- Async I/O Tests ---
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_async_read_write() -> None:
+async def test_async_read_write() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         test_file = tmp_path / "test.txt"
@@ -42,12 +40,10 @@ def test_async_read_write() -> None:
         assert read_content == content, "Read content does not match written content."  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_json_parser() -> None:
+async def test_json_parser() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         test_file = tmp_path / "test.json"
@@ -64,12 +60,10 @@ def test_json_parser() -> None:
         assert "key" in preview, "Preview does not contain expected content."  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_text_parser() -> None:
+async def test_text_parser() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         test_file = tmp_path / "test.txt"
@@ -81,12 +75,10 @@ def test_text_parser() -> None:
         assert preview.endswith("..."), "Text preview did not truncate as expected."  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_file_reader_process_file() -> None:
+async def test_file_reader_process_file() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         test_file = tmp_path / "sample.txt"
@@ -105,12 +97,10 @@ def test_file_reader_process_file() -> None:
         assert metadata.mime_type.startswith("text/"), "MIME type not detected as text."  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_directory_manager() -> None:
+async def test_directory_manager() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         new_dir = Path(tmpdir) / "new_directory"
         await DirectoryManager.ensure_directory(new_dir)
@@ -119,12 +109,10 @@ def test_directory_manager() -> None:
         )
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_duplicate_detector(tmp_path_factory: TempPathFactory) -> None:
+async def test_duplicate_detector(tmp_path_factory: TempPathFactory) -> None:
     tmp_dir = tmp_path_factory.mktemp("duplicates")
     file1 = tmp_dir / "file1.txt"
     file2 = tmp_dir / "file2.txt"
@@ -139,12 +127,10 @@ def test_duplicate_detector(tmp_path_factory: TempPathFactory) -> None:
     )  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_file_mover(tmp_path_factory: TempPathFactory) -> None:
+async def test_file_mover(tmp_path_factory: TempPathFactory) -> None:
     tmp_dir = tmp_path_factory.mktemp("mover")
     source_file = tmp_dir / "source.txt"
     dest_dir = tmp_dir / "dest"
@@ -158,12 +144,10 @@ def test_file_mover(tmp_path_factory: TempPathFactory) -> None:
     )
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_file_tree_generation(tmp_path_factory: TempPathFactory) -> None:
+async def test_file_tree_generation(tmp_path_factory: TempPathFactory) -> None:
     tmp_dir = tmp_path_factory.mktemp("file_tree")
     (tmp_dir / "file1.txt").write_text("content1", encoding="utf-8")
     subdir = tmp_dir / "subdir"
@@ -179,12 +163,10 @@ def test_file_tree_generation(tmp_path_factory: TempPathFactory) -> None:
     assert "subdir" in file_tree, "subdir not found in generated file tree."  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_sorter(
+async def test_sorter(
     tmp_path_factory: TempPathFactory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     tmp_dir = tmp_path_factory.mktemp("sorter")

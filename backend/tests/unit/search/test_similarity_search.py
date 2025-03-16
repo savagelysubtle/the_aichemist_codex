@@ -6,7 +6,7 @@ similarity search feature in a real-world context.
 
 import os
 import tempfile
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +24,7 @@ from backend.src.utils.cache_manager import CacheManager
 @pytest.mark.search
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_files() -> Iterator[Path]:
+async def test_files() -> AsyncIterator[Path]:
     """Create temporary test files with controlled content.
 
     Creates groups of files with related content to test similarity detection.

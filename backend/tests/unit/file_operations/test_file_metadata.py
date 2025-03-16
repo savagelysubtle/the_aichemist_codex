@@ -1,12 +1,12 @@
-import pytest
 # test_file_metadata.py
 from pathlib import Path
+
+import pytest
 
 from backend.src.file_reader.file_metadata import FileMetadata
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
 @pytest.mark.unit
 def test_file_metadata_instantiation() -> None:
     meta = FileMetadata(

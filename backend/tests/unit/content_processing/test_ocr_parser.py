@@ -19,12 +19,10 @@ async def dummy_extract_file(
     return DummyExtractionResult("Test OCR text", "text/plain", {})
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.content_processing
+@pytest.mark.unit
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_ocr_parser(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+async def test_ocr_parser(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Create a dummy image file
     dummy_image_path = tmp_path / "dummy.png"
     dummy_image_path.write_bytes(b"fake image data")

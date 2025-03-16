@@ -4,7 +4,7 @@ import os
 import shutil
 import sqlite3
 import tempfile
-from collections.abc import AsyncIterator, Generator, Iterator
+from collections.abc import AsyncIterator, Generator
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,7 @@ class TestTagSchema:
     """Test the TagSchema class."""
 
     @pytest.fixture
-    def db_path(self) -> Iterator[Path]:
+    def db_path(self) -> Generator[Path]:
         """Create a temporary database file."""
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
             db_path = Path(f.name)
@@ -37,8 +37,9 @@ class TestTagSchema:
         schema = TagSchema(db_path)
         await schema.initialize()
 
-        # Check if tables were created
-        conn = schema.get_connection()
+        # Create a connection to check if tables were created
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
         # Check tags table
@@ -59,7 +60,7 @@ class TestTagSchema:
         )
         assert cursor.fetchone() is not None  # noqa: S101
 
-        schema.close()
+        conn.close()
 
     @pytest.mark.asyncio
     @pytest.mark.tagging
@@ -69,8 +70,8 @@ class TestTagSchema:
         schema = TagSchema(db_path)
         await schema.initialize()
 
-        # Add some data
-        conn = schema.get_connection()
+        # Add some data using direct connection
+        conn = sqlite3.connect(str(db_path))
         conn.execute("INSERT INTO tags (name, description) VALUES ('test', 'Test tag')")
         conn.commit()
 
@@ -82,14 +83,14 @@ class TestTagSchema:
         cursor.execute("SELECT COUNT(*) FROM tags")
         assert cursor.fetchone()[0] == 0  # noqa: S101
 
-        schema.close()
+        conn.close()
 
 
 class TestTagManager:
     """Test the TagManager class."""
 
     @pytest.fixture
-    def db_path(self) -> Iterator[Path]:
+    def db_path(self) -> Generator[Path]:
         """Create a temporary database file."""
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
             db_path = Path(f.name)
@@ -111,10 +112,7 @@ class TestTagManager:
         await manager.close()
 
     @pytest.fixture
-    @pytest.mark.tagging
-    @pytest.mark.unit
-    @pytest.mark.asyncio
-    async def test_files(self) -> Iterator[dict[str, Path]]:
+    def file_paths(self) -> Generator[dict[str, Path]]:
         """Create temporary test files."""
         temp_dir = tempfile.mkdtemp()
 
@@ -210,10 +208,10 @@ class TestTagManager:
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_add_file_tag(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test adding a tag to a file."""
-        file_path = test_files["file1"]
+        file_path = file_paths["file1"]
         tag_id = await tag_manager.create_tag("test", "Test tag")
 
         # Add tag to file
@@ -230,10 +228,10 @@ class TestTagManager:
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_add_file_tags(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test adding multiple tags to a file."""
-        file_path = test_files["file1"]
+        file_path = file_paths["file1"]
 
         # Add multiple tags
         tags = [("tag1", 1.0), ("tag2", 0.8), ("tag3", 0.6)]
@@ -249,10 +247,10 @@ class TestTagManager:
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_remove_file_tag(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test removing a tag from a file."""
-        file_path = test_files["file1"]
+        file_path = file_paths["file1"]
 
         # Add tag
         tag_id = await tag_manager.create_tag("test", "Test tag")
@@ -270,19 +268,19 @@ class TestTagManager:
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_get_files_by_tag(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test getting files by tag."""
         tag_id = await tag_manager.create_tag("test", "Test tag")
 
-        await tag_manager.add_file_tag(test_files["file1"], tag_id=tag_id)
-        await tag_manager.add_file_tag(test_files["file2"], tag_id=tag_id)
+        await tag_manager.add_file_tag(file_paths["file1"], tag_id=tag_id)
+        await tag_manager.add_file_tag(file_paths["file2"], tag_id=tag_id)
 
         files = await tag_manager.get_files_by_tag(tag_id=tag_id)
         assert len(files) == 2  # noqa: S101
-        assert str(test_files["file1"].resolve()) in files  # noqa: S101
-        assert str(test_files["file2"].resolve()) in files  # noqa: S101
-        assert str(test_files["file3"].resolve()) not in files  # noqa: S101
+        assert str(file_paths["file1"].resolve()) in files  # noqa: S101
+        assert str(file_paths["file2"].resolve()) in files  # noqa: S101
+        assert str(file_paths["file3"].resolve()) not in files  # noqa: S101
 
         # Test by tag name
         files = await tag_manager.get_files_by_tag(tag_name="test")
@@ -292,17 +290,17 @@ class TestTagManager:
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_get_files_by_tags(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test getting files by multiple tags."""
         tag1_id = await tag_manager.create_tag("tag1", "Tag 1")
         tag2_id = await tag_manager.create_tag("tag2", "Tag 2")
 
         # Add tags to files
-        await tag_manager.add_file_tag(test_files["file1"], tag_id=tag1_id)
-        await tag_manager.add_file_tag(test_files["file1"], tag_id=tag2_id)
-        await tag_manager.add_file_tag(test_files["file2"], tag_id=tag1_id)
-        await tag_manager.add_file_tag(test_files["file3"], tag_id=tag2_id)
+        await tag_manager.add_file_tag(file_paths["file1"], tag_id=tag1_id)
+        await tag_manager.add_file_tag(file_paths["file1"], tag_id=tag2_id)
+        await tag_manager.add_file_tag(file_paths["file2"], tag_id=tag1_id)
+        await tag_manager.add_file_tag(file_paths["file3"], tag_id=tag2_id)
 
         # Test OR query
         files = await tag_manager.get_files_by_tags(
@@ -315,21 +313,21 @@ class TestTagManager:
             [tag1_id, tag2_id], require_all=True
         )
         assert len(files) == 1  # noqa: S101
-        assert str(test_files["file1"].resolve()) in files  # noqa: S101
+        assert str(file_paths["file1"].resolve()) in files  # noqa: S101
 
     @pytest.mark.asyncio
     @pytest.mark.tagging
     @pytest.mark.unit
     async def test_get_tag_counts(
-        self, tag_manager: TagManager, test_files: dict[str, Path]
+        self, tag_manager: TagManager, file_paths: dict[str, Path]
     ) -> None:
         """Test getting tag usage counts."""
         tag1_id = await tag_manager.create_tag("tag1", "Tag 1")
         tag2_id = await tag_manager.create_tag("tag2", "Tag 2")
 
-        await tag_manager.add_file_tag(test_files["file1"], tag_id=tag1_id)
-        await tag_manager.add_file_tag(test_files["file2"], tag_id=tag1_id)
-        await tag_manager.add_file_tag(test_files["file3"], tag_id=tag2_id)
+        await tag_manager.add_file_tag(file_paths["file1"], tag_id=tag1_id)
+        await tag_manager.add_file_tag(file_paths["file2"], tag_id=tag1_id)
+        await tag_manager.add_file_tag(file_paths["file3"], tag_id=tag2_id)
 
         counts = await tag_manager.get_tag_counts()
         assert len(counts) == 2  # noqa: S101
@@ -614,8 +612,9 @@ async def test_integration() -> None:
         async with TagManager(db_path) as tag_manager:
             await tag_manager.initialize()
 
-            # Get database connection for tag hierarchy
-            conn = tag_manager.schema.get_connection()
+            # Create direct connection for tag hierarchy
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
             tag_hierarchy = TagHierarchy(conn)
 
             # Create some tags with hierarchy
@@ -675,8 +674,10 @@ async def test_integration() -> None:
 
             # Test hierarchy queries
 
-            # Create tag hierarchy from tag manager's connection
-            tag_hierarchy = TagHierarchy(tag_manager.schema.get_connection())
+            # Create tag hierarchy using direct connection
+            conn2 = sqlite3.connect(str(db_path))
+            conn2.row_factory = sqlite3.Row
+            tag_hierarchy = TagHierarchy(conn2)
 
             # Get descendants of 'text'
             text_descendants = tag_hierarchy.get_descendants(text_id)
@@ -700,6 +701,10 @@ async def test_integration() -> None:
             code_taxonomy = text_taxonomy["children"]["code"]
             assert "children" in code_taxonomy  # noqa: S101
             assert "python" in code_taxonomy["children"]  # noqa: S101
+
+            # Close connections
+            conn.close()
+            conn2.close()
 
     finally:
         # Cleanup

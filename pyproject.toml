@@ -154,6 +154,8 @@ tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
 markers = ["asyncio: mark a test as an asyncio test"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 
 [tool.ruff]

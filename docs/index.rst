@@ -42,12 +42,19 @@ Contents
    api/tagging
    api/rollback
    api/utils
+   api/config
+   api/models
+   api/notification
+   api/project_reader
+   api/output_formatter
+   api/ingest
 
 .. toctree::
    :maxdepth: 1
    :caption: Development
 
    contributing
+   code_style
    roadmap
    changelog
 

@@ -1,1 +1,382 @@
-/* This file intentionally left blank. */
+/* The Aichemist Codex - Custom Theme
+ * Dark theme with lime green accents
+ */
+
+/* Custom properties for theming */
+:root {
+    --lime-green: #00FF00;
+    --lime-green-dark: #00E676;
+    --background-dark: #121212;
+    --background-darker: #0a0a0a;
+    --sidebar-background: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-muted: #a0a0a0;
+    --border-radius: 8px;
+    --transition-speed: 0.3s;
+}
+
+/* Modern card-based layout for content */
+.document {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Card-style sections */
+.section {
+    background: var(--sidebar-background);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Modern navigation */
+.custom-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background: var(--background-darker);
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--lime-green);
+}
+
+.header-nav ul {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.header-nav li {
+    margin: 0 1rem;
+}
+
+.header-nav a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    transition: background-color var(--transition-speed);
+}
+
+.header-nav a:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+    color: var(--lime-green);
+}
+
+/* Furo theme overrides */
+:root {
+    /* Light theme variables */
+    --color-foreground-primary: var(--text-color);
+    --color-foreground-secondary: var(--text-muted);
+    --color-foreground-muted: var(--text-muted);
+    --color-background-primary: var(--background-dark);
+    --color-background-secondary: var(--sidebar-background);
+    --color-background-hover: rgba(0, 255, 0, 0.05);
+    --color-brand-primary: var(--lime-green);
+    --color-brand-content: var(--lime-green-dark);
+    --color-api-background: var(--sidebar-background);
+    --color-api-border: var(--lime-green-dark);
+    --color-inline-code-background: rgba(0, 255, 0, 0.05);
+}
+
+[data-theme="dark"] {
+    /* Dark theme variables */
+    --color-foreground-primary: var(--text-color);
+    --color-foreground-secondary: var(--text-muted);
+    --color-foreground-muted: var(--text-muted);
+    --color-background-primary: var(--background-dark);
+    --color-background-secondary: var(--sidebar-background);
+    --color-background-hover: rgba(0, 255, 0, 0.05);
+    --color-brand-primary: var(--lime-green);
+    --color-brand-content: var(--lime-green-dark);
+    --color-api-background: var(--sidebar-background);
+    --color-api-border: var(--lime-green-dark);
+    --color-inline-code-background: rgba(0, 255, 0, 0.05);
+}
+
+/* Code block styling */
+div[class^="highlight"] {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    position: relative;
+}
+
+pre {
+    padding: 1.5rem !important;
+    border-radius: var(--border-radius);
+    overflow-x: auto;
+    background-color: var(--sidebar-background) !important;
+}
+
+.highlight {
+    background-color: var(--sidebar-background) !important;
+}
+
+/* Copy button */
+.copy-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--lime-green-dark);
+    color: var(--background-dark);
+    border: none;
+    border-radius: 4px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.copy-button:hover {
+    background: var(--lime-green);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--lime-green);
+    border-radius: 4px;
+}
+
+/* Modern tables */
+table.docutils {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    border: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+table.docutils th {
+    background: var(--lime-green-dark);
+    color: var(--background-dark);
+    padding: 1rem;
+    text-align: left;
+}
+
+table.docutils td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+table.docutils tr:hover {
+    background: rgba(0, 255, 0, 0.05);
+}
+
+/* Admonitions (notes, warnings, etc.) */
+.admonition {
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--lime-green-dark);
+    background-color: var(--sidebar-background);
+    margin: 1.5rem 0;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admonition-title {
+    font-weight: bold;
+    margin: -1rem -1rem 1rem -1rem;
+    padding: 0.5rem 1rem;
+    background-color: rgba(0, 255, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+/* Sidebar customization */
+.sidebar-brand {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sidebar-brand-text {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: var(--lime-green);
+}
+
+.sidebar-search {
+    padding: 1rem;
+}
+
+.sidebar-search-container {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* Navigation links */
+.toctree-l1 > a,
+.toctree-l2 > a,
+.toctree-l3 > a {
+    border-radius: var(--border-radius);
+    margin: 0.2rem 0;
+    transition: background-color var(--transition-speed);
+}
+
+.toctree-l1 > a:hover,
+.toctree-l2 > a:hover,
+.toctree-l3 > a:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    background: transparent;
+    border: 1px solid var(--lime-green-dark);
+    color: var(--lime-green);
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all var(--transition-speed);
+}
+
+.theme-toggle:hover {
+    background: rgba(0, 255, 0, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .custom-header {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .header-nav ul {
+        margin-top: 1rem;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .header-nav li {
+        margin: 0.5rem 0;
+    }
+
+    .document {
+        padding: 1rem;
+    }
+
+    .section {
+        padding: 1.5rem;
+    }
+}
+
+/* Landing page customization */
+.landing-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.landing-title {
+    font-size: 3rem;
+    color: var(--lime-green);
+    margin-bottom: 1rem;
+}
+
+.landing-subtitle {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.feature-card {
+    background: var(--sidebar-background);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    text-align: center;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    color: var(--lime-green);
+    margin-bottom: 1rem;
+}
+
+.feature-title {
+    font-size: 1.5rem;
+    color: var(--lime-green);
+    margin-bottom: 1rem;
+}
+
+.feature-description {
+    color: var(--text-muted);
+}
+
+/* Button styles */
+.button {
+    display: inline-block;
+    background: var(--lime-green-dark);
+    color: var(--background-dark);
+    padding: 0.8rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: bold;
+    transition: background var(--transition-speed);
+    margin: 0.5rem;
+}
+
+.button:hover {
+    background: var(--lime-green);
+}
+
+.button.secondary {
+    background: transparent;
+    border: 2px solid var(--lime-green-dark);
+    color: var(--lime-green);
+}
+
+.button.secondary:hover {
+    background: rgba(0, 255, 0, 0.1);
+}
+
+/* Syntax highlighting overrides - make class names and function names green instead of red */
+.highlight .nc,   /* Class name */
+.highlight .nf,   /* Function name */
+.highlight .fm,   /* Method name */
+.highlight .nn,   /* Namespace */
+.highlight .nx,   /* Other names */
+.highlight .na,   /* Attribute name */
+.highlight .nt,   /* Tag name */
+.highlight .k,    /* Keyword */
+.highlight .kn,   /* Namespace keyword */
+.highlight .kc,   /* Constant keyword */
+.highlight .o,    /* Operator */
+.highlight .ow,   /* Operator word */
+.highlight .p,    /* Punctuation */
+.highlight .gp    /* Generic.Prompt */
+{
+    color: var(--lime-green) !important;
+}

@@ -8,12 +8,12 @@ from backend.main import select_directory
 
 
 # Fake implementations for GUI functions to bypass actual dialogs.
-def fake_askdirectory(prompt):
+def fake_askdirectory(prompt: str) -> str:
     # Return a temporary directory path.
     return tempfile.gettempdir()
 
 
-def fake_messagebox_info(title, message):
+def fake_messagebox_info(title: str, message: str) -> None:
     return  # Simply bypass; in real tests you might capture/log the message.
 
 
@@ -27,8 +27,7 @@ def patch_tkinter(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tkinter.messagebox, "showerror", fake_messagebox_info)
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.core
 @pytest.mark.unit
 def test_select_directory() -> None:
     # Verify that select_directory returns a valid Path object.

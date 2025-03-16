@@ -6,12 +6,11 @@ import pytest
 from backend.src.project_reader.code_summary import process_file
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
+@pytest.mark.content_processing
+@pytest.mark.unit
 
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_function_metadata_extraction(tmp_path: Path) -> None:
+async def test_function_metadata_extraction(tmp_path: Path) -> None:
     """Test extracting function metadata, including decorators and return types."""
     test_file = tmp_path / "test_script.py"
     test_file.write_text(
@@ -33,12 +32,11 @@ def my_func(a: int, b: str) -> bool:
     assert summaries_list[0]["return_type"] == "bool"  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
+@pytest.mark.content_processing
+@pytest.mark.unit
 
 @pytest.mark.asyncio
-async async @pytest.mark.unit
-def test_class_extraction(tmp_path: Path) -> None:
+async def test_class_extraction(tmp_path: Path) -> None:
     """Test extracting class metadata, including methods."""
     test_file = tmp_path / "test_class.py"
     test_file.write_text(

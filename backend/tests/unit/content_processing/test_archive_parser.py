@@ -23,10 +23,9 @@ def sample_zip(tmp_path: Path) -> Path:
 
 
 @pytest.mark.asyncio
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
+@pytest.mark.content_processing
 @pytest.mark.unit
-async async async def test_archive_parser_zip(sample_zip: Path) -> None:
+async def test_archive_parser_zip(sample_zip: Path) -> None:
     """Test ArchiveParser on a ZIP archive."""
     parser = ArchiveParser()
     result = await parser.parse(sample_zip)
@@ -38,10 +37,9 @@ async async async def test_archive_parser_zip(sample_zip: Path) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
+@pytest.mark.content_processing
 @pytest.mark.unit
-async async async def test_archive_parser_unsupported(tmp_path: Path) -> None:
+async def test_archive_parser_unsupported(tmp_path: Path) -> None:
     """Test ArchiveParser raises ValueError for an unsupported format."""
     dummy_file = tmp_path / "dummy.rar"
     dummy_file.write_text("dummy content")

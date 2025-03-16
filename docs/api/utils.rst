@@ -1,9 +1,79 @@
-Utils
-=====
+Utilities
+=========
 
-The Utils package provides essential utilities and helper functions used throughout The Aichemist Codex.
+The Utilities module provides common helper functions and tools used throughout the application.
 
 .. automodule:: backend.src.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Logging
+------
+
+Logging utilities for consistent logging throughout the application.
+
+.. automodule:: backend.src.utils.logger
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Path Utilities
+-----------
+
+Utilities for handling file paths and file system operations.
+
+.. automodule:: backend.src.utils.path_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+String Utilities
+-------------
+
+Utilities for string manipulation and processing.
+
+.. automodule:: backend.src.utils.string_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Date & Time Utilities
+------------------
+
+Utilities for handling date and time operations.
+
+.. automodule:: backend.src.utils.datetime_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Concurrency Utilities
+------------------
+
+Utilities for managing concurrent operations.
+
+.. automodule:: backend.src.utils.concurrency
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Validation Utilities
+-----------------
+
+Utilities for data validation and verification.
+
+.. automodule:: backend.src.utils.validation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Caching Utilities
+--------------
+
+Utilities for caching and improving performance.
+
+.. automodule:: backend.src.utils.cache
    :members:
    :undoc-members:
    :show-inheritance:
@@ -60,14 +130,6 @@ Batch Processor
 --------------
 
 .. automodule:: backend.src.utils.batch_processor
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Concurrency
-----------
-
-.. automodule:: backend.src.utils.concurrency
    :members:
    :undoc-members:
    :show-inheritance:

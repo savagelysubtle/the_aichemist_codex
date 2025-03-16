@@ -22,32 +22,36 @@ class TestPDFMetadataExtractor:
     """Test suite for the PDF metadata extractor."""
 
     @pytest.mark.metadata
-@pytest.mark.unit
-def test_supported_mime_types(self, pdf_extractor):
+    @pytest.mark.unit
+    def test_supported_mime_types(self, pdf_extractor: PDFMetadataExtractor) -> None:
         """Test the supported MIME types."""
         assert "application/pdf" in pdf_extractor.supported_mime_types
         assert len(pdf_extractor.supported_mime_types) >= 1
 
     @pytest.mark.metadata
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_file_extensions(self, pdf_extractor):
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_file_extensions(self, pdf_extractor: PDFMetadataExtractor) -> None:
         """Test the file extension mapping."""
-        assert ".pdf" in pdf_extractor.FILE_EXTENSIONS
-        assert pdf_extractor.FILE_EXTENSIONS[".pdf"] == "application/pdf"
+        assert ".pdf" in pdf_extractor.FILE_EXTENSIONS  # type: ignore
+        assert pdf_extractor.FILE_EXTENSIONS[".pdf"] == "application/pdf"  # type: ignore
 
     @pytest.mark.asyncio
-@pytest.mark.metadata
-@pytest.mark.unit
-async def test_extract_nonexistent_file(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    async def test_extract_nonexistent_file(
+        self, pdf_extractor: PDFMetadataExtractor
+    ) -> None:
         """Test extraction with a nonexistent file."""
         with pytest.raises(FileNotFoundError):
             await pdf_extractor.extract("/nonexistent/file.pdf")
 
     @pytest.mark.asyncio
-@pytest.mark.metadata
-@pytest.mark.unit
-async def test_extract_unsupported_mime_type(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    async def test_extract_unsupported_mime_type(
+        self, pdf_extractor: PDFMetadataExtractor
+    ) -> None:
         """Test extraction with an unsupported MIME type."""
         # Create a temporary file
         tmp_file = Path("test_file.txt")
@@ -55,8 +59,9 @@ async def test_extract_unsupported_mime_type(self, pdf_extractor):
 
         try:
             # Mock the MIME type detector to return an unsupported type
-            with patch.object(
-                pdf_extractor.mime_detector, "get_mime_type", return_value="text/plain"
+            with patch(
+                "backend.src.metadata.pdf_extractor.MimeDetector.get_mime_type",
+                return_value="text/plain",
             ):
                 with pytest.raises(ValueError):
                     await pdf_extractor.extract(tmp_file)
@@ -66,9 +71,11 @@ async def test_extract_unsupported_mime_type(self, pdf_extractor):
                 tmp_file.unlink()
 
     @pytest.mark.asyncio
-@pytest.mark.metadata
-@pytest.mark.unit
-async def test_extract_with_cache(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    async def test_extract_with_cache(
+        self, pdf_extractor: PDFMetadataExtractor
+    ) -> None:
         """Test extraction with cache."""
         # Set up mocks
         cache_manager = MagicMock()
@@ -86,9 +93,8 @@ async def test_extract_with_cache(self, pdf_extractor):
 
         try:
             # Mock MIME type detection
-            with patch.object(
-                pdf_extractor.mime_detector,
-                "get_mime_type",
+            with patch(
+                "backend.src.metadata.pdf_extractor.MimeDetector.get_mime_type",
                 return_value="application/pdf",
             ):
                 result = await pdf_extractor.extract(file_path)
@@ -102,9 +108,11 @@ async def test_extract_with_cache(self, pdf_extractor):
                 file_path.unlink()
 
     @pytest.mark.asyncio
-@pytest.mark.metadata
-@pytest.mark.unit
-async def test_extract_without_pypdf(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    async def test_extract_without_pypdf(
+        self, pdf_extractor: PDFMetadataExtractor
+    ) -> None:
         """Test extraction when PyPDF2 is not available."""
         with patch("backend.src.metadata.pdf_extractor.PYPDF2_AVAILABLE", False):
             # Create a temporary file
@@ -113,9 +121,8 @@ async def test_extract_without_pypdf(self, pdf_extractor):
 
             try:
                 # Mock the MIME type detector to return a supported type
-                with patch.object(
-                    pdf_extractor.mime_detector,
-                    "get_mime_type",
+                with patch(
+                    "backend.src.metadata.pdf_extractor.MimeDetector.get_mime_type",
                     return_value="application/pdf",
                 ):
                     result = await pdf_extractor.extract(tmp_file)
@@ -128,9 +135,11 @@ async def test_extract_without_pypdf(self, pdf_extractor):
                     tmp_file.unlink()
 
     @pytest.mark.asyncio
-@pytest.mark.metadata
-@pytest.mark.unit
-async def test_extract_with_pypdf_error(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    async def test_extract_with_pypdf_error(
+        self, pdf_extractor: PDFMetadataExtractor
+    ) -> None:
         """Test extraction when PyPDF2 raises an error."""
         # Create a temporary file
         tmp_file = Path("test_file.pdf")
@@ -138,9 +147,8 @@ async def test_extract_with_pypdf_error(self, pdf_extractor):
 
         try:
             # Mock the MIME type detector to return a supported type
-            with patch.object(
-                pdf_extractor.mime_detector,
-                "get_mime_type",
+            with patch(
+                "backend.src.metadata.pdf_extractor.MimeDetector.get_mime_type",
                 return_value="application/pdf",
             ):
                 # Mock PyPDF2 to raise an error
@@ -158,7 +166,9 @@ async def test_extract_with_pypdf_error(self, pdf_extractor):
             if tmp_file.exists():
                 tmp_file.unlink()
 
-    def test_extract_with_pypdf(self, pdf_extractor):
+    @pytest.mark.metadata
+    @pytest.mark.unit
+    def test_extract_with_pypdf(self, pdf_extractor: PDFMetadataExtractor) -> None:
         """Test the PyPDF2 extraction method directly."""
         # This test would require a real PDF file
         # For unit testing purposes, we'll mock PdfReader instead
@@ -190,7 +200,7 @@ async def test_extract_with_pypdf_error(self, pdf_extractor):
             file_path = "test_file.pdf"
 
             # Call the method
-            result = pdf_extractor._extract_pdf_with_pypdf(file_path)
+            result = pdf_extractor._extract_pdf_with_pypdf(file_path)  # type: ignore
 
             # Assert the results
             assert result["metadata_type"] == "pdf"

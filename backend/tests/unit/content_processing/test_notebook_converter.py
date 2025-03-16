@@ -1,12 +1,12 @@
-import pytest
 import json
 from pathlib import Path
+
+import pytest
 
 from backend.src.project_reader.notebooks import NotebookConverter
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.content_processing
 @pytest.mark.unit
 def test_notebook_conversion(tmp_path: Path) -> None:
     """Test extracting Python code from a Jupyter Notebook."""

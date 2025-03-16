@@ -14,12 +14,10 @@ import pytest
 # For this example, we'll use mock objects
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_metadata_extraction_basic():
+def test_metadata_extraction_basic() -> None:
     """Test basic metadata extraction functionality."""
     # Setup - create a mock file path and expected metadata
     file_path = os.path.join("test_files", "sample.pdf")
@@ -42,12 +40,10 @@ def test_metadata_extraction_basic():
     mock_extractor.extract.assert_called_once_with(file_path)
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_metadata_extraction_empty_file():
+def test_metadata_extraction_empty_file() -> None:
     """Test metadata extraction with an empty file."""
     # Setup - create a mock file path
     file_path = os.path.join("test_files", "empty.pdf")
@@ -64,8 +60,9 @@ def test_metadata_extraction_empty_file():
     mock_extractor.extract.assert_called_once_with(file_path)
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
+@pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "file_extension,expected_extractor_type",
     [
@@ -76,9 +73,7 @@ def test_metadata_extraction_empty_file():
         (".unknown", None),
     ],
 )
-@pytest.mark.metadata
-@pytest.mark.unit
-def test_extractor_factory(file_extension, expected_extractor_type):
+def test_extractor_factory(file_extension: str, expected_extractor_type: str) -> None:
     """Test that the extractor factory returns the correct extractor type."""
     # Setup - create a mock factory and file path
     mock_factory = MagicMock()
@@ -104,13 +99,10 @@ def test_extractor_factory(file_extension, expected_extractor_type):
     mock_factory.get_extractor.assert_called_once_with(file_path)
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_metadata_extraction_integration():
+def test_metadata_extraction_integration() -> None:
     """
     Integration test for metadata extraction.
 

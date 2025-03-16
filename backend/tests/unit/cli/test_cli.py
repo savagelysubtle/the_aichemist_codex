@@ -8,9 +8,6 @@ from pytest import CaptureFixture, MonkeyPatch
 from backend.cli import main, validate_directory
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.cli
 @pytest.mark.unit
 def test_validate_directory(tmp_path: Path) -> None:
@@ -21,9 +18,6 @@ def test_validate_directory(tmp_path: Path) -> None:
     assert result == d.resolve()  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.cli
 @pytest.mark.unit
 def test_validate_directory_failure(tmp_path: Path) -> None:
@@ -31,9 +25,6 @@ def test_validate_directory_failure(tmp_path: Path) -> None:
     with pytest.raises(ArgumentTypeError):
         validate_directory(str(tmp_path / "nonexistent"))
 
-
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
 
 @pytest.mark.cli
 @pytest.mark.unit
@@ -57,9 +48,8 @@ def test_cli_read_command(
     assert "This is a test file." in captured  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
+@pytest.mark.cli
+@pytest.mark.unit
 @pytest.mark.cli
 @pytest.mark.unit
 def test_cli_tree_command(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

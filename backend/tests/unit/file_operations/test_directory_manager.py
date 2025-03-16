@@ -32,8 +32,7 @@ def dir_manager_setup(
     return test_dir, rollback_log, temp_dir
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
 @pytest.mark.unit
 def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path]) -> None:
     test_dir, rollback_log, _ = dir_manager_setup
@@ -48,8 +47,7 @@ def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path]) -> None:
     assert any(op.get("operation") == "create" for op in data)  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.file_operations
 @pytest.mark.unit
 def test_cleanup_empty_dirs(dir_manager_setup: tuple[Path, Path, Path]) -> None:
     _, _, temp_dir = dir_manager_setup

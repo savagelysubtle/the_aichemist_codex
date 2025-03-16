@@ -1,12 +1,13 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 # test_ingest_reader.py
 from backend.src.ingest.reader import convert_notebook, read_full_file
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
+@pytest.mark.ingest
 @pytest.mark.unit
 def test_read_full_file(tmp_path: Path) -> None:
     # Create a sample text file.
@@ -18,8 +19,8 @@ def test_read_full_file(tmp_path: Path) -> None:
     assert sample_text in content  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
+@pytest.mark.ingest
 @pytest.mark.unit
 def test_read_full_file_fallback_encoding(tmp_path: Path) -> None:
     # Create a file encoded in latin-1.
@@ -31,8 +32,8 @@ def test_read_full_file_fallback_encoding(tmp_path: Path) -> None:
     assert sample_text in content  # noqa: S101
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
+@pytest.mark.ingest
 @pytest.mark.unit
 def test_convert_notebook(tmp_path: Path) -> None:
     # Create a dummy notebook JSON file.

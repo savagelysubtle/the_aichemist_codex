@@ -1,13 +1,13 @@
-import pytest
 # tests/test_ingest.py
-
 from pathlib import Path
+
+import pytest
 
 from backend.src.ingest import generate_digest
 
 
-@pytest.mark.[a-z]+
-
+@pytest.mark.asyncio
+@pytest.mark.ingest
 @pytest.mark.unit
 def test_generate_digest_with_empty_dir(tmp_path: Path) -> None:
     # Create a temporary directory (this is automatically provided by

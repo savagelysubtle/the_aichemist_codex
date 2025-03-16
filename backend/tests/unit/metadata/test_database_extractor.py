@@ -3,15 +3,19 @@
 import os
 import sqlite3
 import tempfile
+from collections.abc import Generator
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from backend.src.metadata.database_extractor import DatabaseMetadataExtractor
+from backend.src.utils.cache_manager import CacheManager
 
 
 # Test fixtures
 @pytest.fixture
-def sample_sqlite_db():
+def sample_sqlite_db() -> Generator[Path]:
     """Create a temporary SQLite database for testing"""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         db_path = temp_file.name
@@ -74,14 +78,14 @@ def sample_sqlite_db():
     conn.commit()
     conn.close()
 
-    yield db_path
+    yield Path(db_path)
 
     # Cleanup
     os.unlink(db_path)
 
 
 @pytest.fixture
-def sample_sql_dump():
+def sample_sql_dump() -> Generator[Path]:
     """Create a temporary SQL dump file for testing"""
     with tempfile.NamedTemporaryFile(suffix=".sql", delete=False) as temp_file:
         temp_file.write(b"""
@@ -122,14 +126,14 @@ INSERT INTO posts (id, user_id, title, content, published) VALUES
 (3, 2, 'User2 post', 'Content from user2', TRUE);
         """)
 
-    yield temp_file.name
+    yield Path(temp_file.name)
 
     # Cleanup
     os.unlink(temp_file.name)
 
 
 @pytest.fixture
-def sample_mysql_dump():
+def sample_mysql_dump() -> Generator[Path]:
     """Create a temporary MySQL dump file for testing"""
     with tempfile.NamedTemporaryFile(suffix=".mysql", delete=False) as temp_file:
         temp_file.write(b"""
@@ -248,38 +252,34 @@ SET character_set_client = @saved_cs_client;
 -- Dump completed on 2023-03-16 14:25:36
         """)
 
-    yield temp_file.name
+    yield Path(temp_file.name)
 
     # Cleanup
     os.unlink(temp_file.name)
 
 
+class MockCacheManager:
+    def __init__(self) -> None:
+        self.cache: dict[str, Any] = {}
+
+    async def get(self, key: str) -> Any:
+        return self.cache.get(key)
+
+    async def put(self, key: str, value: Any) -> None:
+        self.cache[key] = value
+
+
 @pytest.fixture
-def mock_cache_manager():
+def mock_cache_manager() -> Any:  # Use Any to avoid type compatibility issues
     """Mock cache manager for testing caching functionality"""
-
-    class MockCacheManager:
-        def __init__(self):
-            self.cache = {}
-
-        async def get(self, key):
-            return self.cache.get(key)
-
-        async def put(self, key, value):
-            self.cache[key] = value
-
     return MockCacheManager()
 
 
 # Actual tests
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_sqlite_metadata_extraction(sample_sqlite_db):
+async def test_sqlite_metadata_extraction(sample_sqlite_db: Path) -> None:
     """Test extraction of metadata from SQLite database"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_sqlite_db)
@@ -318,14 +318,10 @@ def test_sqlite_metadata_extraction(sample_sqlite_db):
     assert "1 views" in metadata["summary"]
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_sql_dump_metadata_extraction(sample_sql_dump):
+async def test_sql_dump_metadata_extraction(sample_sql_dump: Path) -> None:
     """Test extraction of metadata from SQL dump file"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_sql_dump)
@@ -350,50 +346,42 @@ def test_sql_dump_metadata_extraction(sample_sql_dump):
     assert "2 table definitions" in metadata["summary"]
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_mysql_dump_metadata_extraction(sample_mysql_dump):
+async def test_mysql_dump_metadata_extraction(sample_mysql_dump: Path) -> None:
     """Test extraction of metadata from MySQL dump file"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_mysql_dump)
 
     # Test basic metadata
-    assert metadata["metadata_type"] == "database"
-    assert metadata["format"]["type"] == "mysql_dump"
-    assert metadata["format"]["detected_type"] == "mysql"
+    assert metadata["metadata_type"] == "database"  # noqa: S101
+    assert metadata["format"]["type"] == "mysql_dump"  # noqa: S101
+    assert metadata["format"]["detected_type"] == "mysql"  # noqa: S101
 
     # Test database identification
-    assert "database_name" in metadata["format"]
-    assert metadata["format"]["database_name"] == "test_db"
+    assert "database_name" in metadata["format"]  # noqa: S101
+    assert metadata["format"]["database_name"] == "test_db"  # noqa: S101
 
     # Test schema information
-    assert metadata["schema"]["table_count"] == 2
-    assert metadata["schema"]["view_count"] == 1
-    assert "users" in metadata["schema"]["tables"]
-    assert "posts" in metadata["schema"]["tables"]
+    assert metadata["schema"]["table_count"] == 2  # noqa: S101
+    assert metadata["schema"]["view_count"] == 1  # noqa: S101
+    assert "users" in metadata["schema"]["tables"]  # noqa: S101
+    assert "posts" in metadata["schema"]["tables"]  # noqa: S101
 
     # Test charset detection
-    assert "default_charset" in metadata["format"]
-    assert metadata["format"]["default_charset"] == "utf8mb4"
+    assert "default_charset" in metadata["format"]  # noqa: S101
+    assert metadata["format"]["default_charset"] == "utf8mb4"  # noqa: S101
 
     # Test summary
-    assert "MySQL dump" in metadata["summary"]
-    assert "test_db" in metadata["summary"]
+    assert "MySQL dump" in metadata["summary"]  # noqa: S101
+    assert "test_db" in metadata["summary"]  # noqa: S101
 
-
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
 
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_nonexistent_file():
+async def test_nonexistent_file() -> None:
     """Test handling of nonexistent files"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract("nonexistent_file.db")
@@ -402,14 +390,10 @@ def test_nonexistent_file():
     assert metadata == {}
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_unsupported_file_format():
+async def test_unsupported_file_format() -> None:
     """Test handling of unsupported file formats"""
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
         temp_file.write(b"This is not a database file")
@@ -420,19 +404,15 @@ def test_unsupported_file_format():
         metadata = await extractor.extract(path)
 
         # Should return empty dict for unsupported formats
-        assert metadata == {}
+        assert metadata == {}  # noqa: S101
     finally:
         os.unlink(path)
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_sqlite_corrupt_database():
+async def test_sqlite_corrupt_database() -> None:
     """Test handling of corrupt SQLite databases"""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         temp_file.write(b"This is not a valid SQLite database file")
@@ -443,23 +423,23 @@ def test_sqlite_corrupt_database():
         metadata = await extractor.extract(path)
 
         # Should return metadata with error information
-        assert metadata["metadata_type"] == "database"
-        assert metadata["format"]["type"] == "sqlite"
-        assert "error" in metadata
+        assert metadata["metadata_type"] == "database"  # noqa: S101
+        assert metadata["format"]["type"] == "sqlite"  # noqa: S101
+        assert "error" in metadata  # noqa: S101
     finally:
         os.unlink(path)
 
 
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-@pytest.mark.[a-z]+
-
 @pytest.mark.asyncio
-async async @pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.unit
-def test_caching_functionality(sample_sqlite_db, mock_cache_manager):
+async def test_caching_functionality(
+    sample_sqlite_db: Path, mock_cache_manager: MockCacheManager
+) -> None:
     """Test that caching works correctly"""
-    extractor = DatabaseMetadataExtractor(cache_manager=mock_cache_manager)
+    extractor = DatabaseMetadataExtractor(
+        cache_manager=cast(CacheManager, mock_cache_manager)
+    )
 
     # First extraction - should extract and cache
     metadata1 = await extractor.extract(sample_sqlite_db)

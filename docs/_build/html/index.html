@@ -1,216 +1,212 @@
 
 
-<!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to The Aichemist Codex’s documentation! &mdash; The Aichemist Codex  documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
-      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
 
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.svg"/><!-- Generated with Sphinx 8.2.3 and Furo 2024.08.06 -->
+        <title>The Aichemist Codex</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  --color-brand-primary: #32cd32;
+  --color-brand-content: #32cd32;
+  --color-background-secondary: #f8f9fa;
+  --color-background-hover: #ebedef;
+  --color-link: #1d8311;
+  --color-link-hover: #32cd32;
+  --color-sidebar-link-text: #2b2b2b;
+  --color-sidebar-link-text--top-level: #262626;
+  --color-sidebar-item-background--current: #e3ffe3;
+  --color-sidebar-item-background--hover: #f0f8f0;
+  --color-foreground-secondary: #363636;
+  --color-foreground-muted: #646464;
+  --color-foreground-border: #d0d0d0;
+  --color-inline-code-background: #f5f5f5;
+  --color-highlighted-background: #fdffe2;
+  --color-api-background: #f5f7f9;
+  --color-api-border: #e1e4e5;
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=5929fcd5"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="_static/copybutton.js?v=f281be69"></script>
-    <script src="_static/js/theme.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Getting Started" href="getting_started.html" /> 
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #32cd32;
+  --color-brand-content: #32cd32;
+  --color-background-primary: #131313;
+  --color-background-secondary: #1a1a1a;
+  --color-background-hover: #292929;
+  --color-link: #5fff5f;
+  --color-link-hover: #32cd32;
+  --color-sidebar-background: #1a1a1a;
+  --color-sidebar-link-text: #bebebe;
+  --color-sidebar-link-text--top-level: #e0e0e0;
+  --color-sidebar-item-background--current: #0f3b0f;
+  --color-sidebar-item-background--hover: #1f2f1f;
+  --color-foreground-primary: #e0e0e0;
+  --color-foreground-secondary: #bebebe;
+  --color-foreground-muted: #949494;
+  --color-foreground-border: #4c4c4c;
+  --color-inline-code-background: #2b2b2b;
+  --color-highlighted-background: #262410;
+  --color-api-background: #1a1a1a;
+  --color-api-border: #303030;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #32cd32;
+  --color-brand-content: #32cd32;
+  --color-background-primary: #131313;
+  --color-background-secondary: #1a1a1a;
+  --color-background-hover: #292929;
+  --color-link: #5fff5f;
+  --color-link-hover: #32cd32;
+  --color-sidebar-background: #1a1a1a;
+  --color-sidebar-link-text: #bebebe;
+  --color-sidebar-link-text--top-level: #e0e0e0;
+  --color-sidebar-item-background--current: #0f3b0f;
+  --color-sidebar-item-background--hover: #1f2f1f;
+  --color-foreground-primary: #e0e0e0;
+  --color-foreground-secondary: #bebebe;
+  --color-foreground-muted: #949494;
+  --color-foreground-border: #4c4c4c;
+  --color-inline-code-background: #2b2b2b;
+  --color-highlighted-background: #262410;
+  --color-api-background: #1a1a1a;
+  --color-api-border: #303030;
+  
+      }
+    }
+  }
+</style>
+  
+  
+  <link rel="stylesheet" href="_static/custom.css" />
+  <script defer src="_static/custom.js"></script>
+  <link rel="icon" href="_static/favicon.ico" />
+  <meta name="theme-color" content="#1e1e1e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="_static/landing.css" />
 </head>
+  <body>
+    
+<div class="landing-header animated">
+  <img src="_static/logo-lime.svg" alt="The Aichemist Codex Logo" width="180" height="180" />
+  <h1 class="landing-title">The Aichemist Codex</h1>
+  <p class="landing-subtitle">A modern knowledge management system designed for researchers, data scientists, and curious minds.</p>
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="#" class="icon icon-home">
-            The Aichemist Codex
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
+  <div class="landing-buttons">
+    <a href="getting_started.html" class="sd-btn sd-btn-primary">Get Started</a>
+    <a href="usage.html" class="sd-btn sd-btn-secondary">Explore Features</a>
+    <a href="https://github.com/your-username/the-aichemist-codex" class="sd-btn">View on GitHub</a>
+  </div>
 </div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="api/file_reader.html">File Reader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/utils.html">Utils</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">The Aichemist Codex</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Welcome to The Aichemist Codex’s documentation!</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
-  <section id="welcome-to-the-aichemist-codex-s-documentation">
-<h1>Welcome to The Aichemist Codex’s documentation!<a class="headerlink" href="#welcome-to-the-aichemist-codex-s-documentation" title="Link to this heading"></a></h1>
-<a class="reference internal image-reference" href="images/logo.png"><img alt="The Aichemist Codex Logo" class="align-center" src="images/logo.png" style="width: 200px;" />
-</a>
-<p><em>Intelligent File Management and Knowledge Extraction System</em></p>
-<p>The Aichemist Codex is an advanced file management and knowledge extraction system
-designed to transform how you interact with your files and documents. It leverages
-AI and machine learning to provide intelligent file organization, content analysis,
-and relationship mapping.</p>
-<section id="contents">
-<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading"></a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#what-is-the-aichemist-codex">What is The Aichemist Codex?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#quick-start">Quick Start</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#example-usage">Example Usage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#next-steps">Next Steps</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#system-requirements">System Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-methods">Installation Methods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#verify-installation">Verify Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#troubleshooting">Troubleshooting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#next-steps">Next Steps</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#command-line-interface">Command Line Interface</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#relationship-mapping">Relationship Mapping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#python-api">Python API</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#configuration">Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#advanced-features">Advanced Features</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="api/file_reader.html">File Reader</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.ArchiveParser"><code class="docutils literal notranslate"><span class="pre">ArchiveParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.BaseParser"><code class="docutils literal notranslate"><span class="pre">BaseParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.CodeParser"><code class="docutils literal notranslate"><span class="pre">CodeParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.CsvParser"><code class="docutils literal notranslate"><span class="pre">CsvParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.DocumentParser"><code class="docutils literal notranslate"><span class="pre">DocumentParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.FileMetadata"><code class="docutils literal notranslate"><span class="pre">FileMetadata</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.FileReader"><code class="docutils literal notranslate"><span class="pre">FileReader</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.JsonParser"><code class="docutils literal notranslate"><span class="pre">JsonParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.OCRParser"><code class="docutils literal notranslate"><span class="pre">OCRParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.SpreadsheetParser"><code class="docutils literal notranslate"><span class="pre">SpreadsheetParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.TextParser"><code class="docutils literal notranslate"><span class="pre">TextParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.VectorParser"><code class="docutils literal notranslate"><span class="pre">VectorParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.XmlParser"><code class="docutils literal notranslate"><span class="pre">XmlParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.YamlParser"><code class="docutils literal notranslate"><span class="pre">YamlParser</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#backend.src.file_reader.get_parser_for_mime_type"><code class="docutils literal notranslate"><span class="pre">get_parser_for_mime_type()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#module-backend.src.file_reader.file_reader">FileReader</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#file-metadata">File Metadata</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#module-backend.src.file_reader.parsers">Parsers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html#ocr-parser">OCR Parser</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api/utils.html">Utils</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.AsyncFileIO"><code class="docutils literal notranslate"><span class="pre">AsyncFileIO</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.AsyncFileReader"><code class="docutils literal notranslate"><span class="pre">AsyncFileReader</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.AsyncFileTools"><code class="docutils literal notranslate"><span class="pre">AsyncFileTools</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.AsyncSQL"><code class="docutils literal notranslate"><span class="pre">AsyncSQL</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.CodexError"><code class="docutils literal notranslate"><span class="pre">CodexError</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.MaxTokenError"><code class="docutils literal notranslate"><span class="pre">MaxTokenError</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.NotebookProcessingError"><code class="docutils literal notranslate"><span class="pre">NotebookProcessingError</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.SafeFileHandler"><code class="docutils literal notranslate"><span class="pre">SafeFileHandler</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#backend.src.utils.get_project_name"><code class="docutils literal notranslate"><span class="pre">get_project_name()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#module-backend.src.utils.async_io">Async I/O</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#safety-handler">Safety Handler</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#error-handling">Error Handling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#pattern-matching">Pattern Matching</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#module-backend.src.utils.sqlasync_io">Async SQL</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#cache-manager">Cache Manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#batch-processor">Batch Processor</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#concurrency">Concurrency</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/utils.html#mime-type-detector">MIME Type Detector</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-</div>
-</section>
-<section id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
-</section>
-</section>
-
-
-           </div>
-          </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="getting_started.html" class="btn btn-neutral float-right" title="Getting Started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Steve Oatman.</p>
+<div class="feature-grid">
+  <div class="feature-card animated delay-1">
+    <div class="feature-icon">📂</div>
+    <h3 class="feature-title">Intelligent File Management</h3>
+    <p class="feature-description">Automatically organize, tag, and categorize your research files with AI-powered tools.</p>
   </div>
 
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
-        </div>
-      </div>
-    </section>
+  <div class="feature-card animated delay-2">
+    <div class="feature-icon">🔍</div>
+    <h3 class="feature-title">Semantic Search</h3>
+    <p class="feature-description">Find exactly what you need with context-aware search capabilities that understand the content of your files.</p>
   </div>
+
+  <div class="feature-card animated delay-3">
+    <div class="feature-icon">🔗</div>
+    <h3 class="feature-title">Knowledge Relationships</h3>
+    <p class="feature-description">Discover connections between your data with automated relationship analysis and visualization.</p>
+  </div>
+</div>
+
+<div class="section animated">
+  <h2>Easy to Install and Use</h2>
+  <div class="code-example">
+    pip install aichemist-codex<br>
+    aichemist init
+  </div>
+  <p>Get up and running in minutes with a simple installation process. The intuitive interface makes managing your knowledge base effortless.</p>
+</div>
+
+<div class="section animated">
+  <h2>Explore the Documentation</h2>
+  <div class="docs-grid">
+    <a href="getting_started.html" class="docs-card">
+      <h3>User Guide</h3>
+      <p>Learn how to use The Aichemist Codex effectively</p>
+    </a>
+    <a href="api/file_manager.html" class="docs-card">
+      <h3>API Reference</h3>
+      <p>Detailed documentation for developers</p>
+    </a>
+    <a href="contributing.html" class="docs-card">
+      <h3>Contributing</h3>
+      <p>Join our community and help improve the project</p>
+    </a>
+    <a href="roadmap.html" class="docs-card">
+      <h3>Roadmap</h3>
+      <p>See what's planned for future releases</p>
+    </a>
+  </div>
+</div>
+
+  <script src="_static/documentation_options.js?v=7f41d439"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    
   <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+    // Initialize theme-related functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add logo to sidebar if not already present
+      if (!document.querySelector('.sidebar-logo')) {
+        const logoContainer = document.createElement('div');
+        logoContainer.className = 'sidebar-logo';
 
+        const logoLink = document.createElement('a');
+        logoLink.href = "#";
+        logoLink.className = 'sidebar-logo-link';
+
+        const logoImg = document.createElement('img');
+        logoImg.className = 'sidebar-logo-image';
+        logoImg.src = "_static/logo-lime.svg";
+        logoImg.alt = "The Aichemist Codex Logo";
+        logoImg.width = 100;
+        logoImg.height = 100;
+
+        logoLink.appendChild(logoImg);
+        logoContainer.appendChild(logoLink);
+
+        const sidebar = document.querySelector('.sidebar-brand');
+        if (sidebar) {
+          sidebar.insertBefore(logoContainer, sidebar.firstChild);
+        }
+      }
+    });
+  </script>
 </body>
 </html>

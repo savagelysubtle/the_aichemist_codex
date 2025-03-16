@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -1417,8 +1418,9 @@ def main() -> None:
             async with TagManager(tag_db_path) as tag_manager:
                 await tag_manager.initialize()
 
-                # Get database connection for tag hierarchy
-                conn = tag_manager.schema.get_connection()
+                # Create direct connection for tag hierarchy
+                conn = sqlite3.connect(str(tag_db_path))
+                conn.row_factory = sqlite3.Row
                 tag_hierarchy = TagHierarchy(conn)
 
                 # Basic tag operations
@@ -1655,7 +1657,6 @@ def main() -> None:
                     files = await tag_manager.get_files_by_tags(
                         tag_ids=tag_ids,
                         require_all=require_all,
-                        min_confidence=threshold,
                     )
 
                     # Format results
