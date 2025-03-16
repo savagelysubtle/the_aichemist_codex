@@ -9,6 +9,7 @@ from .audio_extractor import AudioMetadataExtractor
 from .database_extractor import DatabaseMetadataExtractor
 from .extractor import BaseMetadataExtractor, MetadataExtractorRegistry
 from .image_extractor import ImageMetadataExtractor
+from .pdf_extractor import PDFMetadataExtractor
 
 __all__ = [
     "BaseMetadataExtractor",
@@ -16,4 +17,5 @@ __all__ = [
     "ImageMetadataExtractor",
     "AudioMetadataExtractor",
     "DatabaseMetadataExtractor",
+    "PDFMetadataExtractor",
 ]

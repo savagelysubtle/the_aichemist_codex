@@ -30,6 +30,10 @@ categorize files, and generate relevant tags.
      dimensions, color profiles, and more
    - `AudioMetadataExtractor`: For audio files, extracting technical properties,
      tags, and audio characteristics
+   - `DatabaseMetadataExtractor`: For database files, extracting schema
+     information, table structures, and statistics
+   - `PDFMetadataExtractor`: For PDF files, extracting document properties,
+     content, structure, fonts, and security information
 
 3. **Integration Points**
 
@@ -87,6 +91,25 @@ categorize files, and generate relevant tags.
 - Album art detection
 - Multi-format support (MP3, WAV, FLAC, OGG, etc.)
 
+### Database Analysis
+
+- Schema extraction and table structure
+- Statistics on tables and records
+- Data type information
+- Index and constraint detection
+- Format-specific handling (SQLite, SQL dumps)
+
+### PDF Analysis
+
+- Document properties extraction (title, author, creation date)
+- Page information and dimensions
+- Text content analysis with word and character counts
+- Font detection and listing
+- Image detection and counting
+- Security and encryption information
+- Scanned document detection
+- Performance optimization for large documents
+
 ## CLI Commands
 
 Three new CLI commands were added:
@@ -104,7 +127,6 @@ Potential future improvements include:
 1. **Additional Extractors**
 
    - Video file metadata (resolution, codec, duration, etc.)
-   - Database file metadata (SQLite, etc.)
    - Archive file metadata (ZIP, TAR, etc.)
 
 2. **Enhanced Algorithms**
@@ -114,6 +136,8 @@ Potential future improvements include:
    - Named entity recognition using NLP libraries
    - Audio fingerprinting and BPM detection
    - Image object recognition and face detection
+   - PDF text structure analysis and table extraction
+   - OCR for scanned documents
 
 3. **Performance Optimizations**
 
