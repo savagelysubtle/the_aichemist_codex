@@ -1,7 +1,8 @@
 # The Aichemist Codex
 
-![The Aichemist Codex Logo](docs/images/logo.svg){: .center width="200"
-height="200"}
+<div align="center">
+  <img src="docs/images/logo.svg" alt="The Aichemist Codex Logo" width="200" height="200">
+</div>
 
 ## Intelligent File Management and Knowledge Extraction System
 
