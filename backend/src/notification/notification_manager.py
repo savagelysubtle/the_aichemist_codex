@@ -1,8 +1,24 @@
 """
-Notification system for The Aichemist Codex.
+Notification system for managing and delivering notifications.
 
-This module provides functionality to create, manage, and deliver notifications
-through various channels based on notification type and severity.
+This module provides a comprehensive notification system with a publisher-subscriber
+pattern. It handles creation, storage, and delivery of notifications across the application.
+Notifications are categorized by levels (info, warning, error) and types (system, file, task).
+
+The module uses a centralized data directory to store notifications in JSON format.
+
+Typical usage:
+    manager = NotificationManager()
+    notification = manager.create_notification(
+        "File Processed",
+        "File example.txt has been processed successfully",
+        NotificationLevel.INFO,
+        NotificationType.FILE
+    )
+
+    # Subscribe to notifications
+    def handle_notification(notification):
+        print(f"Received: {notification.title}")
 """
 
 import asyncio
@@ -10,8 +26,8 @@ import hashlib
 import json
 import logging
 import time
-from enum import Enum
-from typing import Any, Generic, TypeVar
+from enum import Enum, auto
+from typing import Any
 
 from backend.src.config.settings import DATA_DIR, NOTIFICATION_SETTINGS
 from backend.src.utils.async_io import AsyncFileIO
@@ -29,12 +45,20 @@ T = TypeVar("T")
 
 
 class NotificationLevel(Enum):
-    """Notification severity levels."""
+    """
+    Enumeration for notification priority levels.
 
-    INFO = 0
-    WARNING = 1
-    ERROR = 2
-    CRITICAL = 3
+    Attributes:
+        INFO: Low priority informational notifications
+        WARNING: Medium priority warning notifications
+        ERROR: High priority error notifications
+        CRITICAL: Highest priority critical notifications
+    """
+
+    INFO = auto()
+    WARNING = auto()
+    ERROR = auto()
+    CRITICAL = auto()
 
     @classmethod
     def from_string(cls, level_str: str) -> "NotificationLevel":
@@ -59,18 +83,41 @@ class NotificationLevel(Enum):
 
 
 class NotificationType(Enum):
-    """Categories of notifications."""
+    """
+    Enumeration for notification categories.
 
-    FILE = "file"  # File system events
-    SYSTEM = "system"  # System-level events
-    SECURITY = "security"  # Security-related events
-    USER = "user"  # User actions
-    APPLICATION = "application"  # Application events
-    CUSTOM = "custom"  # Custom event types
+    Attributes:
+        SYSTEM: System-level notifications related to application functionality
+        FILE: File-related notifications for file operations and status
+        TASK: Task-related notifications for background job status
+        SECURITY: Security-related notifications for access and permissions
+        USER: User-related notifications for account and profile updates
+    """
+
+    SYSTEM = auto()
+    FILE = auto()
+    TASK = auto()
+    SECURITY = auto()
+    USER = auto()
 
 
 class Notification:
-    """Represents a single notification instance."""
+    """
+    Represents a single notification with metadata.
+
+    This class encapsulates all notification data including title, message,
+    level, type, timestamp, and read status.
+
+    Attributes:
+        id: Unique identifier for the notification
+        title: Short notification title
+        message: Detailed notification message
+        level: Priority level (INFO, WARNING, ERROR, CRITICAL)
+        type: Category type (SYSTEM, FILE, TASK, etc.)
+        timestamp: Creation time of the notification
+        read: Whether the notification has been marked as read
+        metadata: Additional contextual information for the notification
+    """
 
     def __init__(
         self,
@@ -371,14 +418,25 @@ class SimpleCache(Generic[T]):
 
 class NotificationManager:
     """
-    Manages the notification system with a publisher-subscriber pattern.
+    Manages creation, storage, and delivery of notifications.
+
+    This class implements a publisher-subscriber pattern for notifications,
+    allowing components to subscribe to notifications and receive updates
+    when new notifications are created.
 
     Features:
-    - Processes notifications through multiple channels
-    - Supports different notification types and severity levels
-    - Implements throttling to prevent notification flooding
-    - Provides API for querying notification history
-    - Applies rules-based filtering and routing
+    - Asynchronous notification delivery
+    - Persistence to JSON storage
+    - Configurable retention policies
+    - Filtering by type and level
+    - Read/unread status tracking
+
+    Attributes:
+        _instance: Singleton instance reference
+        _subscribers: Set of callback functions subscribed to notifications
+        _notifications: Dictionary of stored notifications by ID
+        _lock: Asyncio lock for thread safety
+        max_notifications: Maximum number of notifications to keep
     """
 
     _instance = None

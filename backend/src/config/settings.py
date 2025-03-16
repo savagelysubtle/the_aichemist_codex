@@ -1,12 +1,79 @@
 """Global settings and configuration constants."""
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
+
+# Project root detection - more robust approach
+def determine_project_root() -> Path:
+    """
+    Determine the project root directory using multiple methods.
+
+    First checks for environment variable, then tries to detect based on
+    repository structure, with a fallback to the parent of the backend directory.
+
+    Returns:
+        Path: The detected project root directory
+    """
+    # 1. First priority: Check environment variable
+    env_root = os.environ.get("AICHEMIST_ROOT_DIR")
+    if env_root:
+        root_dir = Path(env_root).resolve()
+        if root_dir.exists():
+            logger.info(f"Using root directory from environment: {root_dir}")
+            return root_dir
+        else:
+            logger.warning(f"Environment root directory doesn't exist: {root_dir}")
+
+    # 2. Second priority: Look for repository indicators
+    current_file = Path(__file__).resolve()
+    potential_root = (
+        current_file.parent.parent.parent.parent
+    )  # Go up to the project root
+
+    # Check for indicators of project root (like README.md, pyproject.toml, etc.)
+    root_indicators = ["README.md", "pyproject.toml", ".git"]
+    if any((potential_root / indicator).exists() for indicator in root_indicators):
+        logger.info(f"Detected project root at: {potential_root}")
+        return potential_root
+
+    # 3. Fallback: Use parent of backend directory
+    backend_parent = current_file.parent.parent.parent  # This is backend/
+    logger.info(f"Using backend parent as root: {backend_parent}")
+    return backend_parent
+
+
+# Determine data directory location
+def determine_data_dir() -> Path:
+    """
+    Determine the data directory location.
+
+    Checks for environment variable first, then uses a subdirectory
+    of the project root.
+
+    Returns:
+        Path: The data directory path
+    """
+    # Check for environment variable override
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        data_dir = Path(env_data_dir).resolve()
+        logger.info(f"Using data directory from environment: {data_dir}")
+        return data_dir
+
+    # Default: Use data/ subdirectory in project root
+    data_dir = PROJECT_ROOT / "data"
+    logger.info(f"Using default data directory: {data_dir}")
+    return data_dir
+
+
 # Base directories
-ROOT_DIR = Path(__file__).parent.parent.parent
-DATA_DIR = ROOT_DIR / "data"
+PROJECT_ROOT = determine_project_root()
+DATA_DIR = determine_data_dir()
 CACHE_DIR = DATA_DIR / "cache"
 LOG_DIR = DATA_DIR / "logs"
 EXPORT_DIR = DATA_DIR / "exports"

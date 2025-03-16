@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: Enforces AI-friendly coding practices for readability and maintainability
 globs: **/*.py"
 alwaysApply: false

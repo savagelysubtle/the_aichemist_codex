@@ -68,13 +68,38 @@ You can also configure The Aichemist Codex using environment variables. Environm
 
 .. code-block:: bash
 
-   # Set data directory
+   # Set project root directory
+   export AICHEMIST_ROOT_DIR=/path/to/project
+
+   # Set data directory (takes precedence over AICHEMIST_ROOT_DIR)
    export AICHEMIST_DATA_DIR=/path/to/data
 
    # Configure tagging
    export AICHEMIST_TAGGING_DB_PATH=/path/to/tags.db
    export AICHEMIST_TAGGING_MIN_CONFIDENCE=0.7
    export AICHEMIST_TAGGING_ENABLE_ML=true
+
+Data Directory Configuration
+---------------------------
+
+The Aichemist Codex stores various data files such as backups, logs, notifications, and cache files in a data directory. This directory is determined using the following logic:
+
+1. Use the ``AICHEMIST_DATA_DIR`` environment variable if set
+2. If ``AICHEMIST_ROOT_DIR`` is set, use ``AICHEMIST_ROOT_DIR/data``
+3. Otherwise, detect the project root by looking for certain files (README.md, pyproject.toml, .git)
+4. If detection fails, default to the parent directory of the backend folder
+
+The data directory contains these subdirectories:
+
+- ``backup/``: File backups for rollback operations
+- ``cache/``: Temporary cache files
+- ``exports/``: Exported analysis results
+- ``logs/``: Application logs
+- ``notifications/``: Stored notifications
+- ``trash/``: Deleted files (temporary storage)
+- ``versions/``: Version history
+
+See the :doc:`data_directory_config` documentation for more details.
 
 Programmatic Configuration
 -------------------------
