@@ -3,15 +3,58 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-aichemist_codex documentation
-=============================
+Welcome to The Aichemist Codex's documentation!
+===================================================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+.. image:: /images/logo.png
+   :width: 200px
+   :alt: The Aichemist Codex Logo
+   :align: center
 
+*Intelligent File Management and Knowledge Extraction System*
+
+The Aichemist Codex is an advanced file management and knowledge extraction system
+designed to transform how you interact with your files and documents. It leverages
+AI and machine learning to provide intelligent file organization, content analysis,
+and relationship mapping.
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guide
+
+   getting_started
+   installation
+   usage
+   configuration
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api/file_reader
+   api/file_manager
+   api/metadata
+   api/search
+   api/relationships
+   api/tagging
+   api/rollback
+   api/utils
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Development
+
+   contributing
+   roadmap
+   changelog
+
+Indices and tables
+-----------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 

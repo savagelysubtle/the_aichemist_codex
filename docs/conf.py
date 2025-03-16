@@ -3,10 +3,17 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
+import sys
+
+# Add the backend/src directory to the Python path
+sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../backend/src"))
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "aichemist_codex"
+project = "The Aichemist Codex"
 copyright = "2025, Steve Oatman"
 author = "Steve Oatman"
 
@@ -39,10 +46,6 @@ extensions = [
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../../backend/src"))
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
