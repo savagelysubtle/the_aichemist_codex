@@ -1,5 +1,92 @@
 # The Aichemist Codex: Implementation Plan
 
+## NEXT IMPLEMENTATION STEPS: Real-Time File Tracking & File Versioning
+
+### Week 1: Core File Change Detection System
+
+#### Day 1-2: Design & Setup
+
+1. Create directory structure for `file_tracker` module
+2. Design UML diagrams for all interfaces and relationships
+3. Set up test framework with pytest fixtures
+4. Create configuration file schema for tracking settings
+
+#### Day 3-4: Change Detector Implementation
+
+1. Implement abstract `ChangeDetector` base class
+2. Create `ContentChangeDetector` for text files
+3. Develop `HashChangeDetector` for binary files
+4. Implement unit tests for each detector type
+
+#### Day 5-7: File Watcher Integration
+
+1. Refactor existing `FileEventHandler` class
+2. Add throttling and debounce mechanisms
+3. Implement support for ignored directories
+4. Create integration tests with sample directories
+
+### Week 2: Multi-Directory Support & Change History
+
+#### Day 1-2: Configuration System
+
+1. Implement `TrackerConfiguration` class
+2. Create config loading/saving functionality
+3. Add validation for directory settings
+4. Create CLI commands for configuration management
+
+#### Day 3-5: Directory Registry
+
+1. Implement `DirectoryRegistry` class
+2. Add dynamic directory registration/unregistration
+3. Create nested directory support
+4. Implement path resolution and normalization
+
+#### Day 6-7: Change History Database
+
+1. Design SQLite schema for change history
+2. Implement `ChangeHistoryManager` class
+3. Create query interface for history retrieval
+4. Add cleanup policies for old records
+
+### Week 3: Version Storage & Diff Generation
+
+#### Day 1-3: Version Storage System
+
+1. Design `StorageProvider` interface
+2. Implement file system storage provider
+3. Create version metadata structure
+4. Set up secure storage with proper permissions
+
+#### Day 4-7: Diff Generation System
+
+1. Implement `DiffGenerator` abstract class
+2. Create text file diff implementation
+3. Develop binary file diff generator
+4. Add conflict detection and resolution
+
+### Week 4: Version Management API & Integration
+
+#### Day 1-3: Version Manager Implementation
+
+1. Create `VersionManager` main interface
+2. Implement version creation and retrieval
+3. Add version history and comparison functionality
+4. Create version restoration capabilities
+
+#### Day 4-5: Policy Implementation
+
+1. Implement configurable retention policies
+2. Add space-saving strategies
+3. Create version pruning functionality
+4. Implement special handling for critical files
+
+#### Day 6-7: CLI & Integration
+
+1. Connect file tracking with versioning system
+2. Implement CLI commands for version management
+3. Add end-to-end integration tests
+4. Create documentation for the new features
+
 ## Current Status
 
 ✅ **Phase 1: Core Improvements** - Fully completed
@@ -11,210 +98,20 @@
 - Performance & scalability optimizations
 - Security & compliance
 
-✅ **Phase 2: Partial Completion**
+⚡ **Phase 2: Partial Completion**
 
-- Advanced Search & Content Analysis - Completed
-- Smart File Organization - Completed
-- File Relationship Mapping - Completed
-- Monitoring & Change Tracking - Completed
-- Notification System - Completed
+- Advanced Search & Content Analysis - ✅ Completed
+- Smart File Organization - ✅ Completed
+- File Relationship Mapping - ✅ Completed
+- Monitoring & Change Tracking - 🔄 In Progress
+  - ✅ Notification System - Completed
+  - ⏳ Real-Time File Tracking - Not started
+  - ⏳ File Versioning - Not started
+- Expanded Format Support - ⏳ Not started
 
-🎯 **Current Focus Areas** (not yet completed):
+🎯 **Current Focus Areas**:
 
-- Expanded Format Support
+- Real-Time File Tracking (high priority)
+- File Versioning System (high priority)
+- Expanded Format Support (medium priority)
 
-## Next Steps Plan
-
-### 1. Monitoring & Change Tracking Implementation (High Priority)
-
-After a deep review of the existing file watcher, rollback, and logging systems,
-here's a detailed implementation plan:
-
-#### Phase 1: Enhanced Real-Time File Tracking (Weeks 1-2)
-
-##### Step 1: Improve FileEventHandler (Days 1-3)
-
-- [x] Implement missing event handlers in FileEventHandler class:
-  - [x] Add `on_deleted` method to track file deletions
-  - [x] Add `on_moved` method to track file renames/moves
-  - [x] Ensure proper rollback operations are recorded for all events
-- [x] Add support for ignored directories/patterns via configuration
-
-##### Step 2: Change Detection Algorithms (Days 4-7)
-
-- [x] Create a `ChangeDetector` class to identify different types of changes:
-  - [x] Implement content-based change detection for text files
-  - [x] Add hash-based change detection for binary files
-  - [x] Create "smart debounce" logic to handle rapid sequential changes
-- [x] Add change severity classification (minor/major/critical changes)
-
-##### Step 3: Change History Storage System (Days 8-10)
-
-- [x] Create a `ChangeHistoryManager` class that:
-  - [x] Maintains a database of file changes (SQLite)
-  - [x] Stores metadata about each change (timestamp, type, user, etc.)
-  - [x] Provides APIs for querying change history by file or time range
-  - [x] Implements clean-up policies for old change records
-
-##### Step 4: Multi-Directory Support Enhancement (Days 11-14)
-
-- [x] Optimize the existing multi-directory monitoring:
-  - [x] Add priority-based monitoring (critical vs. non-critical directories)
-  - [x] Implement resource throttling for high-change-rate directories
-  - [x] Create recursive directory discovery with customizable depth
-  - [x] Add dynamic directory registration/unregistration
-
-#### Phase 2: File Versioning System (Weeks 3-4)
-
-##### Step 1: Versioning Strategy Design (Days 1-3)
-
-- [x] Design the versioning strategy:
-  - [x] Create `VersionManager` class to coordinate versioning operations
-  - [x] Implement configurable versioning policies (full copy vs. diff-based)
-  - [x] Design storage structure for version history
-
-##### Step 2: Historical Version Storage (Days 4-7)
-
-- [x] Implement the storage mechanisms:
-  - [x] Create efficient storage for full-file versions
-  - [x] Implement diff-based storage for text files using `difflib`
-  - [x] Add metadata storage for each version (timestamp, author, change reason)
-  - [x] Create compression strategies for large files
-
-##### Step 3: Diff Generation and Comparison (Days 8-10)
-
-- [x] Create diff generation tools:
-  - [x] Implement text file diff generation using unified diff format
-  - [x] Add syntax highlighting for code file diffs
-  - [x] Create binary file comparison for non-text files
-  - [x] Optimize diff algorithms for large files
-
-##### Step 4: Version Restoration System (Days 11-14)
-
-- [x] Build the version restoration tools:
-  - [x] Implement `restore_version(file_path, version_id)` function
-  - [x] Add version browsing capabilities
-  - [x] Create conflict resolution for concurrent changes
-  - [x] Implement bulk restoration for multiple files
-
-#### Phase 3: Notification System (Weeks 5-6)
-
-##### Step 1: Notification Architecture (Days 1-3)
-
-- [x] Design the notification architecture:
-  - [x] Create `NotificationManager` class with a publisher-subscriber pattern
-  - [x] Implement event categorization (file, system, security events)
-  - [x] Design notification templates for different event types
-  - [x] Add notification queuing for high-volume scenarios
-
-##### Step 2: Notification Channels (Days 4-7)
-
-- [x] Implement various notification channels:
-  - [x] Create enhanced log-based notifications with structured logging
-  - [x] Add email notifications with customizable templates
-  - [x] Implement webhook support for external system integration
-  - [x] Add in-app notification queue
-
-##### Step 3: Notification Rules Engine (Days 8-10)
-
-- [x] Build a rules engine for notifications:
-  - [x] Create a DSL for defining notification rules
-  - [x] Implement rule evaluation engine
-  - [x] Add support for time-based and event-based rules
-  - [x] Create rule testing/simulation capabilities
-
-##### Step 4: Notification Dashboard (Days 11-14)
-
-- [x] Develop a notification dashboard:
-  - [x] Create a CLI-based dashboard showing recent notifications
-  - [x] Implement notification statistics and analytics
-  - [x] Add filtering and searching of notification history
-  - [x] Create notification archiving and export capabilities
-
-### 2. Expanded Format Support (Medium Priority)
-
-#### Week 7-8: Binary & Specialized File Support
-
-- Add image metadata extraction (EXIF)
-- Implement audio file metadata support
-- Create database file metadata extractors
-- Build PDF content extraction
-- Add video file metadata support
-
-#### Week 9-10: Format Conversion
-
-- Implement document conversion pipelines
-- Add quality validation for conversions
-- Create batch conversion functionality
-- Build conversion API endpoints
-- Add format-specific optimizations
-
-### 3. Start Planning for Phase 3 (Lower Priority)
-
-#### Week 11-12: AI-Powered Enhancement Planning
-
-- Research ML models for search ranking
-- Evaluate NLP libraries for context-aware search
-- Design recommendation engine architecture
-- Create proof-of-concept for content classification
-
-## Implementation Approach
-
-1. Follow test-driven development
-2. Update documentation as features are implemented
-3. Create detailed design docs before implementation
-4. Set up CI/CD pipeline for automated testing
-5. Schedule bi-weekly progress reviews
-
-This plan will complete the remaining items in Phase 2 over the next 12 weeks,
-while laying groundwork for Phase 3.
-
-## Resource Allocation
-
-### Personnel Needs
-
-- 2 backend developers for core implementation
-- 1 ML/AI specialist for search and classification
-- 1 QA engineer for testing
-- 1 technical writer for documentation
-
-### Technology Stack Additions
-
-- `watchdog` for file system monitoring
-- `LibGit2` or similar for versioning
-- Image libraries: `Pillow`, `ExifRead`
-- Audio libraries: `pydub`, `mutagen`
-- PDF processing: `PyPDF2`, `pdf2image`
-- Email: `smtplib` or third-party service
-- Webhooks: Custom implementation with `FastAPI`
-
-## Risk Assessment
-
-### Potential Challenges
-
-1. Performance degradation with real-time monitoring
-2. Storage requirements for versioning system
-3. Complexity in handling various file formats
-4. Notification system reliability
-
-### Mitigation Strategies
-
-1. Implement efficient change detection with throttling
-2. Design space-efficient versioning with configurable retention
-3. Modular approach to file format handlers
-4. Robust error handling and retry mechanisms for notifications
-
-## Success Metrics
-
-- File change detection latency < 2 seconds
-- Version history retrieval time < 500ms
-- Format conversion success rate > 95%
-- Notification delivery success rate > 99%
-- System resource usage increase < 15%
-
-## Timeline Overview
-
-- Weeks 1-6: Monitoring & Change Tracking
-- Weeks 7-10: Expanded Format Support
-- Weeks 11-12: AI Planning & Preparation
-- Week 13: Review & Planning for Phase 3
