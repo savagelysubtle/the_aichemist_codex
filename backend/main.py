@@ -10,14 +10,14 @@ from tkinter import filedialog, messagebox
 # Ensure correct package resolution
 sys.path.append(str(Path(__file__).resolve().parent))
 
-# Set up logging early
-from backend.config.logging_config import setup_logging
+# Import all required modules before any executable code
+from backend.src.config.logging_config import setup_logging
+from backend.src.file_manager.file_tree import generate_file_tree
+from backend.src.ingest.reader import generate_digest
+from backend.src.project_reader.code_summary import summarize_project
 
+# Set up logging after imports
 setup_logging()
-
-from backend.file_manager.file_tree import generate_file_tree
-from backend.ingest.reader import generate_digest
-from backend.project_reader.code_summary import summarize_project
 
 logger = logging.getLogger(__name__)
 

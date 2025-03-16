@@ -1,0 +1,40 @@
+---
+description: Enforces consistent Python code style.
+globs: **/*.py
+alwaysApply: false
+---
+# Code Style & Formatting
+
+## 1. Linting & Formatting
+- Use **Ruff** for linting and auto-fixes:
+  ```bash
+  ruff check . --fix
+Use mypy for static type checking.
+
+## 2. Ruff Configuration
+Ensure Ruff is installed in every project:
+bash
+Copy
+Edit
+uv pip install ruff
+Use pyproject.toml for Ruff configuration:
+toml
+Copy
+Edit
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "__pycache__",
+]
+select = ["E", "F", "B", "A"]
+ignore = ["E501"]
+
+## 3. Naming Conventions
+Use snake_case for variables and functions.
+Use PascalCase for classes.
+Use UPPER_CASE for constants.

@@ -1,0 +1,32 @@
+---
+description: Enforces Python coding standards and project structure.
+globs: **/*.py
+alwaysApply: false
+---
+# Python Coding Guidelines
+
+## 1. Project Structure
+- Organize code into `/src`, `/tests`, `/docs`, and `/config`.
+- Separate logic into:
+  - `models/` → Data representations & schemas
+  - `services/` → Business logic
+  - `controllers/` → API endpoints or CLI handlers
+  - `utils/` → Helper functions and shared utilities
+
+## 2. Coding Standards
+- Follow **PEP 8** formatting.
+- Use **Ruff** for linting (`ruff check`, `ruff format`).
+- Use **type hints** (`str`, `list[int]`, `Optional[dict]`).
+- Implement **structured logging** using `structlog`.
+
+## 3. Testing Best Practices
+- Use **pytest** for unit and integration testing.
+- Organize tests using:
+  - `tests/unit/` → for isolated function tests
+  - `tests/integration/` → for database and API tests
+  - `tests/performance/` → for benchmarking
+- Aim for **80%+ test coverage**, focusing on **critical paths**.
+
+## 4. Configuration Management
+- Store secrets in **environment variables** (e.g., `.env` files).
+- Use **Pydantic Settings** for structured configuration.

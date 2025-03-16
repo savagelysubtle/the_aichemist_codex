@@ -1,0 +1,19 @@
+---
+description: Defines best practices for error handling and logging.
+globs: **/*.py
+alwaysApply: false
+---
+# Error Handling & Logging Guidelines
+
+## 1. Exception Handling
+- Always raise **meaningful exceptions**:
+  ```python
+  raise ValueError(f"Invalid user ID {user_id}. Expected integer, got {type(user_id)}")
+Prefer custom exception classes for better debugging.
+
+## 2. Logging Practices
+Use structured logging (structlog or logging).
+Log errors with context (e.g., request ID, user ID, timestamp).
+Ensure logs are machine-readable for monitoring tools.
+
+[logging_config.py](mdc:backend/src/config/logging_config.py) is the central logger for the project

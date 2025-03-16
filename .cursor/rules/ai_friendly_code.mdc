@@ -1,0 +1,27 @@
+---
+description: Enforces AI-friendly coding practices for readability and maintainability
+globs: **/*.py"
+alwaysApply: false
+---
+# AI-Friendly Code Practices
+
+## 1. Code Readability
+- Use **descriptive variable and function names**.
+- Write **clear and concise comments** for complex logic:
+  ```python
+
+
+## 2. Type Hints & Docstrings
+Always include type hints (str, list[int], Optional[Dict[str, Any]]).
+Document functions with Google-style docstrings:
+
+def fetch_data(url: str) -> dict:
+
+    """Fetches JSON data from a given URL.
+
+    Args:
+        url (str): The API endpoint.
+
+    Returns:
+        dict: Parsed JSON response.
+    """

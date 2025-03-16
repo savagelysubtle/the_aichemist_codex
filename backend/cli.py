@@ -7,33 +7,33 @@ import logging
 import sys
 from pathlib import Path
 
-from backend.file_manager.duplicate_detector import DuplicateDetector
-from backend.file_manager.file_tree import FileTreeGenerator
-from backend.file_manager.file_watcher import FileEventHandler
-from backend.file_manager.sorter import RuleBasedSorter
-from backend.file_reader.file_reader import FileReader
-from backend.ingest.aggregator import aggregate_digest
-from backend.ingest.scanner import scan_directory
-from backend.metadata.manager import MetadataManager
-from backend.output_formatter.json_writer import save_as_json_async
-from backend.output_formatter.markdown_writer import save_as_markdown
-from backend.project_reader.code_summary import summarize_project
-from backend.project_reader.notebooks import NotebookConverter
-from backend.project_reader.token_counter import TokenAnalyzer
-from backend.relationships.detector import DetectionStrategy, RelationshipDetector
-from backend.relationships.detectors.directory_structure import (
+from backend.src.file_manager.duplicate_detector import DuplicateDetector
+from backend.src.file_manager.file_tree import FileTreeGenerator
+from backend.src.file_manager.file_watcher import FileEventHandler
+from backend.src.file_manager.sorter import RuleBasedSorter
+from backend.src.file_reader.file_reader import FileReader
+from backend.src.ingest.aggregator import aggregate_digest
+from backend.src.ingest.scanner import scan_directory
+from backend.src.metadata.manager import MetadataManager
+from backend.src.output_formatter.json_writer import save_as_json_async
+from backend.src.output_formatter.markdown_writer import save_as_markdown
+from backend.src.project_reader.code_summary import summarize_project
+from backend.src.project_reader.notebooks import NotebookConverter
+from backend.src.project_reader.token_counter import TokenAnalyzer
+from backend.src.relationships.detector import DetectionStrategy, RelationshipDetector
+from backend.src.relationships.detectors.directory_structure import (
     DirectoryStructureDetector,
 )
-from backend.relationships.graph import RelationshipGraph
-from backend.relationships.relationship import RelationshipType
-from backend.relationships.store import RelationshipStore
-from backend.rollback.rollback_manager import RollbackManager
-from backend.search.search_engine import SearchEngine
-from backend.tagging.classifier import TagClassifier
-from backend.tagging.hierarchy import TagHierarchy
-from backend.tagging.manager import TagManager
-from backend.tagging.suggester import TagSuggester
-from backend.utils.cache_manager import CacheManager
+from backend.src.relationships.graph import RelationshipGraph
+from backend.src.relationships.relationship import RelationshipType
+from backend.src.relationships.store import RelationshipStore
+from backend.src.rollback.rollback_manager import RollbackManager
+from backend.src.search.search_engine import SearchEngine
+from backend.src.tagging.classifier import TagClassifier
+from backend.src.tagging.hierarchy import TagHierarchy
+from backend.src.tagging.manager import TagManager
+from backend.src.tagging.suggester import TagSuggester
+from backend.src.utils.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -637,11 +637,12 @@ def main():
         output_json_file = args.directory / "code_summary.json"
         output_md_file = args.directory / "code_summary.md"
         logger.info(f"Analyzing code in {args.directory}")
-        summarize_project(
-            args.directory,
-            output_md_file,
-            output_json_file,
-            include_notebooks=args.include_notebooks,
+        asyncio.run(
+            summarize_project(
+                args.directory,
+                output_md_file,
+                output_json_file,
+            )
         )
         if args.output_format == "json":
             logger.info(f"Code summary saved to {output_json_file}")
@@ -668,7 +669,10 @@ def main():
                     if file.is_file():
                         for rule in rules:
                             if await sorter.rule_matches_extended(file, rule):
-                                target_dir = Path(rule.get("target_dir"))
+                                target_dir_value = rule.get("target_dir")
+                                if target_dir_value is None:
+                                    continue  # Skip rule if no target directory specified
+                                target_dir = Path(target_dir_value)
                                 if not target_dir.is_absolute():
                                     target_dir = directory / target_dir
                                 target_file = target_dir / file.name
@@ -691,10 +695,9 @@ def main():
         output_file = args.output or args.directory / "duplicates.json"
         logger.info(f"Scanning for duplicates in {args.directory}")
         duplicate_detector = DuplicateDetector()
-        duplicate_detector = asyncio.run(
-            duplicate_detector.scan_directory(args.directory, args.method)
+        duplicates_dict = asyncio.run(
+            duplicate_detector.scan_directory(args.directory, method=args.method)
         )
-        duplicates_dict = duplicate_detector.get_duplicates()
         asyncio.run(save_as_json_async(duplicates_dict, output_file))
         logger.info(
             f"Found {len(duplicates_dict)} duplicate sets, saved to {output_file}"
@@ -743,9 +746,17 @@ def main():
         output_file = args.output or args.directory / "token_counts.json"
         logger.info(f"Counting tokens in {args.directory}")
         token_analyzer = TokenAnalyzer()
-        token_counts = token_analyzer.analyze_directory(
-            args.directory, model=args.model
-        )
+
+        # Implement directory scanning since TokenAnalyzer only has estimate method
+        token_counts = {}
+        for file_path in args.directory.glob("**/*.txt"):
+            try:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                token_counts[str(file_path)] = token_analyzer.estimate(content)
+            except Exception as e:
+                logger.error(f"Error processing {file_path}: {e}")
+
         asyncio.run(save_as_json_async(token_counts, output_file))
         logger.info(f"Token counts saved to {output_file}")
 
@@ -876,7 +887,7 @@ def main():
         content_map = {}
         for file_path in files:
             try:
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     content_map[file_path] = f.read()
             except Exception as e:
                 logger.error(f"Error reading file {file_path}: {e}")
@@ -894,24 +905,31 @@ def main():
             return
         logger.info(f"Reading file: {args.file}")
         reader = FileReader()
-        reader.get_mime_types = reader.get_mime_types(args.file)
+        mime_type = reader.get_mime_type(args.file)
         metadata = asyncio.run(reader.process_file(args.file))
         content = metadata.preview
         if args.format == "auto":
             print(content)
         elif args.format == "json":
             if args.output:
-                asyncio.run(save_as_json_async(metadata.to_dict(), args.output))
+                metadata_dict = {
+                    k: v
+                    for k, v in vars(metadata).items()
+                    if not k.startswith("_") and v is not None
+                }
+                asyncio.run(save_as_json_async(metadata_dict, args.output))
                 logger.info(f"JSON output saved to {args.output}")
             else:
                 print(content)
         elif args.format == "markdown":
             if args.output:
-                save_as_markdown(content, args.output)
+                # Create dummy data structure expected by save_as_markdown
+                data = {str(args.file): {"summary": content, "functions": []}}
+                asyncio.run(save_as_markdown(Path(args.output), data))
                 logger.info(f"Markdown output saved to {args.output}")
             else:
-                md_content = save_as_markdown(content, None)
-                print(md_content)
+                # Create a minimal representation for display
+                print(f"# {args.file.name}\n\n{content}")
         else:
             print(content)
 
@@ -938,8 +956,79 @@ def main():
         elif args.rollback_command == "clear":
             rm._undo_stack.clear()
             rm._redo_stack.clear()
-            rm.rollback_log.write_text("[]", encoding="utf-8")
-            logger.info("Cleared all rollback operations.")
+
+            # Use safer file writing approach with platform-specific handling
+            try:
+                import platform
+
+                system = platform.system()
+
+                # Windows approach (default)
+                if system == "Windows":
+                    try:
+                        # Try to use Windows file locking
+                        with open(rm.rollback_log, "w") as f:
+                            try:
+                                import msvcrt
+
+                                # Lock file for writing
+                                msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+                            except (OSError, ImportError):
+                                # If locking fails, we'll still try to update the file
+                                logger.warning(
+                                    "File locking not available on this Windows system"
+                                )
+
+                            try:
+                                # Write empty array
+                                json.dump([], f, indent=4)
+                            finally:
+                                # Unlock file if locked
+                                try:
+                                    import msvcrt
+
+                                    # Unlock the file
+                                    f.seek(
+                                        0
+                                    )  # Need to be at the beginning for unlocking
+                                    msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+                                except (OSError, ImportError):
+                                    pass
+                    except Exception as e:
+                        logger.error(f"Error clearing rollback log on Windows: {e}")
+                        # Fallback to simple write
+                        with open(rm.rollback_log, "w") as f:
+                            json.dump([], f, indent=4)
+                # Unix approach (fallback) - COMMENTED OUT
+                else:
+                    # Simple non-locking approach since Unix code is commented out
+                    with open(rm.rollback_log, "w") as f:
+                        json.dump([], f, indent=4)
+
+                    # COMMENTED OUT: Unix-specific code
+                    """
+                    try:
+                        import fcntl
+
+                        # Safely write an empty array to the rollback log file
+                        with open(rm.rollback_log, "w") as f:
+                            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                            try:
+                                json.dump([], f, indent=4)
+                            finally:
+                                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    except ImportError:
+                        # fcntl not available, use simple write
+                        logger.warning(
+                            "fcntl not available on this system, using simple file write"
+                        )
+                        with open(rm.rollback_log, "w") as f:
+                            json.dump([], f, indent=4)
+                    """
+
+                logger.info("Cleared all rollback operations.")
+            except Exception as e:
+                logger.error(f"Error clearing rollback log: {e}")
 
     elif args.command == "metadata":
         # Handle metadata extraction
@@ -1081,13 +1170,16 @@ def main():
                         groups[tag].append(str(result.path))
 
                 elif group_by == "language":
-                    # For code files
+                    # For code files - use direct attribute access based on FileMetadata class
                     language = None
-                    if hasattr(result, "code_language") and result.code_language:
-                        language = result.code_language
-                    # For text files
-                    elif hasattr(result, "language") and result.language:
+                    # Use language or programming_language attribute from FileMetadata
+                    if hasattr(result, "language") and result.language:
                         language = result.language
+                    elif (
+                        hasattr(result, "programming_language")
+                        and result.programming_language
+                    ):
+                        language = result.programming_language
                     # Fallback to extension or mime type
                     else:
                         language = result.extension or result.mime_type.split("/")[0]
@@ -1110,14 +1202,14 @@ def main():
 
                 elif (
                     group_by == "authors"
-                    and hasattr(result, "authors")
-                    and result.authors
+                    and hasattr(result, "author")
+                    and result.author
                 ):
-                    # Group by authors
-                    for author in result.authors:
-                        if author not in groups:
-                            groups[author] = []
-                        groups[author].append(str(result.path))
+                    # Group by author - use the author attribute from FileMetadata
+                    author = result.author
+                    if author not in groups:
+                        groups[author] = []
+                    groups[author].append(str(result.path))
 
             # Sort groups by size
             sorted_groups = sorted(
@@ -1161,6 +1253,9 @@ def main():
         tag_db_path.parent.mkdir(parents=True, exist_ok=True)
 
         async def handle_tags_command():
+            # Import json inside the async function to ensure it's in scope
+            import json
+
             async with TagManager(tag_db_path) as tag_manager:
                 await tag_manager.initialize()
 
@@ -1293,7 +1388,7 @@ def main():
 
                     # Create file reader and classifier
                     file_reader = FileReader()
-                    classifier = TagClassifier()
+                    classifier = TagClassifier(Path.home() / ".aichemist" / "models")
                     tag_suggester = TagSuggester(tag_manager, classifier)
 
                     # Get file metadata
@@ -1340,7 +1435,7 @@ def main():
                     logger.info(f"Batch processing tags for files in: {directory}")
 
                     # Create classifier and suggester
-                    classifier = TagClassifier()
+                    classifier = TagClassifier(Path.home() / ".aichemist" / "models")
                     tag_suggester = TagSuggester(tag_manager, classifier)
 
                     # Process directory
@@ -1552,7 +1647,7 @@ def main():
                         logger.info(f"Importing tag hierarchy from: {input_file}")
 
                         # Load hierarchy from file
-                        with open(input_file, "r") as f:
+                        with open(input_file) as f:
                             hierarchy = json.load(f)
 
                         # Import the hierarchy
@@ -1569,7 +1664,9 @@ def main():
                         logger.info(f"Training tag classifier on files in: {directory}")
 
                         # Create classifier
-                        classifier = TagClassifier()
+                        classifier = TagClassifier(
+                            Path.home() / ".aichemist" / "models"
+                        )
 
                         # Get training data from tagged files
                         training_data = []
@@ -1627,7 +1724,9 @@ def main():
                         logger.info("Getting classifier information")
 
                         # Create classifier
-                        classifier = TagClassifier()
+                        classifier = TagClassifier(
+                            Path.home() / ".aichemist" / "models"
+                        )
 
                         # Get model info
                         info = await classifier.get_model_info()
@@ -1664,6 +1763,9 @@ def main():
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         async def handle_relationships_command():
+            # Import json inside the async function to ensure it's in scope
+            import json
+
             store = RelationshipStore(db_path)
 
             if args.rel_command == "detect":
