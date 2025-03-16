@@ -17,7 +17,6 @@ from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from mutagen.oggvorbis import OggVorbis
-from pydub import AudioSegment
 
 from backend.src.file_reader.file_metadata import FileMetadata
 from backend.src.metadata.extractor import (
@@ -27,11 +26,28 @@ from backend.src.metadata.extractor import (
 from backend.src.utils.cache_manager import CacheManager
 from backend.src.utils.mime_type_detector import MimeTypeDetector
 
-logger = logging.getLogger(__name__)
-
 # Type aliases for better type checking
 AudioFile = TypeVar("AudioFile")
 AudioInfo = TypeVar("AudioInfo")
+
+# Handle optional dependencies
+AUDIO_LIBS_AVAILABLE = False
+AudioSegment = None  # Initialize as None
+try:
+    # Attempt to import pydub
+    import pydub
+    from pydub import AudioSegment
+
+    AUDIO_LIBS_AVAILABLE = True
+except ImportError:
+    # Dependency not available, will handle gracefully at runtime
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "pydub or audioop/pyaudioop dependency is missing. Some audio features will be disabled."
+    )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AudioMetadataExtractor(BaseMetadataExtractor):
@@ -82,6 +98,10 @@ class AudioMetadataExtractor(BaseMetadataExtractor):
         """
         super().__init__(cache_manager)
         self.mime_detector = MimeTypeDetector()
+        if not AUDIO_LIBS_AVAILABLE:
+            logger.warning(
+                "Audio libraries not available: pydub or audioop/pyaudioop missing"
+            )
 
     async def extract(
         self,
@@ -106,6 +126,18 @@ class AudioMetadataExtractor(BaseMetadataExtractor):
         if not path.exists():
             logger.warning(f"Audio file not found: {path}")
             return {}
+
+        if not AUDIO_LIBS_AVAILABLE:
+            return {
+                "error": "Audio libraries not available",
+                "file_path": str(path),
+                "type": "audio",
+                "format": path.suffix.lstrip(".").lower(),
+                "duration_seconds": 0,
+                "channels": 0,
+                "sample_rate": 0,
+                "bit_rate": 0,
+            }
 
         # Determine MIME type if not provided
         if mime_type is None:
@@ -435,52 +467,77 @@ class AudioMetadataExtractor(BaseMetadataExtractor):
         Returns:
             Dictionary containing metadata extracted with PyDub
         """
-        result = {"format": {}, "analysis": {}}
+        if not AUDIO_LIBS_AVAILABLE or AudioSegment is None:
+            return {"format": {}}  # Return empty dict when PyDub is not available
+
+        result = {"format": {}}
         file_ext = path.suffix.lower()
 
-        # Get the pydub format name
-        format_name = self.PYDUB_FORMAT_MAP.get(file_ext)
-        if not format_name:
-            logger.debug(f"Unsupported format for PyDub: {file_ext}")
-            return {}
-
         try:
-            # Load the audio file
-            audio = AudioSegment.from_file(str(path), format=format_name)
+            # Determine PyDub format
+            pydub_format = self.PYDUB_FORMAT_MAP.get(file_ext)
+            if not pydub_format:
+                logger.debug(f"Unsupported PyDub format for extension: {file_ext}")
+                return result
 
-            # Basic properties
-            result["format"]["sample_width_bytes"] = audio.sample_width
-            result["format"]["frame_rate"] = audio.frame_rate
-            result["format"]["frame_width"] = audio.frame_width
-            result["format"]["channels"] = audio.channels
-            result["format"]["duration_ms"] = len(audio)
+            # Load audio with PyDub
+            audio = AudioSegment.from_file(str(path), format=pydub_format)
 
-            # Compute some basic audio characteristics
-            if len(audio) > 0:
+            # Extract basic format info
+            result["format"].update(
+                {
+                    "duration_seconds": len(audio) / 1000,
+                    "channels": audio.channels,
+                    "sample_rate": audio.frame_rate,
+                    "bit_depth": audio.sample_width * 8,
+                    "bit_rate": audio.frame_rate * audio.frame_width * 8,
+                }
+            )
+
+            # Add audio section analysis if the file isn't too large
+            if len(audio) < 300000:  # Limit to 5 minutes of audio for performance
+                # Instead of calling _analyze_audio, do the analysis directly here
+                analysis = {}
+
                 # Calculate dBFS (decibels relative to full scale)
-                result["analysis"]["max_dBFS"] = audio.max_dBFS
-                result["analysis"]["dBFS"] = audio.dBFS
+                analysis["max_dBFS"] = audio.max_dBFS
+                analysis["dBFS"] = audio.dBFS
 
                 # Add RMS (root mean square)
-                result["analysis"]["rms"] = audio.rms
+                analysis["rms"] = audio.rms
 
-                # Extract samples from beginning, middle, and end for analysis
-                if len(audio) >= 3000:  # At least 3 seconds
-                    # Get first, middle, and last second
-                    first_sec = audio[:1000]
-                    mid_sec = audio[len(audio) // 2 - 500 : len(audio) // 2 + 500]
-                    last_sec = audio[-1000:]
+                result["analysis"] = analysis
 
-                    # Calculate dBFS for each section
-                    result["analysis"]["sections"] = {
-                        "start": {"dBFS": first_sec.dBFS, "rms": first_sec.rms},
-                        "middle": {"dBFS": mid_sec.dBFS, "rms": mid_sec.rms},
-                        "end": {"dBFS": last_sec.dBFS, "rms": last_sec.rms},
-                    }
         except Exception as e:
-            logger.debug(f"Error extracting PyDub metadata for {path}: {str(e)}")
+            logger.debug(f"PyDub processing error for {path}: {str(e)}")
 
         return result
+
+    def supports_file(self, file_path: str | Path) -> bool:
+        """
+        Check if this extractor supports the given file.
+
+        Args:
+            file_path: Path to the file to check
+
+        Returns:
+            True if this extractor supports the file, False otherwise
+        """
+        # Skip if audio libraries are not available
+        if not AUDIO_LIBS_AVAILABLE or AudioSegment is None:
+            return False
+
+        path = Path(file_path)
+        if not path.exists():
+            return False
+
+        # Check if the file is a supported audio type
+        mime_type, _ = self.mime_detector.get_mime_type(path)
+        if mime_type in self.SUPPORTED_MIME_TYPES:
+            return True
+
+        # Check file extension
+        return path.suffix.lower() in self.PYDUB_FORMAT_MAP
 
 
 # Register the extractor

@@ -1,0 +1,26 @@
+import pytest
+# test_config_loader.py
+from pathlib import Path
+
+from pytest import MonkeyPatch
+
+from backend.src.config.config_loader import CodexConfig
+
+
+@pytest.mark.[a-z]+
+
+@pytest.mark.unit
+def test_default_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    # Create a temporary config directory with an empty config file.
+    temp_config_dir = tmp_path / "config"
+    temp_config_dir.mkdir()
+    config_file = temp_config_dir / ".codexconfig"
+    config_file.write_text("", encoding="utf-8")
+
+    # Override the CONFIG_FILE variable in config_loader.
+    monkeypatch.setattr("backend.src.config.config_loader.CONFIG_FILE", config_file)
+
+    config = CodexConfig()
+    # Check that essential default settings are present.
+    assert "ignore_patterns" in config.settings  # noqa: S101
+    assert "max_file_size" in config.settings  # noqa: S101

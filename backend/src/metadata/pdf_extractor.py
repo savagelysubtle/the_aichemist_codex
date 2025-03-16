@@ -1,26 +1,26 @@
 """
-PDF metadata and content extraction for The Aichemist Codex.
+Module for extracting metadata from PDF files.
 
-This module provides functionality to extract metadata and content from PDF files,
-including document properties, text content, page count, layout information, and
-other PDF-specific metadata.
+This module provides functionality for extracting metadata from PDF files,
+including basic document properties, content structure, and embedded resources.
 """
 
 import logging
+import os
+import typing as t
+from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
 
-# Third-party imports
-from PyPDF2 import PdfReader
-from PyPDF2.errors import PdfReadError
-
+# Third-party imports - PyPDF2
 try:
-    import pdf2image
+    from PyPDF2 import PdfReader
+    from PyPDF2.errors import PdfReadError
 
-    PDF2IMAGE_AVAILABLE = True
+    PYPDF2_AVAILABLE = True
 except ImportError:
-    # pdf2image is optional - we'll still provide basic functionality without it
-    PDF2IMAGE_AVAILABLE = False
+    PYPDF2_AVAILABLE = False
+    PdfReader = None
+    PdfReadError = Exception  # Fallback type
 
 # Local application imports
 from backend.src.file_reader.file_metadata import FileMetadata
@@ -31,41 +31,38 @@ from backend.src.metadata.extractor import (
 from backend.src.utils.cache_manager import CacheManager
 from backend.src.utils.mime_type_detector import MimeTypeDetector
 
-# Initialize logger with proper name
 logger = logging.getLogger(__name__)
 
-# Define PyPDF2 types for better type checking
-PdfDict = dict[str, Any]
-PdfObject = Any  # PyPDF2 doesn't have clear type hints for all objects
 
-
+@MetadataExtractorRegistry.register
 class PDFMetadataExtractor(BaseMetadataExtractor):
     """
-    Metadata and content extractor for PDF files.
+    Extractor for PDF file metadata.
 
-    This extractor can process PDF files and extract rich metadata including:
-    - Document properties (title, author, creation date, etc.)
+    This class handles the extraction of metadata from PDF files, including:
+    - Document properties (title, author, creation date)
     - Page count and dimensions
-    - Text content and structure
-    - Font information
-    - Embedded images (count and types)
-    - Security and encryption status
-    - PDF version
+    - Text content analysis
+    - Embedded resources (images, fonts)
+    - Security settings
+    - PDF version information
     """
 
     # Supported MIME types
-    SUPPORTED_MIME_TYPES = [
-        "application/pdf",
-        "application/x-pdf",
-        "application/acrobat",
-        "application/vnd.pdf",
-    ]
+    SUPPORTED_MIME_TYPES = ["application/pdf"]
 
-    # Maximum text extraction size (bytes) to prevent excessive memory usage
-    MAX_TEXT_EXTRACTION_SIZE = 10 * 1024 * 1024  # 10MB
+    # File extensions to MIME types mapping
+    FILE_EXTENSIONS = {".pdf": "application/pdf"}
 
-    # Maximum number of pages to extract text from for large documents
-    MAX_PAGES_FULL_EXTRACT = 50
+    def __init__(self, cache_manager: CacheManager | None = None) -> None:
+        """
+        Initialize the PDF metadata extractor.
+
+        Args:
+            cache_manager: Optional cache manager for caching extracted metadata.
+        """
+        super().__init__(cache_manager)
+        self.mime_detector = MimeTypeDetector()
 
     @property
     def supported_mime_types(self) -> list[str]:
@@ -76,14 +73,178 @@ class PDFMetadataExtractor(BaseMetadataExtractor):
         """
         return self.SUPPORTED_MIME_TYPES
 
-    def __init__(self, cache_manager: CacheManager | None = None) -> None:
-        """Initialize the PDF metadata extractor.
+    def _extract_pdf_with_pypdf(self, file_path: str) -> dict[str, t.Any]:
+        """
+        Extract metadata from PDF files using PyPDF2.
 
         Args:
-            cache_manager: Optional cache manager for caching extraction results
+            file_path: Path to the PDF file.
+
+        Returns:
+            Dictionary containing extracted metadata.
+
+        Raises:
+            PdfReadError: If the PDF file cannot be read or is corrupted.
         """
-        super().__init__(cache_manager)
-        self.mime_detector = MimeTypeDetector()
+        # Check that PdfReader is available before using it
+        if not PYPDF2_AVAILABLE or PdfReader is None:
+            raise ImportError("PyPDF2 is required for PDF metadata extraction")
+
+        try:
+            pdf = PdfReader(file_path)
+
+            # Extract document information
+            metadata = {}
+            if pdf.metadata:
+                for key, value in pdf.metadata.items():
+                    # Clean up the key (remove leading '/')
+                    clean_key = key.strip("/") if isinstance(key, str) else key
+                    metadata[clean_key] = value
+
+            # Format dates if available
+            for date_field in ["CreationDate", "ModDate"]:
+                if date_field in metadata:
+                    try:
+                        # PDF dates are typically in format: D:YYYYMMDDHHmmSS
+                        date_str = metadata[date_field]
+                        if isinstance(date_str, str) and date_str.startswith("D:"):
+                            date_str = date_str[2:]  # Remove 'D:' prefix
+                            if len(date_str) >= 14:
+                                year = int(date_str[0:4])
+                                month = int(date_str[4:6])
+                                day = int(date_str[6:8])
+                                hour = int(date_str[8:10])
+                                minute = int(date_str[10:12])
+                                second = int(date_str[12:14])
+
+                                formatted_date = datetime(
+                                    year, month, day, hour, minute, second
+                                ).isoformat()
+                                metadata[date_field] = formatted_date
+                    except (ValueError, TypeError):
+                        # Keep original value if parsing fails
+                        pass
+
+            # Extract document structure information
+            structure_info = {"page_count": len(pdf.pages), "pages": []}
+
+            # Extract information for each page
+            for i, page in enumerate(pdf.pages):
+                page_info = {
+                    "page_number": i + 1,
+                }
+
+                # Get rotation if available
+                try:
+                    if hasattr(page, "get"):
+                        page_info["rotation"] = page.get("/Rotate", 0)
+                    else:
+                        # Fallback for different PyPDF2 versions
+                        page_info["rotation"] = 0
+                except Exception:
+                    page_info["rotation"] = 0
+
+                # Get page dimensions if available
+                try:
+                    if hasattr(page, "mediabox"):
+                        # Newer PyPDF2 versions
+                        page_info["width"] = int(page.mediabox.width)
+                        page_info["height"] = int(page.mediabox.height)
+                    elif hasattr(page, "/MediaBox"):
+                        # Older PyPDF2 versions or different access pattern
+                        media_box = page["/MediaBox"]
+                        if (
+                            hasattr(media_box, "__len__")
+                            and len(t.cast(t.Sequence[float], media_box)) == 4
+                        ):
+                            media_box_seq = t.cast(t.Sequence[float], media_box)
+                            width = float(media_box_seq[2]) - float(media_box_seq[0])
+                            height = float(media_box_seq[3]) - float(media_box_seq[1])
+                            page_info["width"] = int(width)
+                            page_info["height"] = int(height)
+                except (AttributeError, KeyError, TypeError) as e:
+                    logger.warning(f"Failed to extract page dimensions: {e}")
+
+                # Extract text length as a content indicator
+                try:
+                    text = page.extract_text()
+                    page_info["text_length"] = len(text)
+                    page_info["has_text"] = len(text.strip()) > 0
+                except Exception as e:
+                    logger.warning(f"Failed to extract text from page {i + 1}: {e}")
+                    page_info["text_length"] = 0
+                    page_info["has_text"] = False
+
+                structure_info["pages"].append(page_info)
+
+            # Analyze security features
+            security_info = {
+                "encrypted": pdf.is_encrypted,
+                "has_user_password": False,
+                "permissions": None,
+            }
+
+            if pdf.is_encrypted:
+                # Check if there's a user password
+                security_info["has_user_password"] = True
+                # Note: Permissions extraction is PyPDF2 version dependent
+                # We'll try our best but may not work across all versions
+
+            # Analyze file for embedded objects
+            embedded_resources = {
+                "has_images": False,
+                "has_fonts": False,
+                "has_forms": False,
+            }
+
+            try:
+                # Sample a few pages to check for resources
+                sample_pages = min(5, len(pdf.pages))
+                for i in range(sample_pages):
+                    page = pdf.pages[i]
+
+                    # Check for resources - PyPDF2 version-independent approach
+                    if hasattr(page, "get") and page.get("/Resources"):
+                        resources = page["/Resources"]
+
+                        # Check for fonts
+                        if t.cast(dict, resources).get("/Font"):
+                            embedded_resources["has_fonts"] = True
+
+                        # Check for images
+                        if t.cast(dict, resources).get("/XObject"):
+                            xobjects = t.cast(dict, resources)["/XObject"]
+                            for _, xobject in t.cast(dict, xobjects).items():
+                                if (
+                                    hasattr(xobject, "get")
+                                    and xobject.get("/Subtype") == "/Image"
+                                ):
+                                    embedded_resources["has_images"] = True
+                                    break
+            except Exception as e:
+                logger.warning(f"Failed to analyze embedded resources: {e}")
+
+            # Compile the final metadata structure
+            result = {
+                "metadata_type": "pdf",
+                "filename": os.path.basename(file_path),
+                "file_size": os.path.getsize(file_path),
+                "document_info": metadata,
+                "structure": structure_info,
+                "security": security_info,
+                "embedded_resources": embedded_resources,
+                "pdf_version": pdf.pdf_header if hasattr(pdf, "pdf_header") else None,
+                "extraction_method": "pypdf",
+            }
+
+            return result
+
+        except PdfReadError as e:
+            logger.error(f"Error reading PDF file {file_path}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error processing PDF file {file_path}: {e}")
+            raise
 
     async def extract(
         self,
@@ -91,8 +252,9 @@ class PDFMetadataExtractor(BaseMetadataExtractor):
         content: str | None = None,
         mime_type: str | None = None,
         metadata: FileMetadata | None = None,
-    ) -> dict[str, Any]:
-        """Extract metadata and content from a PDF file.
+    ) -> dict[str, t.Any]:
+        """
+        Extract metadata from a PDF file.
 
         Args:
             file_path: Path to the PDF file
@@ -101,21 +263,40 @@ class PDFMetadataExtractor(BaseMetadataExtractor):
             metadata: Optional existing metadata to enhance
 
         Returns:
-            Dictionary containing extracted PDF metadata and content
+            Dictionary containing extracted PDF metadata
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If the file is not a supported PDF format.
         """
+        # Convert to Path for consistent handling
         path = Path(file_path)
         if not path.exists():
-            logger.warning(f"PDF file not found: {path}")
-            return {}
+            error_message = f"File does not exist: {path}"
+            logger.error(error_message)
+            raise FileNotFoundError(error_message)
 
         # Determine MIME type if not provided
         if mime_type is None:
             mime_type, _ = self.mime_detector.get_mime_type(path)
 
-        # Check if this is a supported PDF type
+        # Verify that this is a PDF file
         if mime_type not in self.supported_mime_types:
-            logger.debug(f"Unsupported MIME type for PDF: {mime_type} for file: {path}")
-            return {}
+            # Fallback to extension-based detection if MIME type detection fails
+            extension = path.suffix.lower()
+            if extension in self.FILE_EXTENSIONS:
+                logger.debug(
+                    f"MIME type detection failed, using extension {extension} "
+                    f"for {path}"
+                )
+            else:
+                error_message = (
+                    f"Unsupported file format: {mime_type} for {path}. "
+                    f"PDFMetadataExtractor supports: "
+                    f"{', '.join(self.supported_mime_types)}"
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
 
         # Try to use cache if available
         if self.cache_manager:
@@ -125,9 +306,9 @@ class PDFMetadataExtractor(BaseMetadataExtractor):
                 logger.debug(f"Using cached PDF metadata for {path}")
                 return cached_data
 
-        # Process the PDF file
         try:
-            result = await self._process_pdf(path)
+            # Extract metadata using PyPDF2
+            result = self._extract_pdf_with_pypdf(str(path))
 
             # Cache the result if cache manager is available
             if self.cache_manager:
@@ -135,529 +316,10 @@ class PDFMetadataExtractor(BaseMetadataExtractor):
 
             return result
         except Exception as e:
-            logger.error(f"Error extracting PDF metadata from {path}: {str(e)}")
+            error_message = f"Failed to extract metadata from {path}: {e}"
+            logger.error(error_message)
+            # Return basic error information instead of raising
             return {
                 "metadata_type": "pdf",
                 "error": f"Error extracting PDF metadata: {str(e)}",
             }
-
-    async def _process_pdf(self, path: Path) -> dict[str, Any]:
-        """Process a PDF file to extract metadata and content.
-
-        Args:
-            path: Path to the PDF file
-
-        Returns:
-            Dictionary containing extracted PDF metadata and content
-        """
-        result = {
-            "metadata_type": "pdf",
-            "document": {},
-            "content": {},
-            "structure": {},
-            "security": {},
-        }
-
-        # Basic file information
-        result["document"]["file_size"] = path.stat().st_size
-
-        try:
-            # Open the PDF file
-            with open(path, "rb") as file:
-                # Check if file is too large for full processing
-                is_large_file = path.stat().st_size > self.MAX_TEXT_EXTRACTION_SIZE
-
-                try:
-                    # Create PDF reader
-                    pdf = PdfReader(file)
-
-                    # Extract basic document information
-                    self._extract_document_info(pdf, result)
-
-                    # Extract page information
-                    self._extract_page_info(pdf, result)
-
-                    # Extract text content (with limits for large files)
-                    self._extract_text_content(pdf, result, is_large_file)
-
-                    # Extract font information
-                    self._extract_font_info(pdf, result)
-
-                    # Extract image information
-                    self._extract_image_info(pdf, result)
-
-                    # Extract security information
-                    self._extract_security_info(pdf, result)
-
-                    # Add summary
-                    page_count = result["structure"]["page_count"]
-                    page_text = "page" if page_count == 1 else "pages"
-
-                    title = result["document"].get("title", "Untitled")
-                    author = result["document"].get("author", "Unknown author")
-
-                    result["summary"] = (
-                        f"PDF document '{title}' by {author} with {page_count} {page_text}"
-                    )
-
-                except PdfReadError as e:
-                    # Handle corrupted PDF files
-                    logger.warning(f"Error reading PDF file {path}: {str(e)}")
-                    result["error"] = f"Error reading PDF: {str(e)}"
-
-        except Exception as e:
-            logger.error(f"Error processing PDF file {path}: {str(e)}")
-            result["error"] = f"Error processing PDF: {str(e)}"
-
-        return result
-
-    def _extract_document_info(self, pdf: PdfReader, result: dict[str, Any]) -> None:
-        """Extract document information from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-        """
-        # Extract document metadata
-        if pdf.metadata:
-            # Map PyPDF2 metadata keys to our standardized keys
-            metadata_mapping = {
-                "/Title": "title",
-                "/Author": "author",
-                "/Subject": "subject",
-                "/Keywords": "keywords",
-                "/Creator": "creator",
-                "/Producer": "producer",
-                "/CreationDate": "creation_date",
-                "/ModDate": "modification_date",
-            }
-
-            for pdf_key, our_key in metadata_mapping.items():
-                if pdf_key in pdf.metadata:
-                    value = pdf.metadata[pdf_key]
-                    # Clean up date strings
-                    if isinstance(value, str) and pdf_key in [
-                        "/CreationDate",
-                        "/ModDate",
-                    ]:
-                        # PDF dates format: D:YYYYMMDDHHmmSS
-                        if value.startswith("D:"):
-                            try:
-                                # Extract the date portion and format it
-                                date_str = value[2:14]  # Extract YYYYMMDDHHMM
-                                formatted_date = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]} {date_str[8:10]}:{date_str[10:12]}"
-                                value = formatted_date
-                            except Exception:
-                                # If parsing fails, keep original
-                                pass
-                    result["document"][our_key] = value
-
-        # Extract PDF version
-        if hasattr(pdf, "pdf_header"):
-            result["document"]["pdf_version"] = pdf.pdf_header
-
-    def _extract_page_info(self, pdf: PdfReader, result: dict[str, Any]) -> None:
-        """Extract page information from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-        """
-        # Get page count
-        page_count = len(pdf.pages)
-        result["structure"]["page_count"] = page_count
-
-        # Extract information about pages
-        pages_info = []
-
-        # Limit page info extraction for very large documents
-        max_pages_to_analyze = min(page_count, 100)  # Analyze at most 100 pages
-
-        for i in range(max_pages_to_analyze):
-            page = pdf.pages[i]
-            page_info = {
-                "page_number": i + 1,
-                "width": float(page.mediabox.width),
-                "height": float(page.mediabox.height),
-                "rotation": page.get("/Rotate", 0),
-            }
-
-            # Add page dimensions in points (1/72 inch)
-            page_info["size_points"] = f"{page_info['width']} x {page_info['height']}"
-
-            # Calculate approximate size in inches and mm
-            width_inch = page_info["width"] / 72
-            height_inch = page_info["height"] / 72
-            width_mm = width_inch * 25.4
-            height_mm = height_inch * 25.4
-
-            page_info["size_inches"] = f"{width_inch:.2f} x {height_inch:.2f}"
-            page_info["size_mm"] = f"{width_mm:.2f} x {height_mm:.2f}"
-
-            # Try to determine page size standard
-            # Standard page sizes in points (width, height)
-            standard_sizes = {
-                "A4": (595, 842),
-                "A3": (842, 1191),
-                "Letter": (612, 792),
-                "Legal": (612, 1008),
-                "Tabloid": (792, 1224),
-            }
-
-            # Check if page matches a standard size (within 2 points tolerance)
-            for size_name, (std_w, std_h) in standard_sizes.items():
-                w_diff = abs(page_info["width"] - std_w)
-                h_diff = abs(page_info["height"] - std_h)
-                rotated_w_diff = abs(page_info["width"] - std_h)
-                rotated_h_diff = abs(page_info["height"] - std_w)
-
-                if (w_diff <= 2 and h_diff <= 2) or (
-                    rotated_w_diff <= 2 and rotated_h_diff <= 2
-                ):
-                    page_info["standard_size"] = size_name
-                    break
-
-            pages_info.append(page_info)
-
-        # Add page info to result
-        result["structure"]["pages"] = pages_info
-
-        # Determine if all pages have the same size
-        if page_count > 0:
-            sizes = set()
-            for page in pages_info:
-                sizes.add((page["width"], page["height"]))
-
-            result["structure"]["uniform_page_size"] = len(sizes) == 1
-
-            # Get the most common page size
-            if result["structure"]["uniform_page_size"]:
-                width, height = next(iter(sizes))
-                result["structure"]["page_size"] = {
-                    "width": width,
-                    "height": height,
-                }
-
-                # Add standard size if available
-                if "standard_size" in pages_info[0]:
-                    result["structure"]["standard_size"] = pages_info[0][
-                        "standard_size"
-                    ]
-
-    def _extract_text_content(
-        self, pdf: PdfReader, result: dict[str, Any], is_large_file: bool
-    ) -> None:
-        """Extract text content from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-            is_large_file: Whether the file is considered large
-        """
-        page_count = len(pdf.pages)
-
-        # Determine how many pages to extract
-        pages_to_extract = page_count
-        if is_large_file:
-            pages_to_extract = min(page_count, self.MAX_PAGES_FULL_EXTRACT)
-            result["content"]["text_extraction_limited"] = True
-            result["content"]["text_extraction_page_limit"] = (
-                self.MAX_PAGES_FULL_EXTRACT
-            )
-
-        # Extract text from each page
-        all_text = []
-        page_text = []
-
-        for i in range(pages_to_extract):
-            try:
-                text = pdf.pages[i].extract_text()
-                all_text.append(text)
-
-                # Store individual page text (with reasonable limits)
-                if len(page_text) < 20:  # Store text for at most 20 pages
-                    page_text.append(
-                        {
-                            "page_number": i + 1,
-                            "text": text[:1000]
-                            if len(text) > 1000
-                            else text,  # Limit to 1000 chars per page
-                            "character_count": len(text),
-                        }
-                    )
-            except Exception as e:
-                logger.warning(f"Error extracting text from page {i + 1}: {str(e)}")
-                # Add placeholder
-                all_text.append("")
-                if len(page_text) < 20:
-                    page_text.append(
-                        {
-                            "page_number": i + 1,
-                            "text": f"[Error extracting text: {str(e)}]",
-                            "character_count": 0,
-                        }
-                    )
-
-        # Calculate stats on extracted text
-        full_text = "\n\n".join(all_text)
-        char_count = len(full_text)
-
-        # Word count (approximate)
-        words = full_text.split()
-        word_count = len(words)
-
-        # Calculate average word length
-        avg_word_len = sum(len(w) for w in words) / max(1, word_count)
-
-        # Calculate line count (approximate)
-        line_count = full_text.count("\n") + 1
-
-        # Store content information
-        result["content"]["character_count"] = char_count
-        result["content"]["word_count"] = word_count
-        result["content"]["line_count"] = line_count
-        result["content"]["average_word_length"] = round(avg_word_len, 2)
-        result["content"]["page_text"] = page_text
-
-        # Only store full text if it's not too large
-        if char_count <= 100000:  # Limit to 100KB of text
-            result["content"]["full_text"] = full_text
-        else:
-            # Store just the beginning and end
-            beginning = full_text[:25000]  # First ~25KB
-            ending = full_text[-25000:]  # Last ~25KB
-            result["content"]["text_excerpt"] = {
-                "beginning": beginning,
-                "ending": ending,
-                "note": "Full text is too large to include in metadata",
-            }
-
-        # Check if document appears to be scanned
-        result["content"]["appears_scanned"] = self._check_if_scanned(pdf, all_text)
-
-    def _extract_font_info(self, pdf: PdfReader, result: dict[str, Any]) -> None:
-        """Extract font information from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-        """
-        # Initialize font tracking
-        fonts: set[str] = set()
-        page_count = len(pdf.pages)
-
-        # Limit analysis to first 20 pages for performance
-        max_pages = min(page_count, 20)
-
-        for i in range(max_pages):
-            page = pdf.pages[i]
-
-            # Try to extract font information from the page resources
-            # Use safer dictionary access to avoid type checking errors
-            try:
-                page_obj = cast(dict[str, Any], page)
-                resources = page_obj.get("/Resources", {})
-                if isinstance(resources, dict) and "/Font" in resources:
-                    font_dict = resources["/Font"]
-                    if isinstance(font_dict, dict):
-                        for font in font_dict.values():
-                            if isinstance(font, dict) and "/BaseFont" in font:
-                                font_name = font["/BaseFont"]
-                                if isinstance(font_name, str):
-                                    # Clean up font name
-                                    if font_name.startswith("/"):
-                                        font_name = font_name[1:]
-                                    fonts.add(font_name)
-            except Exception as e:
-                logger.debug(f"Error extracting font info from page {i + 1}: {str(e)}")
-                continue
-
-        # Store font information
-        result["structure"]["fonts"] = sorted(list(fonts))
-        result["structure"]["font_count"] = len(fonts)
-
-    def _extract_image_info(self, pdf: PdfReader, result: dict[str, Any]) -> None:
-        """Extract image information from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-        """
-        # Initialize image tracking
-        image_count = 0
-        page_count = len(pdf.pages)
-
-        # Limit analysis to first 20 pages for performance
-        max_pages = min(page_count, 20)
-        has_images = False
-
-        for i in range(max_pages):
-            page = pdf.pages[i]
-
-            # Try to detect images in the page resources
-            # Use safer dictionary access to avoid type checking errors
-            try:
-                page_obj = cast(dict[str, Any], page)
-                resources = page_obj.get("/Resources", {})
-                if isinstance(resources, dict) and "/XObject" in resources:
-                    xobject_dict = resources["/XObject"]
-                    if isinstance(xobject_dict, dict):
-                        for obj in xobject_dict.values():
-                            if (
-                                isinstance(obj, dict)
-                                and obj.get("/Subtype") == "/Image"
-                            ):
-                                image_count += 1
-                                has_images = True
-            except Exception as e:
-                logger.debug(f"Error extracting image info from page {i + 1}: {str(e)}")
-                continue
-
-        # Store image information
-        result["structure"]["has_images"] = has_images
-        result["structure"]["image_count_sampled"] = image_count
-
-        # Note that image count is from a sample of pages
-        if page_count > max_pages:
-            result["structure"]["image_count_estimated"] = int(
-                image_count * (page_count / max_pages)
-            )
-            result["structure"]["image_count_note"] = (
-                f"Image count estimated from first {max_pages} pages"
-            )
-
-        # Check for image extraction capability
-        result["structure"]["image_extraction_supported"] = PDF2IMAGE_AVAILABLE
-
-    def _extract_security_info(self, pdf: PdfReader, result: dict[str, Any]) -> None:
-        """Extract security information from the PDF.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            result: Dictionary to update with extracted information
-        """
-        # Check if document is encrypted
-        is_encrypted = pdf.is_encrypted
-        result["security"]["encrypted"] = is_encrypted
-
-        if is_encrypted:
-            # Try to determine encryption method and permissions
-            result["security"]["encryption_method"] = "Standard"  # Default
-
-            # Handle permissions in a PyPDF2 version-independent way
-            try:
-                permissions = []
-
-                # PyPDF2 has changed its permission API across versions
-                # Instead of calling get_permissions() directly, we'll check for common
-                # permission attributes that might be available
-                permission_attributes = [
-                    "can_print",
-                    "can_modify",
-                    "can_copy",
-                    "can_annotate",
-                    "can_fill_forms",
-                    "can_extract",
-                    "can_assemble",
-                    "can_print_high_quality",
-                ]
-
-                # Map permission attribute names to readable descriptions
-                perm_map = {
-                    "can_print": "Printing",
-                    "can_modify": "Modifying content",
-                    "can_copy": "Copying content",
-                    "can_annotate": "Annotating",
-                    "can_fill_forms": "Filling forms",
-                    "can_assemble": "Document assembly",
-                    "can_print_high_quality": "High-quality printing",
-                    "can_extract": "Content extraction",
-                }
-
-                # Check for permissions directly on the pdf object
-                for attr in permission_attributes:
-                    if hasattr(pdf, attr):
-                        try:
-                            if getattr(pdf, attr):
-                                permissions.append(perm_map.get(attr, attr))
-                        except Exception:
-                            pass
-
-                # If we found any permissions, store them
-                if permissions:
-                    result["security"]["permissions"] = permissions
-                    result["security"]["has_restrictions"] = len(permissions) < len(
-                        perm_map
-                    )
-                else:
-                    result["security"]["permissions_note"] = (
-                        "Unable to determine exact permissions"
-                    )
-
-                # Check for security info with safe attribute access
-                if hasattr(pdf, "_security"):
-                    security = getattr(pdf, "_security", None)
-                    if security is not None:
-                        if hasattr(security, "_owner_password_required"):
-                            result["security"]["owner_password_protected"] = (
-                                security._owner_password_required
-                            )
-                        if hasattr(security, "_user_password_required"):
-                            result["security"]["user_password_protected"] = (
-                                security._user_password_required
-                            )
-            except Exception as e:
-                logger.debug(f"Error extracting security permissions: {str(e)}")
-                result["security"]["permissions_note"] = "Error determining permissions"
-
-    def _check_if_scanned(self, pdf: PdfReader, text_list: list[str]) -> bool:
-        """Check if the PDF appears to be a scanned document.
-
-        Args:
-            pdf: PyPDF2 PDF reader object
-            text_list: List of extracted text from each page
-
-        Returns:
-            Boolean indicating if the document appears to be scanned
-        """
-        # If there are images but very little text, it might be scanned
-        has_images = False
-
-        # Check a few pages for images
-        pages_to_check = min(5, len(pdf.pages))
-        for i in range(pages_to_check):
-            page = pdf.pages[i]
-
-            # Try to detect images, with safer dictionary access
-            try:
-                page_obj = cast(dict[str, Any], page)
-                resources = page_obj.get("/Resources", {})
-                if isinstance(resources, dict) and "/XObject" in resources:
-                    xobject_dict = resources["/XObject"]
-                    if isinstance(xobject_dict, dict):
-                        for obj in xobject_dict.values():
-                            if (
-                                isinstance(obj, dict)
-                                and obj.get("/Subtype") == "/Image"
-                            ):
-                                has_images = True
-                                break
-            except Exception:
-                continue
-
-            if has_images:
-                break
-
-        # Check if text extraction yielded reasonable results
-        text_content = "".join(text_list[:pages_to_check])
-        avg_text_per_page = len(text_content) / max(1, pages_to_check)
-
-        # Heuristic: If there are images but very little text per page, it might be scanned
-        # Typical scanned documents might have some OCR errors but still some text
-        is_likely_scanned = has_images and avg_text_per_page < 100
-
-        return is_likely_scanned
-
-
-# Register the extractor
-MetadataExtractorRegistry.register(PDFMetadataExtractor)

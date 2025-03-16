@@ -11,25 +11,16 @@ This module provides advanced directory monitoring capabilities including:
 import logging
 import threading
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from watchdog.observers import Observer
 
 from backend.src.config.config_loader import config
-from backend.src.file_manager.file_watcher import FileEventHandler
+
+# Import from common module instead of file_watcher
+from backend.src.file_manager.common import DirectoryPriority
 
 logger = logging.getLogger(__name__)
-
-
-class DirectoryPriority(Enum):
-    """Priority levels for monitored directories."""
-
-    CRITICAL = 0  # Highest priority, always process immediately
-    HIGH = 1  # Process with minimal delay
-    NORMAL = 2  # Standard processing
-    LOW = 3  # Process when resources available
 
 
 @dataclass
@@ -44,122 +35,97 @@ class DirectoryConfig:
 
 class DirectoryMonitor:
     """
-    Enhanced directory monitoring with priority-based processing and dynamic configuration.
+    Enhanced directory monitoring with priority-based processing.
 
-    Features:
-    - Priority-based monitoring for different directories
-    - Resource throttling for high-change-rate directories
-    - Recursive directory discovery with customizable depth
-    - Dynamic directory registration/unregistration
+    This class provides advanced directory monitoring capabilities with
+    configurable priorities, throttling, and recursive depth.
     """
 
     def __init__(self):
         """Initialize the directory monitor."""
-        self.directories: dict[str, DirectoryConfig] = {}
-        self.observers: dict[str, Any] = {}  # Using Any for Observer type
-        self.event_handlers: dict[str, Any] = {}  # Using Any for FileEventHandler type
-        self.active = False
-        self.discovery_thread = None
-        self.discovery_stop_event = threading.Event()
-
-        # Default settings
-        self.default_priority = self._parse_priority(
-            config.get("default_priority", "normal")
-        )
-        self.default_recursive_depth = config.get("default_recursive_depth", 3)
-        self.default_throttle = config.get("default_throttle", 1.0)
-
-        # Auto-discovery settings
-        self.auto_discover = config.get("auto_discover_directories", False)
-        self.auto_discover_parent_dirs = config.get("auto_discover_parent_dirs", [])
-        self.auto_discover_interval = config.get("auto_discover_interval", 3600)
-        self.auto_discover_depth = config.get("auto_discover_depth", 1)
-
-    def start(self):
-        """Start monitoring all configured directories."""
-        if self.active:
-            logger.warning("Directory monitor is already active")
-            return
-
-        # Load directories from config
+        self.observers: dict[str, Observer] = {}
+        self.directory_configs: dict[str, DirectoryConfig] = {}
+        self.discovery_thread: threading.Thread | None = None
+        self.discovery_interval = config.get(
+            "file_manager.directory_discovery_interval", 300
+        )  # 5 minutes default
+        self.discovery_running = False
+        self.discovery_lock = threading.Lock()
+        self.base_throttle = config.get("file_manager.base_throttle", 1.0)
         self._load_directories_from_config()
 
-        # Start monitoring each directory
-        for dir_path, dir_config in self.directories.items():
+    def start(self):
+        """Start monitoring all registered directories."""
+        logger.info("Starting directory monitoring")
+        for dir_path, dir_config in self.directory_configs.items():
             self._start_monitoring_directory(dir_path, dir_config)
 
-        # Start auto-discovery if enabled
-        if self.auto_discover and self.auto_discover_parent_dirs:
+        # Start directory discovery if enabled
+        if config.get("file_manager.enable_directory_discovery", False):
             self._start_directory_discovery()
-
-        self.active = True
-        logger.info(
-            f"Directory monitor started with {len(self.directories)} directories"
-        )
 
     def stop(self):
         """Stop monitoring all directories."""
-        if not self.active:
-            logger.warning("Directory monitor is not active")
-            return
-
-        # Stop discovery thread if running
+        logger.info("Stopping directory monitoring")
+        # Stop discovery thread
         if self.discovery_thread and self.discovery_thread.is_alive():
-            self.discovery_stop_event.set()
-            self.discovery_thread.join(timeout=5)
+            self.discovery_running = False
+            self.discovery_thread.join(timeout=5.0)
+            if self.discovery_thread.is_alive():
+                logger.warning(
+                    "Directory discovery thread did not terminate gracefully"
+                )
 
         # Stop all observers
-        for dir_path, observer in self.observers.items():
-            logger.info(f"Stopping observer for {dir_path}")
-            observer.stop()
-
-        # Wait for all observers to stop
-        for dir_path, observer in self.observers.items():
-            observer.join()
+        for observer in self.observers.values():
+            if observer.is_alive():
+                observer.stop()
+                observer.join(timeout=5.0)
+                if observer.is_alive():
+                    logger.warning(
+                        "Observer did not terminate gracefully, some resources may not be released"
+                    )
 
         self.observers.clear()
-        self.event_handlers.clear()
-        self.active = False
-        logger.info("Directory monitor stopped")
 
     def register_directory(self, dir_path: str | Path, **kwargs) -> bool:
         """
-        Dynamically register a new directory for monitoring.
+        Register a directory for monitoring.
 
         Args:
             dir_path: Path to the directory to monitor
-            **kwargs: Optional parameters (priority, recursive_depth, throttle)
+            **kwargs: Additional configuration options:
+                - priority: DirectoryPriority enum value or string name
+                - recursive_depth: How deep to scan subdirectories
+                - throttle: Seconds to wait between processing in high-activity dirs
 
         Returns:
-            True if successfully registered, False otherwise
+            bool: True if registration was successful, False otherwise
         """
         path = Path(dir_path).resolve()
-        path_str = str(path)
-
-        # Check if directory exists
         if not path.exists() or not path.is_dir():
             logger.error(f"Cannot register non-existent directory: {path}")
             return False
 
-        # Check if already monitoring
-        if path_str in self.directories:
-            logger.warning(f"Already monitoring directory: {path}")
-            return False
+        # Convert string priority to enum if needed
+        if "priority" in kwargs and isinstance(kwargs["priority"], str):
+            kwargs["priority"] = self._parse_priority(kwargs["priority"])
 
-        # Create directory configuration
+        # Create directory config
         dir_config = DirectoryConfig(
             path=path,
-            priority=self._parse_priority(kwargs.get("priority", "normal")),
-            recursive_depth=kwargs.get("recursive_depth", self.default_recursive_depth),
-            throttle=kwargs.get("throttle", self.default_throttle),
+            priority=kwargs.get("priority", DirectoryPriority.NORMAL),
+            recursive_depth=kwargs.get("recursive_depth", 3),
+            throttle=kwargs.get("throttle", self.base_throttle),
         )
 
-        # Add to directories
-        self.directories[path_str] = dir_config
+        # Store the config
+        str_path = str(path)
+        self.directory_configs[str_path] = dir_config
 
-        # Start monitoring if active
-        if self.active:
-            self._start_monitoring_directory(path_str, dir_config)
+        # Start monitoring if we're already running
+        if self.observers:
+            self._start_monitoring_directory(str_path, dir_config)
 
         logger.info(
             f"Registered directory: {path} (Priority: {dir_config.priority.name}, "
@@ -169,36 +135,33 @@ class DirectoryMonitor:
 
     def unregister_directory(self, dir_path: str | Path) -> bool:
         """
-        Stop monitoring a directory and remove it from the registry.
+        Unregister a directory from monitoring.
 
         Args:
             dir_path: Path to the directory to stop monitoring
 
         Returns:
-            True if successfully unregistered, False otherwise
+            bool: True if unregistration was successful, False otherwise
         """
         path = Path(dir_path).resolve()
-        path_str = str(path)
+        str_path = str(path)
 
-        # Check if directory is monitored
-        if path_str not in self.directories:
-            logger.warning(f"Directory not monitored: {path}")
+        if str_path not in self.directory_configs:
+            logger.warning(f"Directory not registered: {path}")
             return False
 
-        # Stop observer if active
-        if path_str in self.observers:
-            observer = self.observers[path_str]
-            observer.stop()
-            observer.join()
-            del self.observers[path_str]
+        # Stop and remove the observer
+        if str_path in self.observers:
+            observer = self.observers[str_path]
+            if observer.is_alive():
+                observer.stop()
+                observer.join(timeout=5.0)
+                if observer.is_alive():
+                    logger.warning(f"Observer for {path} did not terminate gracefully")
+            del self.observers[str_path]
 
-        # Remove event handler
-        if path_str in self.event_handlers:
-            del self.event_handlers[path_str]
-
-        # Remove from directories
-        del self.directories[path_str]
-
+        # Remove the config
+        del self.directory_configs[str_path]
         logger.info(f"Unregistered directory: {path}")
         return True
 
@@ -207,41 +170,53 @@ class DirectoryMonitor:
         Update configuration for a monitored directory.
 
         Args:
-            dir_path: Path to the directory
-            **kwargs: Parameters to update (priority, recursive_depth, throttle)
+            dir_path: Path to the directory to update
+            **kwargs: Configuration options to update:
+                - priority: DirectoryPriority enum value or string name
+                - recursive_depth: How deep to scan subdirectories
+                - throttle: Seconds to wait between processing in high-activity dirs
 
         Returns:
-            True if successfully updated, False otherwise
+            bool: True if update was successful, False otherwise
         """
         path = Path(dir_path).resolve()
-        path_str = str(path)
+        str_path = str(path)
 
-        # Check if directory is monitored
-        if path_str not in self.directories:
-            logger.warning(f"Directory not monitored: {path}")
+        if str_path not in self.directory_configs:
+            logger.warning(f"Cannot update non-registered directory: {path}")
             return False
 
         # Get current config
-        dir_config = self.directories[path_str]
+        dir_config = self.directory_configs[str_path]
 
-        # Update config
+        # Update config values
         if "priority" in kwargs:
-            dir_config.priority = self._parse_priority(kwargs["priority"])
+            priority = kwargs["priority"]
+            if isinstance(priority, str):
+                priority = self._parse_priority(priority)
+            dir_config.priority = priority
+
         if "recursive_depth" in kwargs:
-            dir_config.recursive_depth = kwargs["recursive_depth"]
+            dir_config.recursive_depth = int(kwargs["recursive_depth"])
+
         if "throttle" in kwargs:
-            dir_config.throttle = kwargs["throttle"]
+            dir_config.throttle = float(kwargs["throttle"])
 
-        # Restart monitoring if needed
-        if self.active and path_str in self.observers:
+        # Restart monitoring with new config if we're already running
+        if str_path in self.observers:
             # Stop current observer
-            observer = self.observers[path_str]
-            observer.stop()
-            observer.join()
-            del self.observers[path_str]
+            observer = self.observers[str_path]
+            if observer.is_alive():
+                observer.stop()
+                observer.join(timeout=5.0)
+                if observer.is_alive():
+                    logger.warning(
+                        f"Observer for {path} did not terminate gracefully during update"
+                    )
+            del self.observers[str_path]
 
-            # Start new observer with updated config
-            self._start_monitoring_directory(path_str, dir_config)
+            # Start with new config
+            self._start_monitoring_directory(str_path, dir_config)
 
         logger.info(
             f"Updated directory config: {path} (Priority: {dir_config.priority.name}, "
@@ -251,99 +226,96 @@ class DirectoryMonitor:
 
     def get_directory_config(self, dir_path: str | Path) -> DirectoryConfig | None:
         """
-        Get the current configuration for a monitored directory.
+        Get configuration for a monitored directory.
 
         Args:
             dir_path: Path to the directory
 
         Returns:
-            DirectoryConfig if found, None otherwise
+            DirectoryConfig or None: Configuration for the directory, or None if not registered
         """
         path = Path(dir_path).resolve()
-        path_str = str(path)
-
-        return self.directories.get(path_str)
+        str_path = str(path)
+        return self.directory_configs.get(str_path)
 
     def get_all_directories(self) -> dict[str, DirectoryConfig]:
         """
         Get all monitored directories and their configurations.
 
         Returns:
-            Dictionary mapping directory paths to configurations
+            dict: Dictionary mapping directory paths to their configurations
         """
-        return self.directories.copy()
+        return self.directory_configs.copy()
 
     def _load_directories_from_config(self):
-        """Load directory configurations from the global config."""
-        dirs_to_watch = config.get("directories_to_watch", [])
+        """Load directories from configuration."""
+        dirs_config = config.get("file_manager.monitored_directories", [])
+        if not dirs_config:
+            logger.info("No directories configured for monitoring")
+            return
 
-        for dir_entry in dirs_to_watch:
+        for dir_config in dirs_config:
+            if not isinstance(dir_config, dict) or "path" not in dir_config:
+                logger.warning(f"Invalid directory configuration: {dir_config}")
+                continue
+
+            path = dir_config["path"]
+            kwargs = {}
+
+            if "priority" in dir_config:
+                kwargs["priority"] = dir_config["priority"]
+
+            if "recursive_depth" in dir_config:
+                kwargs["recursive_depth"] = int(dir_config["recursive_depth"])
+
+            if "throttle" in dir_config:
+                kwargs["throttle"] = float(dir_config["throttle"])
+
             try:
-                # Handle different formats (string vs dict)
-                if isinstance(dir_entry, str):
-                    # Simple format - just a path string
-                    self.register_directory(dir_entry)
-                elif isinstance(dir_entry, dict):
-                    # Advanced format with additional settings
-                    path = dir_entry.get("path")
-                    if not path:
-                        logger.warning(
-                            f"Skipping directory entry with no path: {dir_entry}"
-                        )
-                        continue
-
-                    self.register_directory(
-                        path,
-                        priority=dir_entry.get("priority", "normal"),
-                        recursive_depth=dir_entry.get(
-                            "recursive_depth", self.default_recursive_depth
-                        ),
-                        throttle=dir_entry.get("throttle", self.default_throttle),
-                    )
-                else:
-                    logger.warning(f"Unsupported directory entry format: {dir_entry}")
+                self.register_directory(path, **kwargs)
             except Exception as e:
-                logger.error(f"Error registering directory from config: {e}")
+                logger.error(f"Error registering directory {path}: {e}")
 
     def _start_monitoring_directory(self, dir_path: str, dir_config: DirectoryConfig):
         """
-        Start monitoring a specific directory with its configuration.
+        Start monitoring a directory.
 
         Args:
             dir_path: String path to the directory
             dir_config: Configuration for the directory
         """
+        # Import here to avoid circular import
+        from backend.src.file_manager.file_watcher import FileEventHandler
+
+        if dir_path in self.observers and self.observers[dir_path].is_alive():
+            logger.warning(f"Directory already being monitored: {dir_path}")
+            return
+
         try:
-            # Create event handler with throttling based on priority
-            event_handler = FileEventHandler(dir_config.path)
-            # Convert float throttle to int for debounce_interval (rounded to nearest integer)
-            throttle_value = self._get_throttle_for_priority(
-                dir_config.priority, dir_config.throttle
-            )
-            event_handler.debounce_interval = int(round(throttle_value))
-
-            # Create and start observer
+            # Create observer and event handler
             observer = Observer()
+            event_handler = FileEventHandler(dir_config.path)
 
-            # Schedule with recursive flag based on depth
-            recursive = dir_config.recursive_depth != 0
-            observer.schedule(event_handler, dir_path, recursive=recursive)
-
-            # If recursive with limited depth, handle that specially
-            if recursive and dir_config.recursive_depth > 0:
+            # Schedule the observer
+            if dir_config.recursive_depth > 0:
+                # Handle limited-depth recursion
                 self._handle_limited_depth_recursion(
-                    dir_config.path, dir_config.recursive_depth, event_handler, observer
+                    dir_config.path,
+                    dir_config.recursive_depth,
+                    event_handler,
+                    observer,
                 )
+            else:
+                # Non-recursive monitoring
+                observer.schedule(event_handler, dir_path, recursive=False)
 
+            # Start the observer
             observer.start()
-
-            # Store in dictionaries
             self.observers[dir_path] = observer
-            self.event_handlers[dir_path] = event_handler
 
             logger.info(
-                f"Started monitoring: {dir_path} (Priority: {dir_config.priority.name}, "
-                f"Depth: {dir_config.recursive_depth}, Throttle: {event_handler.debounce_interval}s)"
+                f"Started monitoring directory: {dir_path} "
+                f"(Priority: {dir_config.priority.name}, Depth: {dir_config.recursive_depth})"
             )
         except Exception as e:
             logger.error(f"Error starting monitoring for {dir_path}: {e}")
@@ -356,15 +328,18 @@ class DirectoryMonitor:
         observer,
     ):
         """
-        Handle recursive monitoring with a limited depth.
+        Handle limited-depth recursion for directory monitoring.
 
         Args:
             base_path: Base directory path
             max_depth: Maximum recursion depth
             event_handler: Event handler to use
-            observer: Observer to schedule with
+            observer: Observer to schedule
         """
-        # Get all subdirectories up to max_depth
+        # Schedule the base directory
+        observer.schedule(event_handler, str(base_path), recursive=False)
+
+        # Collect subdirectories up to max_depth
         subdirs = []
 
         def collect_subdirs(path, current_depth=1):
@@ -376,91 +351,122 @@ class DirectoryMonitor:
                     if item.is_dir():
                         subdirs.append(item)
                         collect_subdirs(item, current_depth + 1)
-            except (PermissionError, OSError) as e:
-                logger.warning(f"Error accessing {path}: {e}")
+            except PermissionError:
+                logger.warning(f"Permission denied accessing directory: {path}")
+            except Exception as e:
+                logger.error(f"Error scanning directory {path}: {e}")
 
+        # Collect subdirectories
         collect_subdirs(base_path)
 
-        # Schedule each subdirectory individually to ensure they're monitored
+        # Schedule each subdirectory non-recursively
         for subdir in subdirs:
             try:
                 observer.schedule(event_handler, str(subdir), recursive=False)
             except Exception as e:
-                logger.warning(f"Error scheduling {subdir}: {e}")
+                logger.error(f"Error scheduling observer for {subdir}: {e}")
 
     def _start_directory_discovery(self):
-        """Start the directory auto-discovery thread."""
+        """Start the directory discovery thread."""
         if self.discovery_thread and self.discovery_thread.is_alive():
-            logger.warning("Directory discovery thread is already running")
+            logger.warning("Directory discovery already running")
             return
 
-        # Reset stop event
-        self.discovery_stop_event.clear()
-
-        # Start thread
+        self.discovery_running = True
         self.discovery_thread = threading.Thread(
-            target=self._directory_discovery_loop, daemon=True
+            target=self._directory_discovery_loop,
+            daemon=True,
+            name="DirectoryDiscoveryThread",
         )
         self.discovery_thread.start()
-        logger.info("Directory auto-discovery started")
+        logger.info("Started directory discovery thread")
 
     def _directory_discovery_loop(self):
-        """Background thread for discovering new directories."""
-        while not self.discovery_stop_event.is_set():
+        """Run the directory discovery loop."""
+        while self.discovery_running:
             try:
                 self._discover_new_directories()
             except Exception as e:
-                logger.error(f"Error during directory discovery: {e}")
+                logger.error(f"Error in directory discovery: {e}")
 
-            # Wait for next interval or until stopped
-            self.discovery_stop_event.wait(self.auto_discover_interval)
+            # Sleep for the discovery interval
+            for _ in range(int(self.discovery_interval)):
+                if not self.discovery_running:
+                    break
+                threading.Event().wait(1)
 
     def _discover_new_directories(self):
-        """Scan parent directories for new subdirectories to monitor."""
-        # Get all parent directories to scan
-        parent_dirs = [Path(p).resolve() for p in self.auto_discover_parent_dirs]
+        """Discover new directories to monitor."""
+        with self.discovery_lock:
+            # Get base directories to scan
+            base_dirs = config.get("file_manager.discovery_base_directories", [])
+            if not base_dirs:
+                return
 
-        # Get currently monitored directories
-        monitored = set(self.directories.keys())
+            # Get discovery depth
+            max_depth = config.get("file_manager.discovery_max_depth", 3)
 
-        # New directories to add
-        new_dirs = set()
+            # Get patterns to include/exclude
+            include_patterns = config.get("file_manager.discovery_include_patterns", [])
+            exclude_patterns = config.get("file_manager.discovery_exclude_patterns", [])
 
-        # Scan each parent directory
-        for parent in parent_dirs:
-            if not parent.exists() or not parent.is_dir():
-                logger.warning(f"Auto-discovery parent does not exist: {parent}")
-                continue
+            # Scan directories
+            new_dirs = set()
 
-            # Find subdirectories up to the configured depth
             def scan_dir(path, current_depth=1):
-                if current_depth > self.auto_discover_depth:
+                if current_depth > max_depth:
                     return
 
                 try:
-                    for item in path.iterdir():
-                        if item.is_dir():
-                            new_dirs.add(str(item.resolve()))
-                            scan_dir(item, current_depth + 1)
-                except (PermissionError, OSError) as e:
-                    logger.warning(f"Error accessing {path} during discovery: {e}")
+                    for item in Path(path).iterdir():
+                        if not item.is_dir():
+                            continue
 
-            scan_dir(parent)
+                        # Check if this directory should be included
+                        dir_name = item.name.lower()
+                        if include_patterns and not any(
+                            pattern.lower() in dir_name for pattern in include_patterns
+                        ):
+                            continue
 
-        # Register new directories that aren't already monitored
-        for dir_path in new_dirs:
-            if dir_path not in monitored:
-                self.register_directory(dir_path)
+                        # Check if this directory should be excluded
+                        if any(
+                            pattern.lower() in dir_name for pattern in exclude_patterns
+                        ):
+                            continue
+
+                        # Add to new directories
+                        new_dirs.add(item)
+
+                        # Scan subdirectories
+                        scan_dir(item, current_depth + 1)
+                except Exception as e:
+                    logger.error(f"Error scanning directory {path}: {e}")
+
+            # Scan all base directories
+            for base_dir in base_dirs:
+                try:
+                    base_path = Path(base_dir)
+                    if base_path.exists() and base_path.is_dir():
+                        scan_dir(base_path)
+                except Exception as e:
+                    logger.error(f"Error scanning base directory {base_dir}: {e}")
+
+            # Register new directories
+            for new_dir in new_dirs:
+                str_path = str(new_dir)
+                if str_path not in self.directory_configs:
+                    self.register_directory(new_dir)
 
     def _parse_priority(self, priority_str: str) -> DirectoryPriority:
         """
-        Parse a priority string to a DirectoryPriority enum.
+        Parse a priority string into a DirectoryPriority enum value.
 
         Args:
-            priority_str: String representation of priority
+            priority_str: Priority string (case-insensitive)
 
         Returns:
-            DirectoryPriority enum value
+            DirectoryPriority: Corresponding enum value
         """
         priority_map = {
             "critical": DirectoryPriority.CRITICAL,
@@ -469,29 +475,12 @@ class DirectoryMonitor:
             "low": DirectoryPriority.LOW,
         }
 
-        return priority_map.get(priority_str.lower(), DirectoryPriority.NORMAL)
-
-    def _get_throttle_for_priority(
-        self, priority: DirectoryPriority, base_throttle: float
-    ) -> float:
-        """
-        Calculate the appropriate throttle/debounce value based on priority.
-
-        Args:
-            priority: Directory priority level
-            base_throttle: Base throttle value from config
-
-        Returns:
-            Adjusted throttle value in seconds
-        """
-        priority_multipliers = {
-            DirectoryPriority.CRITICAL: 0.0,  # No throttling for critical
-            DirectoryPriority.HIGH: 0.5,  # Half throttle for high
-            DirectoryPriority.NORMAL: 1.0,  # Normal throttle
-            DirectoryPriority.LOW: 2.0,  # Double throttle for low
-        }
-
-        return base_throttle * priority_multipliers.get(priority, 1.0)
+        priority_str = priority_str.lower()
+        if priority_str in priority_map:
+            return priority_map[priority_str]
+        else:
+            logger.warning(f"Unknown priority: {priority_str}, defaulting to NORMAL")
+            return DirectoryPriority.NORMAL
 
 
 # Create a singleton instance

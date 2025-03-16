@@ -272,8 +272,14 @@ def mock_cache_manager():
 
 
 # Actual tests
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_sqlite_metadata_extraction(sample_sqlite_db):
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_sqlite_metadata_extraction(sample_sqlite_db):
     """Test extraction of metadata from SQLite database"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_sqlite_db)
@@ -312,8 +318,14 @@ async def test_sqlite_metadata_extraction(sample_sqlite_db):
     assert "1 views" in metadata["summary"]
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_sql_dump_metadata_extraction(sample_sql_dump):
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_sql_dump_metadata_extraction(sample_sql_dump):
     """Test extraction of metadata from SQL dump file"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_sql_dump)
@@ -338,8 +350,14 @@ async def test_sql_dump_metadata_extraction(sample_sql_dump):
     assert "2 table definitions" in metadata["summary"]
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_mysql_dump_metadata_extraction(sample_mysql_dump):
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_mysql_dump_metadata_extraction(sample_mysql_dump):
     """Test extraction of metadata from MySQL dump file"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract(sample_mysql_dump)
@@ -368,8 +386,14 @@ async def test_mysql_dump_metadata_extraction(sample_mysql_dump):
     assert "test_db" in metadata["summary"]
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_nonexistent_file():
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_nonexistent_file():
     """Test handling of nonexistent files"""
     extractor = DatabaseMetadataExtractor()
     metadata = await extractor.extract("nonexistent_file.db")
@@ -378,8 +402,14 @@ async def test_nonexistent_file():
     assert metadata == {}
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_unsupported_file_format():
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_unsupported_file_format():
     """Test handling of unsupported file formats"""
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
         temp_file.write(b"This is not a database file")
@@ -395,8 +425,14 @@ async def test_unsupported_file_format():
         os.unlink(path)
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_sqlite_corrupt_database():
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_sqlite_corrupt_database():
     """Test handling of corrupt SQLite databases"""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         temp_file.write(b"This is not a valid SQLite database file")
@@ -414,8 +450,14 @@ async def test_sqlite_corrupt_database():
         os.unlink(path)
 
 
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+@pytest.mark.[a-z]+
+
 @pytest.mark.asyncio
-async def test_caching_functionality(sample_sqlite_db, mock_cache_manager):
+async async @pytest.mark.metadata
+@pytest.mark.unit
+def test_caching_functionality(sample_sqlite_db, mock_cache_manager):
     """Test that caching works correctly"""
     extractor = DatabaseMetadataExtractor(cache_manager=mock_cache_manager)
 

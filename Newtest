@@ -222,7 +222,23 @@ here's a detailed implementation plan:
   - Implemented robust error handling for corrupt or encrypted PDF files
   - Added efficient caching for improved performance
 
-- [ ] Add video file metadata support
+- [x] Add video file metadata support ✅ DONE: Implemented in
+      backend/src/metadata/video_extractor.py
+
+  - Created `VideoMetadataExtractor` for extracting rich video metadata
+  - Added support for multiple video formats (MP4, AVI, MKV, MOV, WMV, WebM,
+    etc.)
+  - Implemented container format detection and analysis
+  - Added video stream analysis (codec, resolution, frame rate, aspect ratio)
+  - Implemented audio stream analysis (codec, channels, sample rate)
+  - Added subtitle and chapter information extraction
+  - Created a fallback mechanism using multiple libraries (pymediainfo, ffmpeg)
+  - Implemented tag extraction for embedded metadata
+  - Added robust error handling for corrupted or unsupported files
+  - Created comprehensive documentation (docs_video_metadata.md)
+  - Updated metadata registry to include the video extractor
+  - Added efficient caching for improved performance
+  - Created test suite with mocked video files
 
 #### Week 9-10: Format Conversion
 

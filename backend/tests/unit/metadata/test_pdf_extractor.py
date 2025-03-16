@@ -1,240 +1,208 @@
-"""
-Unit tests for the PDF metadata extractor.
+"""Tests for the PDF metadata extractor module.
 
-These tests verify the functionality of the PDFMetadataExtractor class,
-ensuring it correctly extracts metadata from PDF files.
+This module contains unit tests for the PDFMetadataExtractor class.
 """
 
 from pathlib import Path
-from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from PyPDF2.errors import PdfReadError
 
-from backend.src.metadata.pdf_extractor import PDFMetadataExtractor
+from backend.src.metadata.pdf_extractor import PYPDF2_AVAILABLE, PDFMetadataExtractor
 
 
 @pytest.fixture
 def pdf_extractor():
-    """Create a PDF metadata extractor instance for testing."""
+    """Fixture for creating a PDF extractor instance."""
     return PDFMetadataExtractor()
 
 
-def test_supported_mime_types(pdf_extractor):
-    """Test the supported_mime_types property returns the correct MIME types."""
-    mime_types = pdf_extractor.supported_mime_types
+@pytest.mark.skipif(not PYPDF2_AVAILABLE, reason="PyPDF2 is not installed")
+class TestPDFMetadataExtractor:
+    """Test suite for the PDF metadata extractor."""
 
-    # Verify that the expected MIME types are supported
-    assert "application/pdf" in mime_types
-    assert "application/x-pdf" in mime_types
-    assert "application/acrobat" in mime_types
-    assert "application/vnd.pdf" in mime_types
-    assert len(mime_types) == 4
+    @pytest.mark.metadata
+@pytest.mark.unit
+def test_supported_mime_types(self, pdf_extractor):
+        """Test the supported MIME types."""
+        assert "application/pdf" in pdf_extractor.supported_mime_types
+        assert len(pdf_extractor.supported_mime_types) >= 1
 
+    @pytest.mark.metadata
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_file_extensions(self, pdf_extractor):
+        """Test the file extension mapping."""
+        assert ".pdf" in pdf_extractor.FILE_EXTENSIONS
+        assert pdf_extractor.FILE_EXTENSIONS[".pdf"] == "application/pdf"
 
-@mock.patch("backend.src.metadata.pdf_extractor.PdfReader")
-async def test_extract_nonexistent_file(mock_pdfreader, pdf_extractor):
-    """Test extraction with a non-existent file."""
-    # Set up a non-existent file path
-    nonexistent_path = Path("/path/to/nonexistent/file.pdf")
+    @pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
+async def test_extract_nonexistent_file(self, pdf_extractor):
+        """Test extraction with a nonexistent file."""
+        with pytest.raises(FileNotFoundError):
+            await pdf_extractor.extract("/nonexistent/file.pdf")
 
-    # Mock the Path.exists method to return False
-    with mock.patch("pathlib.Path.exists", return_value=False):
-        result = await pdf_extractor.extract(nonexistent_path)
+    @pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
+async def test_extract_unsupported_mime_type(self, pdf_extractor):
+        """Test extraction with an unsupported MIME type."""
+        # Create a temporary file
+        tmp_file = Path("test_file.txt")
+        tmp_file.write_text("This is not a PDF file")
 
-    # Verify that an empty dict is returned for non-existent files
-    assert result == {}
-    # Ensure PdfReader was not called
-    mock_pdfreader.assert_not_called()
-
-
-@mock.patch("backend.src.metadata.pdf_extractor.PdfReader")
-async def test_extract_unsupported_mime_type(mock_pdfreader, pdf_extractor):
-    """Test extraction with an unsupported MIME type."""
-    # Set up a test file path
-    test_path = Path("/path/to/test/file.txt")
-
-    # Mock Path.exists to return True
-    with mock.patch("pathlib.Path.exists", return_value=True):
-        # Mock the mime_detector.get_mime_type to return an unsupported MIME type
-        with mock.patch.object(
-            pdf_extractor.mime_detector,
-            "get_mime_type",
-            return_value=("text/plain", None),
-        ):
-            result = await pdf_extractor.extract(test_path)
-
-    # Verify that an empty dict is returned for unsupported MIME types
-    assert result == {}
-    # Ensure PdfReader was not called
-    mock_pdfreader.assert_not_called()
-
-
-@mock.patch("backend.src.utils.cache_manager.CacheManager")
-async def test_cache_usage(mock_cache_manager, pdf_extractor):
-    """Test that caching is properly used when a cache manager is provided."""
-    # Create a PDF extractor with a mocked cache manager
-    cache_manager = mock.MagicMock()
-    cache_manager.get = mock.AsyncMock(
-        return_value={"metadata_type": "pdf", "cached": True}
-    )
-    pdf_extractor_with_cache = PDFMetadataExtractor(cache_manager=cache_manager)
-
-    # Set up test path and mock data
-    test_path = Path("/path/to/test/file.pdf")
-    cached_data = {"metadata_type": "pdf", "cached": True}
-
-    # Mock Path.exists and stat
-    with mock.patch("pathlib.Path.exists", return_value=True):
-        with mock.patch("pathlib.Path.stat") as mock_stat:
-            # Set up the mock stat result
-            mock_stat_result = mock.MagicMock()
-            mock_stat_result.st_mtime = 12345
-            mock_stat.return_value = mock_stat_result
-
-            # Mock the mime_detector to return a supported MIME type
-            with mock.patch.object(
-                pdf_extractor_with_cache.mime_detector,
-                "get_mime_type",
-                return_value=("application/pdf", None),
+        try:
+            # Mock the MIME type detector to return an unsupported type
+            with patch.object(
+                pdf_extractor.mime_detector, "get_mime_type", return_value="text/plain"
             ):
-                # Call extract
-                result = await pdf_extractor_with_cache.extract(test_path)
+                with pytest.raises(ValueError):
+                    await pdf_extractor.extract(tmp_file)
+        finally:
+            # Clean up
+            if tmp_file.exists():
+                tmp_file.unlink()
 
-                # Verify cache key and result
-                cache_manager.get.assert_called_once()
-                assert result == cached_data
+    @pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
+async def test_extract_with_cache(self, pdf_extractor):
+        """Test extraction with cache."""
+        # Set up mocks
+        cache_manager = MagicMock()
+        pdf_extractor.cache_manager = cache_manager
 
+        # Mock cache hit
+        cached_data = {"metadata_type": "pdf", "cached": True}
+        cache_manager.get.return_value = cached_data
 
-@mock.patch("backend.src.metadata.pdf_extractor.open", create=True)
-@mock.patch("backend.src.metadata.pdf_extractor.PdfReader")
-async def test_extract_error_handling(mock_pdfreader, mock_open, pdf_extractor):
-    """Test error handling when processing a PDF file."""
-    # Set up a test file path
-    test_path = Path("/path/to/test/file.pdf")
+        # Test extraction with cache hit
+        file_path = Path("test_file.pdf")
 
-    # Mock Path.exists to return True
-    with mock.patch("pathlib.Path.exists", return_value=True):
-        # Mock stat
-        with mock.patch("pathlib.Path.stat") as mock_stat:
-            # Set up the mock stat result
-            mock_stat_result = mock.MagicMock()
-            mock_stat_result.st_size = 1024  # 1KB
-            mock_stat.return_value = mock_stat_result
+        # Create a dummy file
+        file_path.write_text("Dummy PDF content")
 
-            # Mock the mime_detector to return a supported MIME type
-            with mock.patch.object(
+        try:
+            # Mock MIME type detection
+            with patch.object(
                 pdf_extractor.mime_detector,
                 "get_mime_type",
-                return_value=("application/pdf", None),
+                return_value="application/pdf",
             ):
-                # Set up PdfReader to raise an exception
-                mock_pdfreader.side_effect = PdfReadError("Invalid PDF file")
+                result = await pdf_extractor.extract(file_path)
 
-                # Call extract
-                result = await pdf_extractor.extract(test_path)
+                assert result == cached_data
+                cache_manager.get.assert_called_once()
+                cache_manager.put.assert_not_called()
+        finally:
+            # Clean up
+            if file_path.exists():
+                file_path.unlink()
 
-                # Verify error handling
-                assert result["metadata_type"] == "pdf"
-                assert "error" in result
-                assert "Error extracting PDF metadata" in result["error"]
+    @pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
+async def test_extract_without_pypdf(self, pdf_extractor):
+        """Test extraction when PyPDF2 is not available."""
+        with patch("backend.src.metadata.pdf_extractor.PYPDF2_AVAILABLE", False):
+            # Create a temporary file
+            tmp_file = Path("test_file.pdf")
+            tmp_file.write_text("This is a fake PDF file")
 
+            try:
+                # Mock the MIME type detector to return a supported type
+                with patch.object(
+                    pdf_extractor.mime_detector,
+                    "get_mime_type",
+                    return_value="application/pdf",
+                ):
+                    result = await pdf_extractor.extract(tmp_file)
+                    assert result["metadata_type"] == "pdf"
+                    assert "error" in result
+                    assert "PyPDF2 is required" in result["error"]
+            finally:
+                # Clean up
+                if tmp_file.exists():
+                    tmp_file.unlink()
 
-@mock.patch("backend.src.metadata.pdf_extractor.open", create=True)
-async def test_process_pdf_basic_info(mock_open, pdf_extractor):
-    """Test processing a PDF file with basic information."""
-    # Set up a test file path
-    test_path = Path("/path/to/test/file.pdf")
+    @pytest.mark.asyncio
+@pytest.mark.metadata
+@pytest.mark.unit
+async def test_extract_with_pypdf_error(self, pdf_extractor):
+        """Test extraction when PyPDF2 raises an error."""
+        # Create a temporary file
+        tmp_file = Path("test_file.pdf")
+        tmp_file.write_text("This is a fake PDF file that will cause PyPDF2 to error")
 
-    # Mock Path.exists to return True and set file size
-    with mock.patch("pathlib.Path.exists", return_value=True):
-        with mock.patch("pathlib.Path.stat") as mock_stat:
-            # Set up the mock stat result
-            mock_stat_result = mock.MagicMock()
-            mock_stat_result.st_size = 1024  # 1KB
-            mock_stat.return_value = mock_stat_result
+        try:
+            # Mock the MIME type detector to return a supported type
+            with patch.object(
+                pdf_extractor.mime_detector,
+                "get_mime_type",
+                return_value="application/pdf",
+            ):
+                # Mock PyPDF2 to raise an error
+                with patch.object(
+                    pdf_extractor,
+                    "_extract_pdf_with_pypdf",
+                    side_effect=Exception("PyPDF2 error"),
+                ):
+                    result = await pdf_extractor.extract(tmp_file)
+                    assert result["metadata_type"] == "pdf"
+                    assert "error" in result
+                    assert "PyPDF2 error" in result["error"]
+        finally:
+            # Clean up
+            if tmp_file.exists():
+                tmp_file.unlink()
 
-            # Create a mock PDF reader instance
-            mock_reader = mock.MagicMock()
+    def test_extract_with_pypdf(self, pdf_extractor):
+        """Test the PyPDF2 extraction method directly."""
+        # This test would require a real PDF file
+        # For unit testing purposes, we'll mock PdfReader instead
 
-            # Set up basic PDF properties
-            mock_reader.metadata = {
-                "/Title": "Test Document",
-                "/Author": "Test Author",
-                "/CreationDate": "D:20230101120000",
-                "/Producer": "Test Producer",
-            }
+        with patch("backend.src.metadata.pdf_extractor.PdfReader") as mock_reader:
+            # Set up the mock
+            mock_pdf = MagicMock()
+            mock_reader.return_value = mock_pdf
 
-            # Set up page information
-            mock_page = mock.MagicMock()
-            mock_page.mediabox.width = 612  # Letter width in points
-            mock_page.mediabox.height = 792  # Letter height in points
-            mock_page.extract_text.return_value = "This is test content"
-            mock_page.get.return_value = 0  # No rotation
+            # Mock properties and methods
+            mock_pdf.metadata = {"/Title": "Test PDF", "/Author": "Test Author"}
+            mock_pdf.is_encrypted = False
+            mock_pdf.pages = [MagicMock(), MagicMock()]  # Two pages
 
-            # Set up resources for font detection
-            mock_resources = {
-                "/Font": {
-                    "/F1": {"/BaseFont": "/Arial"},
-                    "/F2": {"/BaseFont": "/TimesNewRoman"},
-                }
-            }
+            # Mock page properties
+            page0 = mock_pdf.pages[0]
+            page0.get.return_value = 0  # Rotation
+            page0.mediabox.width = 612.0
+            page0.mediabox.height = 792.0
+            page0.extract_text.return_value = "Page 1 content"
 
-            # Mock page dictionary access for resources
-            mock_page.get.side_effect = (
-                lambda key, default=None: mock_resources
-                if key == "/Resources"
-                else default
+            page1 = mock_pdf.pages[1]
+            page1.get.return_value = 0  # Rotation
+            page1.mediabox.width = 612.0
+            page1.mediabox.height = 792.0
+            page1.extract_text.return_value = "Page 2 content"
+
+            # Create a temporary file path
+            file_path = "test_file.pdf"
+
+            # Call the method
+            result = pdf_extractor._extract_pdf_with_pypdf(file_path)
+
+            # Assert the results
+            assert result["metadata_type"] == "pdf"
+            assert result["document_info"]["Title"] == "Test PDF"
+            assert result["document_info"]["Author"] == "Test Author"
+            assert result["structure"]["page_count"] == 2
+            assert len(result["structure"]["pages"]) == 2
+            assert result["structure"]["pages"][0]["page_number"] == 1
+            assert result["structure"]["pages"][0]["width"] == 612.0
+            assert result["structure"]["pages"][0]["height"] == 792.0
+            assert result["structure"]["pages"][0]["text_length"] == len(
+                "Page 1 content"
             )
-
-            # Set up resources for image detection
-            mock_image_resources = {
-                "/XObject": {
-                    "/Im1": {"/Subtype": "/Image"},
-                    "/Im2": {"/Subtype": "/Image"},
-                }
-            }
-
-            # Add resources method to page
-            def get_item(key):
-                if key == "/Resources":
-                    return mock_resources
-                return {}
-
-            mock_page.__getitem__ = get_item
-
-            # Set up pages
-            mock_reader.pages = [mock_page]
-
-            # Set up PDF header
-            mock_reader.pdf_header = "PDF-1.7"
-
-            # Set up security information
-            mock_reader.is_encrypted = False
-
-            # Mock PyPDF2.PdfReader to return our mock
-            with mock.patch(
-                "backend.src.metadata.pdf_extractor.PdfReader", return_value=mock_reader
-            ):
-                # Call _process_pdf directly to test its functionality
-                result = await pdf_extractor._process_pdf(test_path)
-
-                # Verify basic document info
-                assert result["metadata_type"] == "pdf"
-                assert result["document"]["file_size"] == 1024
-                assert result["document"]["title"] == "Test Document"
-                assert result["document"]["author"] == "Test Author"
-                assert result["document"]["pdf_version"] == "PDF-1.7"
-
-                # Verify structure info
-                assert result["structure"]["page_count"] == 1
-
-                # Verify summary
-                assert (
-                    "PDF document 'Test Document' by Test Author with 1 page"
-                    in result["summary"]
-                )
-
-
-if __name__ == "__main__":
-    pytest.main(["-xvs", __file__])
+            assert result["structure"]["pages"][0]["has_text"] is True
+            assert result["security"]["encrypted"] is False

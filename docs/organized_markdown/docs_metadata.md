@@ -34,6 +34,8 @@ categorize files, and generate relevant tags.
      information, table structures, and statistics
    - `PDFMetadataExtractor`: For PDF files, extracting document properties,
      content, structure, fonts, and security information
+   - `VideoMetadataExtractor`: For video files, extracting container
+     information, codec details, streams, and technical properties
 
 3. **Integration Points**
 
@@ -101,14 +103,31 @@ categorize files, and generate relevant tags.
 
 ### PDF Analysis
 
-- Document properties extraction (title, author, creation date)
-- Page information and dimensions
-- Text content analysis with word and character counts
-- Font detection and listing
-- Image detection and counting
-- Security and encryption information
-- Scanned document detection
-- Performance optimization for large documents
+Our system provides comprehensive metadata extraction for PDF documents through
+the PDFMetadataExtractor:
+
+- **Document Properties**: Extract title, author, creation date, producer, and
+  other standard PDF metadata
+- **Page Structure Analysis**: Determine page count, dimensions, and rotation
+  information
+- **Text Content Assessment**: Analyze presence and volume of textual content
+- **Embedded Resources Detection**: Identify fonts, images, and forms embedded
+  within the document
+- **Security Analysis**: Detect encryption status and password protection
+- **PDF Version Identification**: Determine the PDF specification version used
+- **Format Validation**: Accurately identify and validate PDF files
+
+### Video Analysis
+
+- Container format detection and information
+- Video codec and technical specifications
+- Resolution, aspect ratio, and frame rate analysis
+- Multiple stream detection (video, audio, subtitle)
+- Chapter information extraction
+- Color space and pixel format identification
+- Duration and bitrate analysis
+- Metadata tag extraction
+- Multi-library support for maximum compatibility
 
 ## CLI Commands
 

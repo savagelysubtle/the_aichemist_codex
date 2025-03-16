@@ -8,14 +8,25 @@ from pathlib import Path
 import pytest
 
 # Calculate the absolute path to the backend directory.
-BACKEND_DIR = Path(__file__).resolve().parent.parent / "backend"
+# The structure is /project_root/backend, not /project_root/backend/backend
+# So we just need to go one level up from the tests directory
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+BACKEND_SRC_DIR = BACKEND_DIR / "src"
 
-# Dynamically add each package under backend to sys.path.
-# Here, we ensure that only directories that look like Python packages
-# (i.e., contain an __init__.py) are added.
-for subdir in BACKEND_DIR.iterdir():
-    if subdir.is_dir() and (subdir / "__init__.py").exists():
-        sys.path.insert(0, str(subdir))
+# Dynamically add each package under backend/src to sys.path if it exists
+if BACKEND_SRC_DIR.exists():
+    for subdir in BACKEND_SRC_DIR.iterdir():
+        if subdir.is_dir() and (subdir / "__init__.py").exists():
+            sys.path.insert(0, str(subdir))
+else:
+    # If no src directory, then try to find packages directly under backend
+    for subdir in BACKEND_DIR.iterdir():
+        if (
+            subdir.is_dir()
+            and (subdir / "__init__.py").exists()
+            and subdir.name != "tests"
+        ):
+            sys.path.insert(0, str(subdir))
 
 # Also add the main backend directory itself to sys.path
 sys.path.insert(0, str(BACKEND_DIR))
@@ -25,6 +36,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 # Directory to store temporary logs index
 TMP_LOG_INDEX = ROOT_DIR / "data" / "tmp_logs_index.txt"
+
+# Ensure data directory exists
+data_dir = ROOT_DIR / "data"
+data_dir.mkdir(exist_ok=True)
 
 
 @pytest.fixture(autouse=True)
