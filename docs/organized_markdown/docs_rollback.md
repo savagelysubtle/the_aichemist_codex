@@ -195,4 +195,3 @@ except Exception as e:
 ```
 
 This documentation accurately reflects the current implementation while providing clear examples and usage patterns. It covers all major components and their interactions, making it easier for developers to understand and use the rollback system effectively.
-

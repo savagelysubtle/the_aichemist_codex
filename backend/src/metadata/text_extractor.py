@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sklearn.feature_extraction.text import (  # type: ignore
-    CountVectorizer,
+from sklearn.feature_extraction.text import (
+    CountVectorizer,  # type: ignore
     TfidfVectorizer,
 )
 

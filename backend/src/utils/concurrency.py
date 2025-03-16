@@ -6,11 +6,7 @@ import logging
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from typing import (
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import Any, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")

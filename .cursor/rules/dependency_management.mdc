@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: false
 ---
 ---
@@ -12,7 +12,7 @@ alwaysApply: false
 
 ## 1. Package Management
 - Use *or **uv** for dependency management.
-- Keep dependencies **pinned** in `pyproject.toml` 
+- Keep dependencies **pinned** in `pyproject.toml`
 - Regularly update dependencies using:
   ```bash
   uv pip upgrade --all
@@ -21,7 +21,7 @@ alwaysApply: false
 ## 2. Environment Isolation
 - Always create virtual environments with `uv venv`.
 - Activate virtual environments consistently:
-  
+
   - `.venv\Scripts\activate` (Windows)
 
 ## 3. Project Metadata

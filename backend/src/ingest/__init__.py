@@ -27,4 +27,4 @@ from .reader import convert_notebook, generate_digest, read_full_file
 from .scanner import scan_directory
 
 # Re-export the generate_digest function from reader module
-__all__ = ['generate_digest']
+__all__ = ["generate_digest"]

@@ -1,46 +1,55 @@
 # The Aichemist Codex
 
-<div align="center">
-  <img src="docs/images/logo.png" alt="The Aichemist Codex Logo" width="200" height="200" style="max-width: 100%;">
-  <br>
-  <em>Intelligent File Management and Knowledge Extraction System</em>
-</div>
+![The Aichemist Codex Logo](docs/images/logo.svg){: .center width="200"
+height="200"}
 
-<p align="center">
-  <a href="#key-features">Key Features</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#roadmap">Roadmap</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#license">License</a>
-</p>
+## Intelligent File Management and Knowledge Extraction System
+
+[Key Features](#key-features) • [Installation](#installation) • [Usage](#usage)
+• [Architecture](#architecture) • [Documentation](#documentation) •
+[Roadmap](#roadmap) • [Contributing](#contributing) • [License](#license)
 
 ## Overview
 
-The Aichemist Codex is an advanced file management and knowledge extraction system designed to transform how you interact with your files and documents. It leverages AI and machine learning to provide intelligent file organization, content analysis, and relationship mapping, making it easier to find, understand, and utilize information across your digital workspace.
+The Aichemist Codex is an advanced file management and knowledge extraction
+system designed to transform how you interact with your files and documents. It
+leverages AI and machine learning to provide intelligent file organization,
+content analysis, and relationship mapping, making it easier to find,
+understand, and utilize information across your digital workspace.
 
 ## Key Features
 
 ### File Management
-- **Asynchronous File Operations**: High-performance file I/O with chunked processing and streaming support
-- **Rule-Based File Organization**: Automatically sort and organize files based on customizable rules
-- **Rollback System**: Safely undo operations with comprehensive transaction management
-- **Duplicate Detection**: Identify and manage duplicate files across your workspace
+
+- **Asynchronous File Operations**: High-performance file I/O with chunked
+  processing and streaming support
+- **Rule-Based File Organization**: Automatically sort and organize files based
+  on customizable rules
+- **Rollback System**: Safely undo operations with comprehensive transaction
+  management
+- **Duplicate Detection**: Identify and manage duplicate files across your
+  workspace
 
 ### Content Analysis
-- **Comprehensive Metadata Extraction**: Extract rich metadata from diverse file types
+
+- **Comprehensive Metadata Extraction**: Extract rich metadata from diverse file
+  types
 - **MIME Type Detection**: Accurately identify file types for proper handling
-- **File Relationship Mapping**: Discover connections between files based on content, references, and structure
-- **Intelligent Auto-Tagging**: Automatically categorize files using advanced NLP techniques
+- **File Relationship Mapping**: Discover connections between files based on
+  content, references, and structure
+- **Intelligent Auto-Tagging**: Automatically categorize files using advanced
+  NLP techniques
 
 ### Search & Retrieval
-- **Multi-Modal Search**: Find files using full-text, metadata, fuzzy, or semantic search
+
+- **Multi-Modal Search**: Find files using full-text, metadata, fuzzy, or
+  semantic search
 - **File Similarity Detection**: Identify similar files and content clusters
-- **Advanced Filtering**: Filter search results based on tags, metadata, relationships, or content
+- **Advanced Filtering**: Filter search results based on tags, metadata,
+  relationships, or content
 
 ### Performance & Security
+
 - **Cache Management**: Efficient caching system with LRU and TTL support
 - **Batch Processing**: Parallel operations for handling large datasets
 - **Secure Configuration**: Encrypted storage for sensitive configuration values
@@ -48,10 +57,12 @@ The Aichemist Codex is an advanced file management and knowledge extraction syst
 ## Installation
 
 ### Prerequisites
+
 - Python 3.10+
 - pip or Poetry
 
 ### Using pip
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/the_aichemist_codex.git
@@ -66,6 +77,7 @@ pip install -e .
 ```
 
 ### Using Poetry
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/the_aichemist_codex.git
@@ -112,28 +124,40 @@ aichemist organize /path/to/directory
 The Aichemist Codex can also be used as a library in your Python projects:
 
 ```python
+import asyncio
 from backend.src.file_reader import FileReader
 from backend.src.metadata import MetadataManager
 from backend.src.search import SearchEngine
 from backend.src.relationships import RelationshipGraph
 from pathlib import Path
 
-# Process files
-reader = FileReader()
-metadata = await reader.process_file(Path("document.pdf"))
+async def main():
+    # Process files
+    reader = FileReader()
+    metadata = await reader.process_file(Path("document.pdf"))
 
-# Search for content
-search = SearchEngine()
-results = await search.search("machine learning", max_results=10)
+    # Search for content
+    search = SearchEngine()
+    results = await search.search("machine learning", max_results=10)
 
-# Find relationships
-graph = RelationshipGraph()
-related_files = await graph.find_related(Path("project.py"))
+    # Find relationships
+    graph = RelationshipGraph()
+    related_files = await graph.find_related(Path("project.py"))
 
-# Auto-tag files
-from backend.src.tagging import AutoTagger
-tagger = AutoTagger()
-tags = await tagger.generate_tags(Path("article.md"))
+    # Auto-tag files
+    from backend.src.tagging import TagManager, TagSuggester
+    tag_manager = TagManager(Path(".aichemist/tags.db"))
+    await tag_manager.initialize()
+    suggester = TagSuggester(tag_manager)
+    suggestions = await suggester.suggest_tags(metadata)
+
+    # Apply high-confidence tags
+    high_confidence_tags = [(tag, conf) for tag, conf in suggestions if conf > 0.8]
+    if high_confidence_tags:
+        await tag_manager.add_file_tags(Path("document.pdf"), high_confidence_tags)
+
+# Run the async function
+asyncio.run(main())
 ```
 
 ## Architecture
@@ -152,28 +176,42 @@ The Aichemist Codex follows a modular architecture with these core components:
 
 Comprehensive documentation is available in the `docs/` directory:
 
-- [Getting Started Guide](docs/getting_started.md)
-- [Architecture Overview](docs/architecture.md)
-- [API Reference](docs/api_reference.md)
-- [CLI Commands](docs/cli_commands.md)
-- [Configuration Guide](docs/configuration.md)
+- [Project Summary](docs/project_summary.md)
+- [Getting Started Guide](docs/getting_started.rst)
+- [Installation Guide](docs/installation.rst)
+- [Usage Guide](docs/usage.rst)
+- [Configuration Guide](docs/configuration.rst)
+- [API Reference](docs/api/)
+- [Development Roadmap](docs/roadmap.rst)
 
 ## Roadmap
 
-Check out our [Development Roadmap](docs/roadmap/checklist) for upcoming features and improvements.
+Check out our [Development Roadmap](docs/roadmap.rst) for upcoming features and
+improvements.
 
 Current focus areas:
-- Monitoring & Change Tracking
-- Expanded Format Support
-- AI-Powered Enhancements
+
+- **Monitoring & Change Tracking**
+  - Real-time file tracking
+  - File versioning
+- **Expanded Format Support**
+  - Binary & specialized file support
+  - Format conversion capabilities
+- **Future Phases**
+  - AI-powered enhancements
+  - External integrations & API
+  - Continuous improvement
 
 ## Contributing
 
-Contributions are welcome! Please check our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit issues, pull requests, and coding standards.
+Contributions are welcome! Please check our
+[Contributing Guidelines](docs/contributing.rst) for details on how to submit
+issues, pull requests, and coding standards.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
+for details.
 
 ## Acknowledgements
 

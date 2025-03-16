@@ -43,9 +43,9 @@ class DirectoryMonitor:
 
     def __init__(self):
         """Initialize the directory monitor."""
-        self.observers: dict[str, Observer] = {}
-        self.directory_configs: dict[str, DirectoryConfig] = {}
-        self.discovery_thread: threading.Thread | None = None
+        self.observers = {}  # Dictionary mapping path to Observer
+        self.directory_configs = {}  # Dictionary mapping path to DirectoryConfig
+        self.discovery_thread = None  # Directory discovery thread
         self.discovery_interval = config.get(
             "file_manager.directory_discovery_interval", 300
         )  # 5 minutes default
@@ -88,16 +88,21 @@ class DirectoryMonitor:
 
         self.observers.clear()
 
-    def register_directory(self, dir_path: str | Path, **kwargs) -> bool:
+    def register_directory(
+        self,
+        dir_path: str | Path,
+        priority: DirectoryPriority | str | None = None,
+        recursive_depth: int | None = None,
+        throttle: float | None = None,
+    ) -> bool:
         """
         Register a directory for monitoring.
 
         Args:
             dir_path: Path to the directory to monitor
-            **kwargs: Additional configuration options:
-                - priority: DirectoryPriority enum value or string name
-                - recursive_depth: How deep to scan subdirectories
-                - throttle: Seconds to wait between processing in high-activity dirs
+            priority: DirectoryPriority enum value or string name
+            recursive_depth: How deep to scan subdirectories
+            throttle: Seconds to wait between processing in high-activity dirs
 
         Returns:
             bool: True if registration was successful, False otherwise
@@ -108,15 +113,15 @@ class DirectoryMonitor:
             return False
 
         # Convert string priority to enum if needed
-        if "priority" in kwargs and isinstance(kwargs["priority"], str):
-            kwargs["priority"] = self._parse_priority(kwargs["priority"])
+        if priority is not None and isinstance(priority, str):
+            priority = self._parse_priority(priority)
 
         # Create directory config
         dir_config = DirectoryConfig(
             path=path,
-            priority=kwargs.get("priority", DirectoryPriority.NORMAL),
-            recursive_depth=kwargs.get("recursive_depth", 3),
-            throttle=kwargs.get("throttle", self.base_throttle),
+            priority=priority if priority is not None else DirectoryPriority.NORMAL,
+            recursive_depth=recursive_depth if recursive_depth is not None else 3,
+            throttle=throttle if throttle is not None else self.base_throttle,
         )
 
         # Store the config

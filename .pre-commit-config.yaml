@@ -9,6 +9,16 @@ repos:
       - id: check-merge-conflict
       - id: check-yaml
       - id: check-toml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+-   repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+    -   id: markdownlint
+        args: ['--disable', 'MD033', 'MD036']
 
 -   repo: https://github.com/nbQA-dev/nbQA
     rev: 1.8.7

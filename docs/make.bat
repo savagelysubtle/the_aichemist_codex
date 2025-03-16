@@ -24,12 +24,37 @@ if errorlevel 9009 (
 )
 
 if "%1" == "" goto help
+if "%1" == "help" goto help
+if "%1" == "autodoc" goto autodoc
+if "%1" == "docsbuild" goto docsbuild
+if "%1" == "clean" goto clean
 
 %SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
 goto end
 
 :help
 %SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+goto end
+
+:autodoc
+echo.
+echo.Generating API documentation...
+python generate_api_docs.py
+goto end
+
+:docsbuild
+echo.
+echo.Building documentation using build_docs.py...
+python build_docs.py --clean
+goto end
+
+:clean
+echo.
+echo.Cleaning build directory...
+%SPHINXBUILD% -M clean %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+echo.Removing API directory contents...
+del /Q /S %SOURCEDIR%\api\*.rst 2>NUL
+goto end
 
 :end
 popd

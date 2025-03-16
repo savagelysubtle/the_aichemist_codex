@@ -8,7 +8,6 @@ from backend.src.project_reader.code_summary import process_file
 
 @pytest.mark.content_processing
 @pytest.mark.unit
-
 @pytest.mark.asyncio
 async def test_function_metadata_extraction(tmp_path: Path) -> None:
     """Test extracting function metadata, including decorators and return types."""
@@ -34,7 +33,6 @@ def my_func(a: int, b: str) -> bool:
 
 @pytest.mark.content_processing
 @pytest.mark.unit
-
 @pytest.mark.asyncio
 async def test_class_extraction(tmp_path: Path) -> None:
     """Test extracting class metadata, including methods."""

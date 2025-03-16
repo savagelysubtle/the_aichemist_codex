@@ -5,10 +5,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator, AsyncIterable, Callable
 from pathlib import Path
-from typing import (
-    Any,
-    cast,
-)
+from typing import Any, cast
 
 import aiofiles  # type: ignore
 import aiofiles.os  # type: ignore

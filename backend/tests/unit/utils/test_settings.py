@@ -1,6 +1,7 @@
-import pytest
 # test_settings.py
 from pathlib import Path
+
+import pytest
 
 from backend.src.config.settings import (
     DEFAULT_IGNORE_PATTERNS,

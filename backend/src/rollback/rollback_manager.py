@@ -30,8 +30,8 @@ from enum import Enum, auto
 from pathlib import Path
 
 from backend.src.config.settings import (
-    DATA_DIR,  # Ensure settings provide configurable options if desired.
-)
+    DATA_DIR,
+)  # Ensure settings provide configurable options if desired.
 from backend.src.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)

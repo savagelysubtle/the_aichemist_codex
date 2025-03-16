@@ -18,6 +18,14 @@ ressources/
 data/*.h5
 venv/
 .venv/
+.pre-commit-config.yaml
+.pre-commit/
+.pre-commit-hooks.yaml
+.pre-commit-hooks/
+.cursorrules
+.cursorignore
+.github
+
 
 ################################
 ########### PYTHON #############
