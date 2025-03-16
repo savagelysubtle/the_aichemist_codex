@@ -270,7 +270,7 @@ async def test_regex_search(
     file3.write_text("This file has no pattern")
 
     # Index the files
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file1,
             mime_type="text/plain",
@@ -279,7 +279,7 @@ async def test_regex_search(
             preview=file1.read_text(),
         )
     )
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file2,
             mime_type="text/plain",
@@ -288,7 +288,7 @@ async def test_regex_search(
             preview=file2.read_text(),
         )
     )
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file3,
             mime_type="text/plain",
@@ -312,7 +312,7 @@ async def test_regex_search(
     # Test case sensitive search
     file4 = temp_dir / "regex_test4.txt"
     file4.write_text("This file has lowercase pattern: abc-123-xyz")
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file4,
             mime_type="text/plain",
@@ -349,7 +349,7 @@ async def test_search_method_dispatch(
     file2.write_text("Another file with different content")
 
     # Index the files
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file1,
             mime_type="text/plain",
@@ -358,7 +358,7 @@ async def test_search_method_dispatch(
             preview=file1.read_text(),
         )
     )
-    await search_engine.add_to_index_async(
+    search_engine.add_to_index(  # type: ignore
         FileMetadata(
             path=file2,
             mime_type="text/plain",

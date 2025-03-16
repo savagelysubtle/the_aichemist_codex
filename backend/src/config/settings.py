@@ -10,9 +10,10 @@ DATA_DIR = ROOT_DIR / "data"
 CACHE_DIR = DATA_DIR / "cache"
 LOG_DIR = DATA_DIR / "logs"
 EXPORT_DIR = DATA_DIR / "exports"
+VERSION_DIR = DATA_DIR / "versions"
 
 # Ensure directories exist with proper permissions
-for directory in [DATA_DIR, CACHE_DIR, LOG_DIR, EXPORT_DIR]:
+for directory in [DATA_DIR, CACHE_DIR, LOG_DIR, EXPORT_DIR, VERSION_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
     os.chmod(directory, 0o700)  # Secure directory permissions
 
@@ -257,6 +258,86 @@ METADATA_MAX_CONCURRENT = 5  # Maximum concurrent metadata extraction tasks
 METADATA_CONFIDENCE_THRESHOLD = (
     0.5  # Minimum confidence threshold for metadata extraction
 )
+
+# Versioning settings
+DEFAULT_VERSIONING_SETTINGS = {
+    "auto_create_versions": True,  # Automatically create versions on file changes
+    "version_on_modify": True,  # Create versions when files are modified
+    "max_versions_per_file": 20,  # Maximum number of versions to keep per file
+    "default_policy": "HYBRID",  # Default versioning policy (FULL_COPY, DIFF_BASED, HYBRID)
+    "version_retention_days": 30,  # Number of days to keep versions before cleanup
+    "compression_enabled": True,  # Use compression for stored versions
+    "include_patterns": [  # File patterns to include in versioning
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.html",
+        "*.css",
+        "*.md",
+        "*.txt",
+        "*.json",
+        "*.yaml",
+        "*.yml",
+        "*.xml",
+        "*.csv",
+        "*.sql",
+    ],
+    "exclude_patterns": [  # File patterns to exclude from versioning
+        "*.log",
+        "*.tmp",
+        "*.temp",
+        "*.swp",
+        "*.bak",
+        "*.backup",
+        "*.pyc",
+        "*.class",
+        "*.o",
+        "*.obj",
+    ],
+}
+
+# Notification system settings
+NOTIFICATION_SETTINGS = {
+    "enabled": True,  # Master toggle for the notification system
+    "retention_days": 30,  # How long to keep notifications (in days)
+    "max_notifications_per_type": 1000,  # Maximum number of notifications to keep per type
+    "notification_levels": [
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    ],  # Valid notification levels
+    "default_level": "INFO",  # Default notification level
+    "channels": {
+        "log": {
+            "enabled": True,  # Whether to log notifications to the log file
+            "min_level": "INFO",  # Minimum level to log
+        },
+        "email": {
+            "enabled": False,  # Whether to send email notifications
+            "min_level": "WARNING",  # Minimum level to send email
+            "recipients": [],  # List of email recipients
+            "from_address": "",  # From email address
+            "subject_prefix": "[Aichemist Codex] ",  # Prefix for email subjects
+        },
+        "webhook": {
+            "enabled": False,  # Whether to send webhook notifications
+            "min_level": "WARNING",  # Minimum level to send webhook
+            "endpoints": [],  # List of webhook endpoints
+            "headers": {},  # Headers to send with webhook requests
+        },
+        "database": {
+            "enabled": True,  # Whether to store notifications in the database
+            "min_level": "INFO",  # Minimum level to store
+            "max_age_days": 30,  # Maximum age of notifications to keep
+        },
+    },
+    "throttling": {
+        "enabled": True,  # Whether to throttle notifications
+        "window_seconds": 60,  # Time window for throttling (in seconds)
+        "max_similar": 5,  # Maximum number of similar notifications in the window
+    },
+}
 
 
 def get_settings() -> dict[str, Any]:

@@ -9,32 +9,65 @@ alwaysApply: false
 - Use **Ruff** for linting and auto-fixes:
   ```bash
   ruff check . --fix
-Use mypy for static type checking.
+  ```
+- Use mypy for static type checking.
 
 ## 2. Ruff Configuration
-Ensure Ruff is installed in every project:
-bash
-Copy
-Edit
-uv pip install ruff
-Use pyproject.toml for Ruff configuration:
-toml
-Copy
-Edit
-[tool.ruff]
-line-length = 88
-target-version = "py38"
-exclude = [
-    ".venv",
-    "build",
-    "dist",
-    "node_modules",
-    "__pycache__",
-]
-select = ["E", "F", "B", "A"]
-ignore = ["E501"]
+- Ensure Ruff is installed in every project:
+  ```bash
+  uv pip install ruff
+  ```
+- Use pyproject.toml for Ruff configuration:
+  ```toml
+  [tool.ruff]
+  line-length = 88
+  target-version = "py38"
+  exclude = [
+      ".venv",
+      "build",
+      "dist",
+      "node_modules",
+      "__pycache__",
+  ]
+  select = ["E", "F", "B", "A"]
+  ignore = ["E501"]
+  ```
 
 ## 3. Naming Conventions
-Use snake_case for variables and functions.
-Use PascalCase for classes.
-Use UPPER_CASE for constants.
+- Use snake_case for variables and functions.
+- Use PascalCase for classes.
+- Use UPPER_CASE for constants.
+- Prefix private methods and attributes with a single underscore (_).
+
+## 4. Line Length & Formatting
+- Keep lines under 88 characters.
+- Break long lines at logical points.
+- Use parentheses to wrap multi-line expressions:
+  ```python
+  # Long function calls
+  result = my_function(
+      arg1,
+      arg2,
+      keyword_arg=value,
+  )
+
+  # Long f-strings
+  message = (
+      f"Prefix: {value1}"
+      f" - Additional info: {value2}"
+  )
+  ```
+
+## 5. Whitespace
+- Use 4 spaces for indentation (no tabs).
+- Add blank lines to separate logical sections.
+- Use consistent spacing around operators and after commas.
+- Limit consecutive blank lines to one.
+
+## 6. Imports
+- Organize imports in three groups, separated by a blank line:
+  1. Standard library imports
+  2. Third-party imports
+  3. Local application imports
+- Sort imports alphabetically within each group.
+- Use absolute imports for clarity and avoid relative imports when possible.

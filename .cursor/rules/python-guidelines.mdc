@@ -1,6 +1,6 @@
 ---
-description: Enforces Python coding standards and project structure.
-globs: **/*.py
+description: 
+globs: *.py
 alwaysApply: false
 ---
 # Python Coding Guidelines
@@ -16,8 +16,38 @@ alwaysApply: false
 ## 2. Coding Standards
 - Follow **PEP 8** formatting.
 - Use **Ruff** for linting (`ruff check`, `ruff format`).
-- Use **type hints** (`str`, `list[int]`, `Optional[dict]`).
-- Implement **structured logging** using `structlog`.
+
+### Type Annotations
+- Always include return type annotations on public methods and functions (`-> None`, `-> str`, etc.)
+- Include return type annotations on private methods for clarity
+- Use `object` instead of `Any` for generic parameters like `*args` and `**kwargs`
+- For generic classes, use proper type parameters (`Generic[T]`) rather than `Any`
+- When forward-referencing a class, use string literals (e.g., `-> "ClassName"`)
+
+### Naming Conventions
+- Use `snake_case` for variables, functions, and methods
+- Use `PascalCase` for classes
+- Use `UPPER_CASE` for constants
+- Use underscore (`_`) for unused loop variables
+- Prefix private methods and attributes with a single underscore (`_`)
+
+### Line Length & Formatting
+- Keep lines under 88 characters
+- Break long lines at logical points
+- Use parentheses to wrap multi-line expressions
+- For long f-strings, split them across multiple lines:
+  ```python
+  message = (
+      f"{prefix}: "
+      f"{body}"
+  )
+  ```
+
+### Modern Python Idioms
+- Use `super()` instead of `super(ClassName, self)`
+- Use `pathlib` instead of `os.path` for file operations
+- Prefer context managers (`with` statements) for resource management
+- Use f-strings instead of `.format()` or `%` formatting
 
 ## 3. Testing Best Practices
 - Use **pytest** for unit and integration testing.
@@ -30,3 +60,10 @@ alwaysApply: false
 ## 4. Configuration Management
 - Store secrets in **environment variables** (e.g., `.env` files).
 - Use **Pydantic Settings** for structured configuration.
+
+## 5. Error Prevention
+- Always validate user inputs
+- Use exception handling with specific exception types
+- Implement proper logging for errors and important events
+- Add type annotations to catch type errors at development time
+- Use defensive programming techniques for external integrations

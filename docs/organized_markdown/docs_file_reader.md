@@ -1,14 +1,17 @@
-Here's the updated content for modules/file_reader.md:
-
-```markdown
 # File Reader Package Documentation
 
 ## Overview
-The File Reader package provides comprehensive file reading and parsing capabilities with support for multiple file formats. It implements MIME type detection, asynchronous I/O operations, and specialized parsers for various file types including documents, spreadsheets, code files, and images with OCR support.
+
+The File Reader package provides comprehensive file reading and parsing
+capabilities with support for multiple file formats. It implements MIME type
+detection, asynchronous I/O operations, and specialized parsers for various file
+types including documents, spreadsheets, code files, and images with OCR
+support.
 
 ## Components
 
 ### 1. File Reader (file_reader.py)
+
 - Core class for file reading and MIME type detection
 - Features:
   - Asynchronous file operations
@@ -18,6 +21,7 @@ The File Reader package provides comprehensive file reading and parsing capabili
   - Concurrent processing support
   - Caching support
 - Example usage:
+
   ```python
   # Initialize with optional cache manager
   reader = FileReader(max_workers=2, preview_length=100, cache_manager=cache_instance)
@@ -272,6 +276,7 @@ except Exception as e:
 4. Streaming file processing
 5. Cloud storage integration
 
-```
+```plaintext
 
 This documentation accurately reflects the current implementation while providing clear examples and usage patterns. It covers all major components and their interactions, making it easier for developers to understand and use the file reading system effectively.
+```

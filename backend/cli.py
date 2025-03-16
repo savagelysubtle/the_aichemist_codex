@@ -38,16 +38,16 @@ from backend.src.utils.cache_manager import CacheManager
 logger = logging.getLogger(__name__)
 
 
-def validate_directory(directory) -> Path:
+def validate_directory(directory: str) -> Path:
     """Ensure the given directory exists and is accessible."""
-    directory = Path(directory)
-    resolved_dir = directory.resolve()
+    path = Path(directory)
+    resolved_dir = path.resolve()
     if not resolved_dir.exists() or not resolved_dir.is_dir():
         raise argparse.ArgumentTypeError(f"Directory does not exist: {resolved_dir}")
     return resolved_dir
 
 
-def main():
+def main() -> None:
     """Entry point for the command-line interface."""
     parser = argparse.ArgumentParser(
         description="The Aichemist Codex: File Analysis & Organization Tool"
@@ -620,6 +620,164 @@ def main():
     )
     # ---------------------------------------------------------
 
+    # Add notification commands
+    notification_parser = subparsers.add_parser(
+        "notify", help="Manage system notifications."
+    )
+    notification_subparsers = notification_parser.add_subparsers(
+        dest="notify_command", required=True
+    )
+
+    # List notifications command
+    list_parser = notification_subparsers.add_parser("list", help="List notifications")
+    list_parser.add_argument(
+        "--type", dest="notification_type", help="Filter by notification type"
+    )
+    list_parser.add_argument("--level", help="Filter by minimum notification level")
+    list_parser.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of notifications to show"
+    )
+    list_parser.add_argument(
+        "--format",
+        dest="format_output",
+        choices=["table", "json"],
+        default="table",
+        help="Output format",
+    )
+
+    # Show notification command
+    show_parser = notification_subparsers.add_parser(
+        "show", help="Show notification details"
+    )
+    show_parser.add_argument("id", help="Notification ID")
+    show_parser.add_argument(
+        "--format",
+        dest="format_output",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+
+    # Send notification command
+    send_parser = notification_subparsers.add_parser("send", help="Send a notification")
+    send_parser.add_argument("message", help="Notification message")
+    send_parser.add_argument(
+        "--level",
+        default="INFO",
+        help="Notification level (INFO, WARNING, ERROR, CRITICAL)",
+    )
+    send_parser.add_argument(
+        "--type", dest="notification_type", default="SYSTEM", help="Notification type"
+    )
+    send_parser.add_argument(
+        "--source", default="cli", help="Source of the notification"
+    )
+    send_parser.add_argument(
+        "--details", type=json.loads, help="Additional details (JSON format)"
+    )
+
+    # Cleanup command
+    cleanup_parser = notification_subparsers.add_parser(
+        "cleanup", help="Clean up old notifications"
+    )
+    cleanup_parser.add_argument(
+        "--days",
+        type=float,
+        help="Number of days to keep (default: use configured value)",
+    )
+
+    # Rule management commands
+    rule_parser = notification_subparsers.add_parser(
+        "rule", help="Manage notification rules"
+    )
+    rule_subparsers = rule_parser.add_subparsers(dest="rule_command", required=True)
+
+    # List rules command
+    rule_list_parser = rule_subparsers.add_parser(
+        "list", help="List all notification rules"
+    )
+    rule_list_parser.add_argument(
+        "--format",
+        dest="format_output",
+        choices=["table", "json"],
+        default="table",
+        help="Output format",
+    )
+
+    # Show rule command
+    rule_show_parser = rule_subparsers.add_parser(
+        "show", help="Show details of a specific rule"
+    )
+    rule_show_parser.add_argument("id", help="Rule ID")
+    rule_show_parser.add_argument(
+        "--format",
+        dest="format_output",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+
+    # Add rule command
+    rule_add_parser = rule_subparsers.add_parser(
+        "add", help="Add a new notification rule"
+    )
+    rule_add_parser.add_argument(
+        "--file",
+        type=Path,
+        required=True,
+        help="Path to JSON file containing rule definition",
+    )
+
+    # Update rule command
+    rule_update_parser = rule_subparsers.add_parser(
+        "update", help="Update an existing notification rule"
+    )
+    rule_update_parser.add_argument("id", help="Rule ID to update")
+    rule_update_parser.add_argument(
+        "--file",
+        type=Path,
+        required=True,
+        help="Path to JSON file containing updated rule definition",
+    )
+
+    # Delete rule command
+    rule_delete_parser = rule_subparsers.add_parser(
+        "delete", help="Delete a notification rule"
+    )
+    rule_delete_parser.add_argument("id", help="Rule ID to delete")
+
+    # Enable/disable rule command
+    rule_toggle_parser = rule_subparsers.add_parser(
+        "toggle", help="Enable or disable a notification rule"
+    )
+    rule_toggle_parser.add_argument("id", help="Rule ID to toggle")
+    rule_toggle_parser.add_argument(
+        "--enable", type=bool, required=True, help="True to enable, False to disable"
+    )
+
+    # Test rule command
+    rule_test_parser = rule_subparsers.add_parser(
+        "test", help="Test a rule against a notification"
+    )
+    rule_test_parser.add_argument("id", help="Rule ID to test")
+    rule_test_parser.add_argument(
+        "--message", required=True, help="Notification message"
+    )
+    rule_test_parser.add_argument(
+        "--level",
+        default="INFO",
+        help="Notification level (INFO, WARNING, ERROR, CRITICAL)",
+    )
+    rule_test_parser.add_argument(
+        "--type", dest="notification_type", default="SYSTEM", help="Notification type"
+    )
+    rule_test_parser.add_argument(
+        "--source", default="test", help="Source of the notification"
+    )
+    rule_test_parser.add_argument(
+        "--details", type=json.loads, help="Additional details (JSON format)"
+    )
+
     args = parser.parse_args()
     rm = RollbackManager()
 
@@ -663,7 +821,7 @@ def main():
             logger.info("Running in dry-run mode - no files will be moved")
 
             # Create a custom sort method for dry run
-            async def dry_run_sort(directory):
+            async def dry_run_sort(directory: Path) -> None:
                 rules = await sorter.load_rules()
                 for file in directory.rglob("*"):
                     if file.is_file():
@@ -1220,7 +1378,7 @@ def main():
             analysis_results = {
                 "group_by": group_by,
                 "total_files": len(batch_results),
-                "groups": {k: v for k, v in sorted_groups},
+                "groups": dict(sorted_groups),
             }
 
             if output_file:
@@ -1252,7 +1410,7 @@ def main():
         tag_db_path = Path.home() / ".aichemist" / "tags.db"
         tag_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        async def handle_tags_command():
+        async def handle_tags_command() -> None:
             # Import json inside the async function to ensure it's in scope
             import json
 
@@ -1762,7 +1920,7 @@ def main():
         )
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        async def handle_relationships_command():
+        async def handle_relationships_command() -> None:
             # Import json inside the async function to ensure it's in scope
             import json
 
@@ -1815,7 +1973,7 @@ def main():
                     return
 
                 # Define progress callback
-                def progress_callback(current, total):
+                def progress_callback(current: int, total: int) -> None:
                     if total == 0:
                         return
 
@@ -2012,6 +2170,522 @@ def main():
 
     # ✅ Other commands (ingest, notebooks, etc.)
     # ... existing code ...
+
+    # Handle notification commands
+    elif args.command == "notify":
+
+        async def handle_notify_command() -> None:
+            if args.notify_command == "list":
+                await list_notifications(
+                    notification_type=args.notification_type,
+                    level=args.level,
+                    limit=args.limit,
+                    format_output=args.format_output,
+                )
+            elif args.notify_command == "show":
+                await show_notification(
+                    notification_id=args.id,
+                    format_output=args.format_output,
+                )
+            elif args.notify_command == "send":
+                await send_notification(
+                    message=args.message,
+                    level=args.level,
+                    notification_type=args.notification_type,
+                    source=args.source,
+                    details=args.details,
+                )
+            elif args.notify_command == "cleanup":
+                await cleanup_notifications(days=args.days)
+            elif args.notify_command == "rule":
+                # Handle rule management commands
+                if args.rule_command == "list":
+                    await list_rules(format_output=args.format_output)
+                elif args.rule_command == "show":
+                    await show_rule(rule_id=args.id, format_output=args.format_output)
+                elif args.rule_command == "add":
+                    await add_rule(rule_file=args.file)
+                elif args.rule_command == "update":
+                    await update_rule(rule_id=args.id, rule_file=args.file)
+                elif args.rule_command == "delete":
+                    await delete_rule(rule_id=args.id)
+                elif args.rule_command == "toggle":
+                    await toggle_rule(rule_id=args.id, enable=args.enable)
+                elif args.rule_command == "test":
+                    await test_rule(
+                        rule_id=args.id,
+                        message=args.message,
+                        level=args.level,
+                        notification_type=args.notification_type,
+                        source=args.source,
+                        details=args.details,
+                    )
+
+        # Import the notification functions - fix the import path
+        from backend.src.notification import (
+            Notification,
+            NotificationLevel,
+            NotificationType,
+            notification_manager,
+        )
+
+        # Import the rule engine
+        try:
+            from backend.src.notification.rule_engine import (
+                NotificationRule,
+                RuleAction,
+                RuleCondition,
+                TimeCondition,
+                rule_engine,
+            )
+
+            has_rule_engine = True
+        except ImportError:
+            has_rule_engine = False
+            print("Warning: Rule engine not available.")
+
+        # Define the notification CLI functions right here instead of importing
+        async def list_notifications(
+            notification_type: str | None = None,
+            level: str | None = None,
+            limit: int = 20,
+            format_output: str = "table",
+        ) -> None:
+            """List notifications from the database."""
+            import json
+            from datetime import datetime
+
+            from tabulate import tabulate
+
+            # Get notifications
+            notifications = await notification_manager.get_notifications(
+                notification_type=notification_type,
+                level=level,
+                limit=limit,
+            )
+
+            if not notifications:
+                print("No notifications found.")
+                return
+
+            if format_output == "json":
+                print(json.dumps(notifications, indent=2))
+                return
+
+            # Format as table
+            headers = ["ID", "Level", "Type", "Source", "Time", "Message"]
+            rows = []
+
+            for notification in notifications:
+                # Format timestamp
+                timestamp = datetime.fromtimestamp(notification["timestamp"]).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+                # Add row
+                rows.append(
+                    [
+                        notification["id"],
+                        notification["level"],
+                        notification["type"],
+                        notification["source"] or "-",
+                        timestamp,
+                        notification["message"][:50]
+                        + ("..." if len(notification["message"]) > 50 else ""),
+                    ]
+                )
+
+            print(tabulate(rows, headers=headers, tablefmt="pretty"))
+            print(f"\nTotal: {len(notifications)} notifications")
+
+        async def show_notification(
+            notification_id: str, format_output: str = "text"
+        ) -> None:
+            """Show details of a specific notification."""
+            import json
+            from datetime import datetime
+
+            notification = await notification_manager.get_notification_by_id(
+                notification_id
+            )
+
+            if not notification:
+                print(f"Notification with ID '{notification_id}' not found.")
+                return
+
+            if format_output == "json":
+                print(json.dumps(notification, indent=2))
+                return
+
+            # Format as text
+            timestamp = datetime.fromtimestamp(notification["timestamp"]).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+            print(f"ID:       {notification['id']}")
+            print(f"Level:    {notification['level']}")
+            print(f"Type:     {notification['type']}")
+            print(f"Source:   {notification['source'] or '-'}")
+            print(f"Time:     {timestamp}")
+            print(f"Message:  {notification['message']}")
+
+            if notification.get("details"):
+                print("\nDetails:")
+                for key, value in notification["details"].items():
+                    print(f"  {key}: {value}")
+
+        async def send_notification(
+            message: str,
+            level: str = "INFO",
+            notification_type: str = "SYSTEM",
+            source: str = "cli",
+            details: dict | None = None,
+        ) -> None:
+            """Send a notification."""
+            # Validate level
+            try:
+                level_enum = NotificationLevel.from_string(level)
+            except (ValueError, KeyError):
+                print(f"Invalid notification level: {level}")
+                print(f"Valid levels: {', '.join(nl.name for nl in NotificationLevel)}")
+                return
+
+            # Validate type
+            try:
+                if notification_type.upper() in (nt.name for nt in NotificationType):
+                    type_enum = getattr(NotificationType, notification_type.upper())
+                else:
+                    type_enum = NotificationType(notification_type.lower())
+            except (ValueError, KeyError):
+                print(f"Invalid notification type: {notification_type}")
+                print(f"Valid types: {', '.join(nt.name for nt in NotificationType)}")
+                return
+
+            # Send notification
+            notification_id = await notification_manager.notify(
+                message=message,
+                level=level_enum,
+                notification_type=type_enum,
+                source=source,
+                details=details,
+            )
+
+            if notification_id:
+                print(f"Notification sent with ID: {notification_id}")
+            else:
+                print("Failed to send notification (possibly throttled).")
+
+        async def cleanup_notifications(days: int | None = None) -> None:
+            """Clean up old notifications."""
+            removed = await notification_manager.cleanup()
+            print(f"Removed {removed} old notifications.")
+
+        # Define rule management CLI functions
+        async def list_rules(format_output: str = "table") -> None:
+            """List all notification rules."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            import json
+
+            from tabulate import tabulate
+
+            # Get all rules
+            rules = await rule_engine.get_all_rules()
+
+            if not rules:
+                print("No rules found.")
+                return
+
+            if format_output == "json":
+                print(json.dumps(rules, indent=2))
+                return
+
+            # Format as table
+            headers = [
+                "ID",
+                "Name",
+                "Priority",
+                "Enabled",
+                "Conditions",
+                "Actions",
+                "Matches",
+            ]
+            rows = []
+
+            for rule in rules:
+                # Format for table
+                rows.append(
+                    [
+                        rule["rule_id"],
+                        rule["name"],
+                        rule["priority"],
+                        "✓" if rule["enabled"] else "✗",
+                        len(rule["conditions"]),
+                        len(rule["actions"]),
+                        rule["stats"].get("match_count", 0),
+                    ]
+                )
+
+            print(tabulate(rows, headers=headers, tablefmt="pretty"))
+            print(f"\nTotal: {len(rules)} rules")
+
+        async def show_rule(rule_id: str, format_output: str = "text") -> None:
+            """Show details of a specific rule."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            import json
+            from datetime import datetime
+
+            # Get the rule
+            rule = await rule_engine.get_rule(rule_id)
+
+            if not rule:
+                print(f"Rule with ID '{rule_id}' not found.")
+                return
+
+            rule_dict = rule.to_dict()
+
+            if format_output == "json":
+                print(json.dumps(rule_dict, indent=2))
+                return
+
+            # Format as text
+            print(f"ID:          {rule_dict['rule_id']}")
+            print(f"Name:        {rule_dict['name']}")
+            print(f"Description: {rule_dict['description']}")
+            print(f"Priority:    {rule_dict['priority']}")
+            print(f"Enabled:     {rule_dict['enabled']}")
+            print(f"Subscribers: {rule_dict['subscribers'] or 'All'}")
+
+            last_match = rule_dict["stats"].get("last_match_time")
+            match_count = rule_dict["stats"].get("match_count", 0)
+            if last_match:
+                last_match_time = datetime.fromtimestamp(last_match).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+                print(f"Matches:     {match_count} (last: {last_match_time})")
+            else:
+                print(f"Matches:     {match_count}")
+
+            print("\nConditions:")
+            if not rule_dict["conditions"]:
+                print("  None")
+            else:
+                for i, condition in enumerate(rule_dict["conditions"], 1):
+                    op = "NOT " if condition["negate"] else ""
+                    print(
+                        f"  {i}. {condition['field']} {op}{condition['operator']} {condition['value']}"
+                    )
+
+            if rule_dict.get("time_conditions"):
+                print("\nTime Conditions:")
+                for i, condition in enumerate(rule_dict["time_conditions"], 1):
+                    print(f"  {i}. {condition['condition_type']}: {condition['value']}")
+
+            print("\nActions:")
+            if not rule_dict["actions"]:
+                print("  None")
+            else:
+                for i, action in enumerate(rule_dict["actions"], 1):
+                    print(f"  {i}. {action['action_type']}")
+                    for param, value in action["parameters"].items():
+                        print(f"     - {param}: {value}")
+
+        async def add_rule(rule_file: str) -> None:
+            """Add a new notification rule from a JSON file."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            import json
+
+            try:
+                # Read the rule definition from the file
+                with open(rule_file) as f:
+                    rule_data = json.load(f)
+
+                # Create rule
+                rule = NotificationRule(
+                    name=rule_data["name"],
+                    description=rule_data["description"],
+                    conditions=[
+                        RuleCondition.from_dict(c) for c in rule_data["conditions"]
+                    ],
+                    time_conditions=[
+                        TimeCondition.from_dict(tc)
+                        for tc in rule_data.get("time_conditions", [])
+                    ]
+                    if rule_data.get("time_conditions")
+                    else None,
+                    actions=[
+                        RuleAction.from_dict(a) for a in rule_data.get("actions", [])
+                    ]
+                    if rule_data.get("actions")
+                    else None,
+                    enabled=rule_data.get("enabled", True),
+                    priority=rule_data.get("priority", 100),
+                    subscribers=rule_data.get("subscribers"),
+                )
+
+                # Add the rule
+                rule_id = await rule_engine.add_rule(rule)
+                print(f"Rule added with ID: {rule_id}")
+
+            except Exception as e:
+                print(f"Error adding rule: {e}")
+
+        async def update_rule(rule_id: str, rule_file: str) -> None:
+            """Update an existing rule from a JSON file."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            import json
+
+            # Check if rule exists
+            rule = await rule_engine.get_rule(rule_id)
+            if not rule:
+                print(f"Rule with ID '{rule_id}' not found.")
+                return
+
+            try:
+                # Read the rule definition from the file
+                with open(rule_file) as f:
+                    rule_data = json.load(f)
+
+                # Create updated rule (preserving ID)
+                updated_rule = NotificationRule(
+                    name=rule_data["name"],
+                    description=rule_data["description"],
+                    conditions=[
+                        RuleCondition.from_dict(c) for c in rule_data["conditions"]
+                    ],
+                    time_conditions=[
+                        TimeCondition.from_dict(tc)
+                        for tc in rule_data.get("time_conditions", [])
+                    ]
+                    if rule_data.get("time_conditions")
+                    else None,
+                    actions=[
+                        RuleAction.from_dict(a) for a in rule_data.get("actions", [])
+                    ]
+                    if rule_data.get("actions")
+                    else None,
+                    enabled=rule_data.get("enabled", True),
+                    priority=rule_data.get("priority", 100),
+                    subscribers=rule_data.get("subscribers"),
+                    rule_id=rule_id,  # Preserve the original rule ID
+                )
+
+                # Update the rule
+                success = await rule_engine.update_rule(updated_rule)
+                if success:
+                    print(f"Rule '{rule_id}' updated successfully.")
+                else:
+                    print(f"Failed to update rule '{rule_id}'.")
+
+            except Exception as e:
+                print(f"Error updating rule: {e}")
+
+        async def delete_rule(rule_id: str) -> None:
+            """Delete a notification rule."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            # Delete the rule
+            success = await rule_engine.delete_rule(rule_id)
+            if success:
+                print(f"Rule '{rule_id}' deleted successfully.")
+            else:
+                print(f"Rule with ID '{rule_id}' not found.")
+
+        async def toggle_rule(rule_id: str, enable: bool) -> None:
+            """Enable or disable a notification rule."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            # Get the rule
+            rule = await rule_engine.get_rule(rule_id)
+            if not rule:
+                print(f"Rule with ID '{rule_id}' not found.")
+                return
+
+            # Update enabled status
+            rule.enabled = enable
+            success = await rule_engine.update_rule(rule)
+
+            if success:
+                status = "enabled" if enable else "disabled"
+                print(f"Rule '{rule_id}' {status} successfully.")
+            else:
+                print(f"Failed to update rule '{rule_id}'.")
+
+        async def test_rule(
+            rule_id: str,
+            message: str,
+            level: str,
+            notification_type: str,
+            source: str,
+            details: dict | None,
+        ) -> None:
+            """Test a rule against a notification."""
+            if not has_rule_engine:
+                print("Rule engine not available.")
+                return
+
+            # Get the rule
+            rule = await rule_engine.get_rule(rule_id)
+            if not rule:
+                print(f"Rule with ID '{rule_id}' not found.")
+                return
+
+            # Create a test notification
+            notification = Notification(
+                message=message,
+                level=level,
+                notification_type=notification_type,
+                source=source,
+                details=details or {},
+            )
+
+            # Simulate the rule
+            result = await rule_engine.simulate_rule(rule, notification)
+
+            # Display results
+            print(f"Rule: {result['rule']['name']}")
+            print(f"Matches: {'Yes' if result['matches'] else 'No'}")
+
+            if result["matches"]:
+                print("\nActions:")
+                if result["would_block"]:
+                    print("- Would BLOCK the notification")
+
+                if result["would_route_to"]:
+                    print(f"- Would ROUTE to: {', '.join(result['would_route_to'])}")
+
+                if result["would_throttle"]:
+                    print(f"- Would apply THROTTLING: {result['would_throttle']}")
+
+                if (
+                    result["notification_after"]
+                    and result["notification_after"] != result["notification_before"]
+                ):
+                    print("\nNotification would be modified:")
+                    print("Before:")
+                    for k, v in result["notification_before"].items():
+                        print(f"  {k}: {v}")
+                    print("After:")
+                    for k, v in result["notification_after"].items():
+                        print(f"  {k}: {v}")
+
+        # Run the command handler
+        asyncio.run(handle_notify_command())
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 
+from backend.src.config.config_loader import config
 from backend.src.config.settings import DEFAULT_IGNORE_PATTERNS
 
 logger = logging.getLogger(__name__)
@@ -21,8 +22,17 @@ class SafeFileHandler:
 
     @staticmethod
     def should_ignore(file_path: Path) -> bool:
-        """Checks if a file should be ignored based on default ignore patterns."""
-        for pattern in DEFAULT_IGNORE_PATTERNS:
+        """
+        Checks if a file should be ignored based on default and user-configured ignore patterns.
+
+        Uses both the default ignore patterns and any additional patterns
+        specified in the config file.
+        """
+        # Get combined ignore patterns (default + user configured)
+        ignore_patterns = config.get("ignore_patterns", DEFAULT_IGNORE_PATTERNS)
+
+        # Check against all patterns
+        for pattern in ignore_patterns:
             if file_path.match(pattern):
                 logger.info(f"Skipping ignored file: {file_path} (matched {pattern})")
                 return True
@@ -33,6 +43,23 @@ class SafeFileHandler:
                     f"Skipping ignored directory: {file_path} (matched {pattern})"
                 )
                 return True
+
+        # Check against user-defined directory exclusions
+        ignored_directories = config.get("ignored_directories", [])
+        for ignored_dir in ignored_directories:
+            ignored_path = Path(ignored_dir).resolve()
+            try:
+                if (
+                    ignored_path in file_path.resolve().parents
+                    or ignored_path == file_path.resolve()
+                ):
+                    logger.info(
+                        f"Skipping file in ignored directory: {file_path} (in {ignored_dir})"
+                    )
+                    return True
+            except (FileNotFoundError, RuntimeError):
+                continue
+
         return False
 
     @staticmethod

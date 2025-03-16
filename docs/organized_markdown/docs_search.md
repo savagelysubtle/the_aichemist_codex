@@ -1,6 +1,3 @@
-Here's the updated content for modules/search.md:
-
-```markdown
 # Search Package Documentation
 
 ## Overview
@@ -223,6 +220,19 @@ def _estimate_complexity(self, pattern: str) -> int:
 ### Indexing Content
 
 ```python
+# For synchronous context
+search_engine.add_to_index(
+    FileMetadata(
+        path=file_path,
+        mime_type="text/plain",
+        size=1024,
+        extension=".txt",
+        preview="Document content",
+        tags=["important"]
+    )
+)
+
+# In async context, proper await is required
 await search_engine.add_to_index_async(
     FileMetadata(
         path=file_path,
@@ -233,6 +243,25 @@ await search_engine.add_to_index_async(
         tags=["important"]
     )
 )
+```
+
+### Async/Await Best Practices
+
+```python
+# Only use await with functions that actually return awaitables
+await search_engine.search_filename_async("query")  # Correct - async function
+
+# Don't use await with synchronous functions
+results = search_engine.full_text_search("query")  # Correct - sync function
+
+# When testing with pytest.mark.asyncio, ensure proper awaiting
+@pytest.mark.asyncio
+async def test_async_function():
+    # Only await functions that return coroutines
+    results = await truly_async_function()
+
+    # Don't await functions that return None or non-coroutines
+    non_async_function()  # No await here
 ```
 
 ### Search Operations
@@ -250,103 +279,69 @@ results = search_engine.full_text_search("content keywords")
 # Metadata search
 results = await search_engine.metadata_search_async({
     "extension": [".txt"],
-    "tags": ["important"]
+    "size_min": 1024
 })
 
 # Semantic search
-results = await search_engine.semantic_search_async(
-    "conceptually similar content",
-    top_k=5
-)
+results = await search_engine.semantic_search_async("similar content")
+
+# Regex search
+results = await search_engine.regex_search_async(r"pattern\d+")
 ```
 
-### Error Handling
+### Performance Tips
 
-```python
-try:
-    results = await search_engine.semantic_search_async(query)
-    if not results:
-        logger.warning("No semantic search results found")
-except Exception as e:
-    logger.error(f"Search error: {e}")
-```
+- Use appropriate search type based on needs
+- Limit search scope when possible
+- Use `add_to_index` in batch for multiple files
+- Implement caching for frequent searches
+- Monitor and optimize index size
+
+## Testing
+
+The package includes comprehensive tests:
+
+- test_search_engine.py
+  - Tests all search types
+  - Verifies correct indexing
+  - Tests error handling
+  - Ensures proper async/await usage
+  - Verifies search result accuracy
+- test_providers/*.py
+  - Individual provider tests
+  - Performance benchmarks
+  - Edge case handling
+
+## Known Issues and Fixes
+
+1. **"None" is not awaitable error**:
+   - Only use `await` with async functions that return awaitable objects
+   - For functions that don't return awaitables, remove the `await` keyword
+   - In test contexts, use `# type: ignore` comments when appropriate to handle type checking issues
+
+2. **Async test failures**:
+   - Ensure test fixtures properly setup and teardown async resources
+   - Use `asyncio.gather` for parallel operations
+   - Implement proper cleanup in `finally` blocks
+
+3. **Index corruption recovery**:
+   - Automatic index rebuilding on corruption
+   - Index versioning and validation
 
 ## Future Improvements
 
 ### Short-term
 
-1. Enhanced ranking algorithms
-2. Better error recovery
-3. Improved indexing speed
-4. Extended metadata support
-5. More search filters
+1. Enhanced binary file search
+2. Improved performance for large directories
+3. More sophisticated relevance scoring
+4. Better multilingual support
+5. Extended regex capabilities
 
 ### Long-term
 
-1. Distributed search capabilities
-2. Advanced semantic models
-3. Real-time indexing
-4. Caching system
-5. Plugin architecture
-
-## Regex Search Provider
-
-The regex search provider enables powerful pattern matching within file contents using regular expressions. It includes the following features:
-
-- **Pattern Validation**: Validates regex patterns to prevent catastrophic backtracking
-- **Streaming File Reading**: Processes large files efficiently by reading in chunks
-- **Parallel Processing**: Searches multiple files concurrently for better performance
-- **Caching**: Caches search results to improve performance for repeated searches
-- **Case Sensitivity**: Supports both case-sensitive and case-insensitive searches
-- **Whole Word Matching**: Option to match only whole words rather than substrings
-- **Binary File Handling**: Automatically skips binary files to avoid errors
-- **Timeout Protection**: Implements timeouts to prevent hanging on complex patterns
-
-### Configuration
-
-Regex search behavior can be configured through settings:
-
-```python
-# In backend/config/settings.py
-REGEX_MAX_COMPLEXITY = 1000  # Maximum complexity score for regex patterns
-REGEX_TIMEOUT_MS = 500       # Timeout for regex search operations in milliseconds
-REGEX_CACHE_TTL = 300        # Cache TTL for regex search results (5 minutes)
-REGEX_MAX_RESULTS = 100      # Maximum number of results to return
-```
-
-## CLI Usage
-
-The search functionality is also available through the command-line interface:
-
-```bash
-# Basic search
-python -m backend.cli search /path/to/directory "query" --method fulltext
-
-# Regex search
-python -m backend.cli search /path/to/directory "pattern\d+" --method regex --case-sensitive --whole-word
-
-# Save results to file
-python -m backend.cli search /path/to/directory "query" --method fuzzy --output results.json
-```
-
-## Future Roadmap
-
-### Phase 2: Advanced Features
-
-- Enhanced semantic search
-- Regex pattern support
-- File similarity detection
-- Advanced metadata extraction
-
-### Phase 3: AI Capabilities
-
-- ML-based search ranking
-- Context-aware search
-- Smart recommendations
-- Content classification
-
-### Phase 4: Scalability
-
-- Distributed search
-- Load balancing
-- Sharding support
+1. Distributed search across multiple nodes
+2. Machine learning-based search optimization
+3. Real-time indexing improvements
+4. Natural language query processing
+5. Visual content search integration

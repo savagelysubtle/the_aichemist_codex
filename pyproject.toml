@@ -10,7 +10,10 @@ dependencies = [
   "Kreuzberg>=0.1.0",
   "PyYAML>=6.0.1",
   "aiofiles>=24.1.0",
+  "aiohttp>=3.8.5",
   "annotated-types>=0.7.0",
+  "anyio>=4.8.0",
+  "asyncio>=3.4.3",
   "attrs>=25.1.0",
   "click>=8.1.8",
   "colorama>=0.4.6",
@@ -45,6 +48,7 @@ dependencies = [
   "rpds-py>=0.23.1",
   "setuptools>=75.8.0",
   "structlog>=25.1.0",
+  "tabulate>=0.9.0",
   "tenacity>=9.0.0",
   "tiktoken>=0.5.1",
   "tomli>=2.0.1",
@@ -54,7 +58,6 @@ dependencies = [
   "whoosh>=2.7.4",
   "xmltodict>=0.13.0",
   "zipp>=3.21.0",
-  "anyio>=4.8.0",
 
   # Graph & Visualization (for Relationship Mapping)
   "networkx>=3.1",
