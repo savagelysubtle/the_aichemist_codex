@@ -8,6 +8,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
+# Import the DirectoryManager and environment utilities
+from the_aichemist_codex.backend.config.settings import directory_manager
 from the_aichemist_codex.backend.file_manager.duplicate_detector import (
     DuplicateDetector,
 )
@@ -42,6 +44,10 @@ from the_aichemist_codex.backend.tagging.hierarchy import TagHierarchy
 from the_aichemist_codex.backend.tagging.manager import TagManager
 from the_aichemist_codex.backend.tagging.suggester import TagSuggester
 from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.environment import (
+    get_import_mode,
+    is_development_mode,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -788,24 +794,35 @@ def main() -> None:
 
     # Add data directory management commands
     data_parser = subparsers.add_parser(
-        "data", help="Manage data directories and files."
+        "data", help="Manage the application data directory."
     )
     data_subparsers = data_parser.add_subparsers(dest="data_command", required=True)
 
-    # Validate command
-    data_validate_parser = data_subparsers.add_parser(
+    # Command to validate data directory structure
+    validate_parser = data_subparsers.add_parser(
         "validate", help="Validate the data directory structure."
     )
-
-    # Repair command
-    data_repair_parser = data_subparsers.add_parser(
-        "repair",
-        help="Repair the data directory structure by creating missing components.",
+    validate_parser.add_argument(
+        "--fix", action="store_true", help="Automatically fix validation issues."
     )
 
-    # Info command
-    data_info_parser = data_subparsers.add_parser(
-        "info", help="Show information about data directories."
+    # Command to repair data directory structure
+    repair_parser = data_subparsers.add_parser(
+        "repair", help="Repair the data directory structure."
+    )
+    repair_parser.add_argument(
+        "--backup",
+        action="store_true",
+        default=True,
+        help="Create backup before repair (default: True).",
+    )
+
+    # Command to display data directory information
+    info_parser = data_subparsers.add_parser(
+        "info", help="Show information about the data directory."
+    )
+    info_parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Show detailed information."
     )
 
     args = parser.parse_args()
@@ -2718,136 +2735,165 @@ def main() -> None:
         asyncio.run(handle_notify_command())
 
     elif args.command == "data":
-        # Handle data directory management commands
-        if args.data_command == "validate":
-            # Validate the data directory structure
-            from the_aichemist_codex.backend.config import settings
-            from the_aichemist_codex.backend.utils.validate_data_dir import (
-                get_directory_status,
-            )
-
-            overall_status, validation, issues = get_directory_status()
-
-            if overall_status:
-                print("✓ Data directory structure is valid")
-                print(f"Base directory: {settings.DATA_DIR}")
-            else:
-                print("✗ Data directory structure has issues:")
-                for issue in issues:
-                    print(f"  - {issue}")
-
-            # Print detailed status
-            print("\nDetailed status:")
-            print(f"{'Component':<25} {'Status':<10} {'Path'}")
-            print("-" * 80)
-
-            for component, status in validation.items():
-                if component == "base":
-                    path = settings.DATA_DIR
-                elif component in settings.directory_manager.STANDARD_DIRS:
-                    path = settings.directory_manager.get_dir(component)
-                else:
-                    path = settings.directory_manager.get_file_path(component)
-
-                status_text = "✓ Valid" if status else "✗ Missing"
-                print(f"{component:<25} {status_text:<10} {path}")
-
-        elif args.data_command == "repair":
-            # Repair the data directory structure
-            from the_aichemist_codex.backend.utils.validate_data_dir import (
-                get_directory_status,
-                repair_data_directory,
-            )
-
-            # Repair the directory
-            fixes = repair_data_directory()
-
-            if fixes:
-                print("Applied the following fixes:")
-                for fix in fixes:
-                    print(f"  - {fix}")
-            else:
-                print("✓ No repairs needed, data directory structure is valid")
-
-            # Validate again to confirm
-            overall_status, _, _ = get_directory_status()
-            if overall_status:
-                print("✓ Data directory structure is now valid")
-            else:
-                print("✗ Some issues could not be fixed automatically")
-
-        elif args.data_command == "info":
-            # Show information about data directories
-
-            from the_aichemist_codex.backend.config import settings
-            from the_aichemist_codex.backend.utils.validate_data_dir import (
-                get_directory_status,
-            )
-
-            print("Data Directory Information")
-            print(f"Base directory: {settings.DATA_DIR}")
-
-            # Print directory sizes
-            print("\nDirectory Sizes:")
-            print(f"{'Directory':<15} {'Size':<10} {'Items'}")
-            print("-" * 50)
-
-            # Add base directory
-            try:
-                base_size = sum(
-                    f.stat().st_size
-                    for f in settings.DATA_DIR.glob("**/*")
-                    if f.is_file()
-                )
-                base_item_count = sum(1 for _ in settings.DATA_DIR.glob("**/*"))
-                print(
-                    f"{'Base':<15} {base_size / (1024 * 1024):.2f} MB  {base_item_count}"
-                )
-            except Exception as e:
-                print(f"{'Base':<15} Error: {e}")
-
-            # Add subdirectories
-            for subdir in settings.directory_manager.STANDARD_DIRS:
-                dir_path = settings.directory_manager.get_dir(subdir)
-                if dir_path.exists():
-                    try:
-                        size = sum(
-                            f.stat().st_size
-                            for f in dir_path.glob("**/*")
-                            if f.is_file()
-                        )
-                        item_count = sum(1 for _ in dir_path.glob("**/*"))
-                        print(
-                            f"{subdir:<15} {size / (1024 * 1024):.2f} MB  {item_count}"
-                        )
-                    except Exception as e:
-                        print(f"{subdir:<15} Error: {e}")
-                else:
-                    print(f"{subdir:<15} Not found  -")
-
-            # Print environment variables
-            print("\nEnvironment Variables:")
-            print(f"{'Variable':<20} {'Value':<30} {'Status'}")
-            print("-" * 70)
-
-            env_vars = {
-                "AICHEMIST_DATA_DIR": "Override base data directory",
-                "AICHEMIST_ROOT_DIR": "Override project root directory",
-                "AICHEMIST_CACHE_DIR": "Override cache directory",
-            }
-
-            for var, description in env_vars.items():
-                value = os.environ.get(var, "")
-                if value:
-                    path = Path(value)
-                    status = "Exists" if path.exists() else "Not found"
-                    print(f"{var:<20} {value:<30} {status}")
-                else:
-                    print(f"{var:<20} Not set  -")
+        handle_data_command(args)
+        return
 
     else:
         print(f"Unknown command: {args.command}")
         sys.exit(1)
+
+
+def handle_data_command(args):
+    """Handle data directory management commands."""
+    if args.data_command == "validate":
+        validate_data_directory(args.fix)
+    elif args.data_command == "repair":
+        repair_data_directory(args.backup)
+    elif args.data_command == "info":
+        show_data_directory_info(args.verbose)
+
+
+def validate_data_directory(auto_fix=False):
+    """Validate the data directory structure."""
+    # Define expected standard directories
+    expected_dirs = directory_manager.STANDARD_DIRS
+    base_dir = directory_manager.base_dir
+
+    # Check if base directory exists
+    if not base_dir.exists():
+        print(f"❌ Base data directory not found: {base_dir}")
+        if auto_fix:
+            print("🔧 Creating base directory...")
+            base_dir.mkdir(parents=True, exist_ok=True)
+            print(f"✅ Created: {base_dir}")
+        return False
+
+    # Check for expected subdirectories
+    missing_dirs = []
+    for subdir in expected_dirs:
+        path = base_dir / subdir
+        if not path.exists():
+            missing_dirs.append(subdir)
+            print(f"❌ Missing directory: {path}")
+
+    if missing_dirs:
+        if auto_fix:
+            print("🔧 Creating missing directories...")
+            for subdir in missing_dirs:
+                path = base_dir / subdir
+                path.mkdir(parents=True, exist_ok=True)
+                print(f"✅ Created: {path}")
+        return False
+
+    print(f"✅ Data directory structure is valid: {base_dir}")
+    return True
+
+
+def repair_data_directory(create_backup=True):
+    """Repair the data directory structure."""
+    base_dir = directory_manager.base_dir
+
+    # Create backup if requested
+    if create_backup and base_dir.exists():
+        import shutil
+        from datetime import datetime
+
+        backup_name = f"data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        backup_dir = base_dir.parent / backup_name
+
+        print(f"📦 Creating backup: {backup_dir}")
+        shutil.copytree(base_dir, backup_dir, dirs_exist_ok=True)
+        print("✅ Backup created successfully")
+
+    # Fix everything
+    print("🔧 Repairing data directory structure...")
+
+    # Create base directory if needed
+    if not base_dir.exists():
+        base_dir.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Created base directory: {base_dir}")
+
+    # Create standard subdirectories
+    for subdir in directory_manager.STANDARD_DIRS:
+        path = base_dir / subdir
+        path.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Ensured directory exists: {path}")
+
+    print("✅ Data directory structure has been repaired")
+
+
+def show_data_directory_info(verbose=False):
+    """Show information about the data directory."""
+    base_dir = directory_manager.base_dir
+
+    print("\n📁 DATA DIRECTORY INFORMATION")
+    print("=" * 40)
+
+    # Show basic information
+    print(f"Base directory: {base_dir}")
+    print(f"Execution mode: {get_import_mode()}")
+    print(f"Development mode: {'Yes' if is_development_mode() else 'No'}")
+
+    # Check if directory exists
+    if not base_dir.exists():
+        print("\n❌ Data directory does not exist!")
+        return
+
+    # List all standard directories with status
+    print("\nStandard directories:")
+    for subdir in directory_manager.STANDARD_DIRS:
+        path = base_dir / subdir
+        status = "✅ Exists" if path.exists() else "❌ Missing"
+        print(f"  - {subdir}: {status}")
+
+    # If verbose, show extra info like available space, permissions, etc.
+    if verbose:
+        import os
+        import shutil
+
+        print("\nDetailed information:")
+
+        # Available space
+        if base_dir.exists():
+            try:
+                total, used, free = shutil.disk_usage(str(base_dir))
+                print("Disk space:")
+                print(f"  - Total: {total // (1024**3)} GB")
+                print(f"  - Used: {used // (1024**3)} GB")
+                print(f"  - Free: {free // (1024**3)} GB")
+            except Exception as e:
+                print(f"Could not get disk usage: {e}")
+
+        # Environment variables
+        print("\nRelevant environment variables:")
+        print(
+            f"  - AICHEMIST_ROOT_DIR: {os.environ.get('AICHEMIST_ROOT_DIR', 'Not set')}"
+        )
+        print(
+            f"  - AICHEMIST_DATA_DIR: {os.environ.get('AICHEMIST_DATA_DIR', 'Not set')}"
+        )
+        print(
+            f"  - AICHEMIST_DEV_MODE: {os.environ.get('AICHEMIST_DEV_MODE', 'Not set')}"
+        )
+
+        # Directory contents summary
+        if base_dir.exists():
+            total_files = 0
+            total_size = 0
+
+            print("\nDirectory contents:")
+            for subdir in directory_manager.STANDARD_DIRS:
+                path = base_dir / subdir
+                if path.exists():
+                    files = list(path.glob("**/*"))
+                    file_count = len([f for f in files if f.is_file()])
+                    dir_size = sum(f.stat().st_size for f in files if f.is_file())
+                    total_files += file_count
+                    total_size += dir_size
+
+                    print(f"  - {subdir}: {file_count} files, {dir_size // 1024} KB")
+
+            print(f"\nTotal: {total_files} files, {total_size // (1024**2):.2f} MB")
 
 
 if __name__ == "__main__":
