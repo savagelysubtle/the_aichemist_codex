@@ -1,1 +1,0 @@
-# Initialize simple test package

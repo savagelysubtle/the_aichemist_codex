@@ -112,6 +112,11 @@ dev = [
   "pytest-mock>=3.14.0",
   "pytest>=8.3.4",
   "pytest-asyncio>=0.25.3",
+  # Add PyDeps for dependency visualization
+  "pydeps>=1.12.17",
+
+  # PyDeps requires graphviz to generate visualization
+  "graphviz>=0.20.1",
   "types-aiofiles>=23.2.0.0",
   "types-networkx>=3.1.0.0",
   "types-pywin32>=306.0.0.0",
@@ -127,7 +132,7 @@ dev = [
 ]
 
 [project.scripts]
-codex = "aichemist_codex.cli_interface:main"
+codex = "the_aichemist_codex.backend.cli:main"
 docs = "docs.build_docs:main"
 
 [build-system]
@@ -135,24 +140,12 @@ requires = ["setuptools>=75.8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["backend"]
-include = [
-  "file_reader*",
-  "file_manager*",
-  "search*",
-  "logging*",
-  "rollback*",
-  "security*",
-  "ai*",
-  "integration*",
-  "ui*",
-  "utils*",
-  "config*",
-]
+where = ["src"]
+include = ["the_aichemist_codex*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["backend"]
+pythonpath = ["src"]
 tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
@@ -162,7 +155,7 @@ asyncio_default_fixture_loop_scope = "function"
 
 
 [tool.ruff]
-include = ["pyproject.toml", "src/**/*.py", "scripts/**/*.py", "backend/**/*.py"]
+include = ["pyproject.toml", "src/**/*.py", "scripts/**/*.py", "src/**/*.py"]
 
 exclude = [
   ".bzr",
@@ -256,3 +249,35 @@ check_untyped_defs = false
 module = "tests.*"
 disallow_untyped_defs = false
 check_untyped_defs = false
+
+[tool.pydeps]
+max_bacon = 2             # Maximum dependency distance to include
+cluster = true            # Group modules from the same package
+reverse = false           # Show reverse dependencies
+
+# Exclude standard library modules
+exclude = [
+    # Standard library
+    "re", "os", "sys", "collections", "typing", "json", "time", "datetime",
+    "pathlib", "uuid", "logging", "abc", "inspect", "functools", "itertools",
+    "importlib", "shutil", "tempfile", "warnings", "weakref", "contextlib",
+    "subprocess", "multiprocessing", "threading", "argparse", "traceback",
+
+    # External libraries (common ones that add noise)
+    "numpy.*", "pandas.*", "matplotlib.*", "setuptools.*", "aiohttp.*",
+    "asyncio.*", "pydantic.*", "click.*", "rich.*", "sqlalchemy.*",
+
+    # Virtual environment paths
+    ".venv.*", "site-packages.*", "dist-packages.*",
+
+    # Test modules/directories
+    "*test*", "*tests*", "*pytest*", "*mock*", "*conftest*",
+
+    # Build/documentation related
+    "docs.*", "build.*", "dist.*", "sphinx.*", "*setup*"
+]
+
+# Additional PyDeps options for better visualization
+max_module_depth = 4      # Limit module depth for readability
+min_cluster_size = 2      # Minimum number of nodes to form a cluster
+noise_level = 1000        # High value to avoid excluding nodes

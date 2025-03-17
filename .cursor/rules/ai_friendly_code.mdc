@@ -1,23 +1,30 @@
 ---
-description:
-globs:
-alwaysApply: false
----
----
 description: Enforces AI-friendly coding practices for readability and maintainability
-globs: **/*.py"
+globs: **/*.py
 alwaysApply: false
 ---
-# AI-Friendly Code Practices
+# AI-Friendly Coding Practices
 
-## 1. Code Readability
+## 1. Clear Function Names and Signatures
+- Use **descriptive function names** that indicate action and purpose:
+  ```python
+  # Good
+  def calculate_total_price(items, tax_rate):
+      ...
+
+  # Avoid
+  def calc(i, t):
+      ...
+  ```
+
+## 2. Code Readability
 - Use **descriptive variable and function names** that clearly convey purpose.
 - Write **clear and concise comments** for complex logic.
 - Maintain consistent indentation and formatting.
 - Limit line length to 88 characters to improve readability.
 - Split complex expressions into smaller, self-explanatory parts.
 
-## 2. Type Hints & Docstrings
+## 3. Type Hints & Docstrings
 - Always include type hints (`str`, `list[int]`, `Optional[Dict[str, Any]]`).
 - Prefer specific types over `Any` whenever possible.
 - For generic parameters, use `object` instead of `Any` (e.g., `*args: object`).
@@ -34,26 +41,26 @@ def fetch_data(url: str) -> dict:
         dict: Parsed JSON response.
     """
 
-## 3. Naming Conventions
+## 4. Naming Conventions
 - Use `snake_case` for variables, functions, and methods.
 - Use `PascalCase` for classes.
 - Use `UPPER_CASE` for constants.
 - Use underscore (`_`) for unused loop variables.
 - Prefix private methods and attributes with a single underscore (`_`).
 
-## 4. Code Organization
+## 5. Code Organization
 - Break down complex functions into smaller, single-purpose functions.
 - Group related functionality into classes or modules.
 - Organize imports logically (stdlib, third-party, local).
 - Use meaningful file and directory names that reflect their contents.
 
-## 5. Error Handling
+## 6. Error Handling
 - Use explicit error handling with try/except blocks.
 - Catch specific exceptions rather than generic ones.
 - Include informative error messages.
 - Implement defensive programming for external dependencies.
 
-## 6. Consistent Patterns
+## 7. Consistent Patterns
 - Maintain consistent patterns for similar operations.
 - Use the same approach for handling common tasks (e.g., file I/O, API calls).
 - Follow established design patterns appropriate to the problem domain.

@@ -1,16 +1,12 @@
 ---
-description:
-globs:
-alwaysApply: false
----
----
 description: Establishes best practices for dependency management.
-globs: pyproject.toml
+globs: **/pyproject.toml,**/requirements.txt,**/setup.py
 alwaysApply: false
 ---
 # Dependency Management Guidelines
 
-## 1. Package Management
+## 1. Modern Package Management
+- Use **pyproject.toml** for package configuration:
 - Use *or **uv** for dependency management.
 - Keep dependencies **pinned** in `pyproject.toml`
 - Regularly update dependencies using:

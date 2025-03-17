@@ -1,1 +1,0 @@
-# Initialize metadata test package
