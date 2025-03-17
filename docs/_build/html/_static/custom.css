@@ -380,3 +380,19 @@ table.docutils tr:hover {
 {
     color: var(--lime-green) !important;
 }
+
+/* Markdown Image Centering */
+img.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Center alignments for README.md and other markdown files */
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}

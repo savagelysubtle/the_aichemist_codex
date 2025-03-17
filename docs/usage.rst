@@ -16,7 +16,7 @@ Initialize a New Codex
 
 .. code-block:: bash
 
-   aichemist init [path]
+   codex init [path]
 
 This creates a new codex at the specified path, setting up necessary directories and configuration.
 
@@ -25,7 +25,7 @@ Add Files to Codex
 
 .. code-block:: bash
 
-   aichemist add [files_or_directories]
+   codex add [files_or_directories]
 
 This command adds files or entire directories to the codex, processing and indexing them for search and organization.
 
@@ -34,7 +34,7 @@ Search for Content
 
 .. code-block:: bash
 
-   aichemist search "search query"
+   codex search "search query"
 
 This performs a search across all indexed files.
 
@@ -44,19 +44,19 @@ Advanced Search Options
 .. code-block:: bash
 
    # Fuzzy search
-   aichemist search --fuzzy "aproximate term"
+   codex search --fuzzy "aproximate term"
 
    # Semantic search
-   aichemist search --semantic "conceptually similar content"
+   codex search --semantic "conceptually similar content"
 
    # Regex search
-   aichemist search --regex "pattern.*search"
+   codex search --regex "pattern.*search"
 
    # Search by file type
-   aichemist search --type=python "function definition"
+   codex search --type=python "function definition"
 
    # Search by tag
-   aichemist search --tag=documentation
+   codex search --tag=documentation
 
 File Organization
 ~~~~~~~~~~~~~~~
@@ -66,7 +66,7 @@ Organize Files Based on Rules
 
 .. code-block:: bash
 
-   aichemist organize [directory]
+   codex organize [directory]
 
 This applies the sorting rules defined in your configuration to organize files.
 
@@ -75,7 +75,7 @@ Find Duplicate Files
 
 .. code-block:: bash
 
-   aichemist dupes [directory]
+   codex dupes [directory]
 
 This identifies duplicate files and provides options for handling them.
 
@@ -87,7 +87,7 @@ Auto-Tag Files
 
 .. code-block:: bash
 
-   aichemist tag --auto [files_or_directories]
+   codex tag --auto [files_or_directories]
 
 This automatically generates and applies tags based on file content.
 
@@ -96,7 +96,7 @@ Get Tag Suggestions
 
 .. code-block:: bash
 
-   aichemist tag --suggest [files]
+   codex tag --suggest [files]
 
 This generates tag suggestions without applying them, allowing you to review and select appropriate tags. The system uses multiple strategies:
 
@@ -110,13 +110,13 @@ Manual Tag Operations
 .. code-block:: bash
 
    # Add tags
-   aichemist tag --add "tag1,tag2" [files]
+   codex tag --add "tag1,tag2" [files]
 
    # Remove tags
-   aichemist tag --remove "tag1" [files]
+   codex tag --remove "tag1" [files]
 
    # List tags
-   aichemist tag --list [files]
+   codex tag --list [files]
 
 Working with Tags in Python
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -176,7 +176,7 @@ Generate Relationship Map
 
 .. code-block:: bash
 
-   aichemist relationships [files_or_directories]
+   codex relationships [files_or_directories]
 
 This analyzes files and generates a map of relationships between them.
 
@@ -185,7 +185,7 @@ Find Related Files
 
 .. code-block:: bash
 
-   aichemist related [file]
+   codex related [file]
 
 This shows files related to the specified file.
 

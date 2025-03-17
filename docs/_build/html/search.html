@@ -14,8 +14,8 @@
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
-
-
+    
+    
 
 
 <style>
@@ -39,7 +39,7 @@
   --color-highlighted-background: #fdffe2;
   --color-api-background: #f5f7f9;
   --color-api-border: #e1e4e5;
-
+  
   }
   @media not print {
     body[data-theme="dark"] {
@@ -65,7 +65,7 @@
   --color-highlighted-background: #262410;
   --color-api-background: #1a1a1a;
   --color-api-border: #303030;
-
+  
     }
     @media (prefers-color-scheme: dark) {
       body:not([data-theme="light"]) {
@@ -91,12 +91,12 @@
   --color-highlighted-background: #262410;
   --color-api-background: #1a1a1a;
   --color-api-border: #303030;
-
+  
       }
     }
   }
 </style>
-
+  
   <link rel="stylesheet" href="_static/custom.css" />
   <script defer src="_static/custom.js"></script>
   <link rel="icon" href="_static/favicon.ico" />
@@ -104,11 +104,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
   <body>
-
+    
     <script>
       document.body.dataset.theme = localStorage.getItem("theme") || "auto";
     </script>
-
+    
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <symbol id="svg-toc" viewBox="0 0 24 24">
@@ -254,15 +254,15 @@
   </header>
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
-
+      
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
-
+  
   <div class="sidebar-logo-container">
     <img class="sidebar-logo" src="_static/logo-lime.svg" alt="Logo"/>
   </div>
-
+  
   <span class="sidebar-brand-text">The Aichemist Codex</span>
-
+  
 </a><form class="sidebar-search-container" method="get" action="#" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
@@ -275,26 +275,58 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data Management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI Reference</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/file_reader.html">File Reader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/file_manager.html">File Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/metadata.html">Metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/search.html">Search</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/relationships.html">Relationships</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/tagging.html">Tagging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/rollback.html">Rollback</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/utils.html">Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/config.html">Configuration</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/quick_start.html">Quick Start Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tagging_workflow.html">Tagging Workflow Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/semantic_search.html">Advanced Semantic Search Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/file_organization.html">File Organization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/advanced_api_usage.html">Advanced API Usage Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/custom_plugins.html">Custom Plugins Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/file_relationships.html">File Relationships Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/search_techniques.html">Search Techniques Tutorial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/quick_start.html">Quick Start Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/tagging_workflow.html">Tagging Workflow Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/semantic_search.html">Advanced Semantic Search Techniques</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/file_organization.html">File Organization Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/advanced_api_usage.html">Advanced API Usage Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/custom_plugins.html">Custom Plugins Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/file_relationships.html">File Relationships Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/search_techniques.html">Search Techniques Tutorial</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/ai.html">Ai Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/config.html">Config Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/file_manager.html">File Manager Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/file_reader.html">File Reader Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/integration.html">Integration Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/metadata.html">Metadata Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/relationships.html">Relationships Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/rollback.html">Rollback Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/search.html">Search Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/security.html">Security Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/ui.html">Ui Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/utils.html">Utils Module</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api/models.html">Data Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/tagging.html">Tagging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/notification.html">Notification</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/project_reader.html">Project Reader</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/output_formatter.html">Output Formatter</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/ingest.html">Ingest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/project_reader.html">Project Reader</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="development.html">The Aichemist Codex Development Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="environment.html">Environment Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="code_style.html">Code Style Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
@@ -305,7 +337,7 @@
 </div>
 
       </div>
-
+      
     </div>
   </aside>
   <div class="main">
@@ -333,7 +365,7 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-
+          
 <noscript>
 <div class="admonition error">
   <p class="admonition-title">Error</p>
@@ -348,39 +380,48 @@
         </article>
       </div>
       <footer>
-
+        
         <div class="related-pages">
-
-
+          
+          
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; 2025, Steve Oatman
+                Copyright &#169; 
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
-
+            
             <a href="https://github.com/pradyunsg/furo">Furo</a>
-
+            
           </div>
           <div class="right-details">
             <div class="icons">
               <a class="muted-link " href="https://github.com/your-username/the-aichemist-codex" aria-label="GitHub">
-                <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                     viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53
+                    5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23
+                    -.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87
+                    2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                    -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0
+                    1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+                    1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01
+                    1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z">
+                    </path>
                 </svg>
             </a>
-
+              
             </div>
           </div>
         </div>
-
+        
       </footer>
     </div>
     <aside class="toc-drawer no-toc">
-
-
-
+      
+      
+      
     </aside>
   </div>
 </div>
@@ -390,7 +431,7 @@
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=f281be69"></script>
-
+    
 <script src="_static/searchtools.js"></script>
 <script src="_static/language_data.js"></script>
   <script>

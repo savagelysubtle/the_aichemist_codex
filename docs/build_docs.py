@@ -11,6 +11,7 @@ This script automates the entire documentation build process:
 import argparse
 import importlib.util
 import os
+import platform
 import shlex
 import subprocess
 import sys
@@ -47,16 +48,43 @@ def run_sphinx_command(command: str, description: str | None = None) -> bool:
         print(f"\n{description}...")
 
     try:
-        # Convert the command to a list of arguments
-        # This is safe because we only run predefined sphinx commands
-        # with paths we control in this script
-        args = shlex.split(command)
+        # For Windows, we need to be careful with command-line arguments
+        if platform.system() == "Windows":
+            # Parse the command carefully preserving all arguments
+            if command.startswith("sphinx-build -M"):
+                # Handle the special case for sphinx-build -M format sourcedir outputdir
+                parts = command.split(
+                    " ", 3
+                )  # Split into: ["sphinx-build", "-M", "format", "sourcedir outputdir"]
+                if len(parts) >= 4:
+                    # Further split the last part into sourcedir and outputdir
+                    dir_parts = parts[3].strip().split(" ", 1)
+                    if len(dir_parts) == 2:
+                        args = [
+                            parts[0],
+                            parts[1],
+                            parts[2],
+                            dir_parts[0],
+                            dir_parts[1],
+                        ]
+                    else:
+                        # Something is wrong with the format
+                        raise ValueError(f"Unexpected command format: {command}")
+                else:
+                    raise ValueError(f"Unexpected command format: {command}")
+            else:
+                # For other commands just use regular parsing
+                args = shlex.split(command)
+        else:
+            # On Unix-like systems, use shlex
+            args = shlex.split(command)
 
         # Safety check - ensure this is a sphinx-build command
         if not args[0].startswith("sphinx-build"):
             raise ValueError(f"Unsupported command: {args[0]}")
 
         # Run the sphinx command with arguments
+        print(f"Running command: {' '.join(args)}")
         process = subprocess.run(  # noqa: S603
             args,
             check=True,
@@ -95,11 +123,15 @@ def build_docs(output_format: str = "html", clean: bool = False) -> None:
     # Set up the commands
     commands: list[tuple[str, str]] = []
 
+    # Convert paths to strings with proper escaping for command line
+    docs_dir_str = str(docs_dir).replace("\\", "/")
+    build_dir_str = str(build_dir).replace("\\", "/")
+
     # Clean build if requested
     if clean:
         commands.append(
             (
-                f"sphinx-build -M clean {docs_dir} {build_dir}",
+                f"sphinx-build -M clean {docs_dir_str} {build_dir_str}",
                 "Cleaning build directory",
             )
         )
@@ -109,7 +141,7 @@ def build_docs(output_format: str = "html", clean: bool = False) -> None:
     generate_api_docs.main()
 
     # Build documentation
-    build_command = f"sphinx-build -M {output_format} {docs_dir} {build_dir}"
+    build_command = f"sphinx-build -M {output_format} {docs_dir_str} {build_dir_str}"
     commands.append((build_command, f"Building {output_format} documentation"))
 
     # Run all commands

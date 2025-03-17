@@ -3,12 +3,79 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+# -- Path setup and mocking configuration -------------------------------------
 import os
 import sys
+from unittest.mock import MagicMock
 
-# Add the backend/src directory to the Python path
+# Add the project root and src directories to the Python path
 sys.path.insert(0, os.path.abspath(".."))
-sys.path.insert(0, os.path.abspath("../backend/src"))
+sys.path.insert(0, os.path.abspath("../src"))
+
+
+# Define a smarter mock class that avoids recursion issues
+class BetterMock(MagicMock):
+    """A smarter mock class that prevents recursion and circular imports."""
+
+    _recursion_depth = 0
+    _max_recursion = 5  # Limit recursion to avoid infinite loops
+
+    @classmethod
+    def __getattr__(cls, name):
+        # Prevent recursion by tracking depth
+        cls._recursion_depth += 1
+        if cls._recursion_depth > cls._max_recursion:
+            cls._recursion_depth = 0
+            return MagicMock()
+
+        result = MagicMock()
+        cls._recursion_depth = 0
+        return result
+
+
+# List of modules to mock for autodoc
+MOCK_MODULES = [
+    # External libraries
+    "rapidfuzz",
+    "whoosh",
+    "faiss",
+    "faiss_cpu",
+    "numpy",
+    "transformers",
+    "sklearn",
+    "pandas",
+    "sentence_transformers",
+    "torch",
+    "nltk",
+    "sklearn.metrics",
+    # Add any other external libraries your code imports
+]
+
+# Set up autodoc_mock_imports for simple external dependencies
+autodoc_mock_imports = MOCK_MODULES
+
+# Specific modules that cause circular imports
+CIRCULAR_MODULES = [
+    "the_aichemist_codex.backend.config",
+    "the_aichemist_codex.backend.config.config_loader",
+    "the_aichemist_codex.backend.config.settings",
+    "the_aichemist_codex.backend.file_manager",
+    "the_aichemist_codex.backend.file_reader",
+    "the_aichemist_codex.backend.metadata",
+    # Add other modules with circular dependencies here
+]
+
+# Apply mocks to specific modules that cause circular imports
+for mod_name in CIRCULAR_MODULES:
+    sys.modules[mod_name] = BetterMock()
+    # Also mock submodules to avoid import errors
+    parts = mod_name.split(".")
+    for i in range(1, len(parts)):
+        parent_mod = ".".join(parts[:i])
+        if parent_mod not in sys.modules:
+            sys.modules[parent_mod] = BetterMock()
+
+print("Using autodoc with mocking for circular imports and external dependencies.")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -35,7 +102,8 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.doctest",
     "sphinx.ext.extlinks",
-    "sphinx_autodoc_typehints",
+    # Disable this extension which causes problems with MagicMock objects
+    # "sphinx_autodoc_typehints",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.graphviz",
     "sphinx.ext.inheritance_diagram",
@@ -43,8 +111,48 @@ extensions = [
     "sphinx.ext.autosectionlabel",
 ]
 
+# Enable autosummary
+autosummary_generate = True  # Generate stub files
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+    "ignore-module-all": False,  # Use __all__ if defined to determine what to document
+    "imported-members": True,
+    "special-members": "__init__",  # Document initialization methods
+    "private-members": False,  # Don't document private members by default
+    "member-order": "groupwise",  # Group members by type
+}
+
+# Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Don't warn about missing references - will help with mocked modules
+nitpicky = False
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# The suffix(es) of source filenames.
+source_suffix = [".rst"]
+
+# If myst_parser is available, enable markdown support
+try:
+    import importlib.util
+
+    if importlib.util.find_spec("myst_parser"):
+        source_suffix.append(".md")
+        extensions.append("myst_parser")
+        print("Markdown support enabled via myst_parser")
+    else:
+        print(
+            "Warning: myst_parser not available. Markdown support limited to RST only."
+        )
+except ImportError:
+    print(
+        "Warning: importlib.util not available. Markdown support limited to RST only."
+    )
 
 # Define the master document
 master_doc = "index"
@@ -133,10 +241,9 @@ html_show_sourcelink = False
 html_copy_source = False
 
 # -- Extension configuration -------------------------------------------------
-# autoclass_content = 'both'
+autoclass_content = "both"  # Use both class and __init__ docstrings
 autodoc_member_order = "groupwise"
-autodoc_typehints = "description"
-autoclass_content = "both"
+autodoc_typehints = "description"  # Put typehints in descriptions to avoid issues
 
 # -- Options for HTML help output -------------------------------------------------
 htmlhelp_basename = "TheAichemistCodexdoc"
@@ -171,8 +278,11 @@ intersphinx_cache_limit = 5  # days to cache
 intersphinx_timeout = 30  # seconds for timeout
 
 # -- Autodoc-typehints configuration -----------------------------------------
-# Settings for sphinx-autodoc-typehints extension
+# Settings for sphinx-autodoc-typehints extension (if re-enabled)
 set_type_checking_flag = True
 typehints_fully_qualified = False
 always_document_param_types = True
 typehints_document_rtype = True
+
+# Make autodoc warnings non-fatal
+autodoc_warningiserror = False

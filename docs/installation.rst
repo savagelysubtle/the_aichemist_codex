@@ -29,7 +29,21 @@ For development installations:
 
    git clone https://github.com/yourusername/the_aichemist_codex.git
    cd the_aichemist_codex
-   pip install -e .
+   pip install -e ".[dev]"
+
+Using the run.py Script
+~~~~~~~~~~~~~~~~~~~~~~
+
+For development work, you can use the run.py script without installation:
+
+.. code-block:: bash
+
+   git clone https://github.com/yourusername/the_aichemist_codex.git
+   cd the_aichemist_codex
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
+   pip install -r requirements.txt
+   python run.py  # Runs the application in development mode
 
 Using Poetry
 ~~~~~~~~~~~

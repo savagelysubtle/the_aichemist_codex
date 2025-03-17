@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to The Aichemist Codex's documentation!
+Welcome to The Aichemist Codex
 ===================================================
 
 .. image:: /images/logo.png
@@ -18,6 +18,20 @@ designed to transform how you interact with your files and documents. It leverag
 AI and machine learning to provide intelligent file organization, content analysis,
 and relationship mapping.
 
+Key Features
+-----------
+
+- **Intelligent File Organization**: Automatically organize and sort files based on content
+- **Advanced Content Search**: Find files using semantic, fuzzy, or regex search
+- **Relationship Mapping**: Discover connections between files in your collection
+- **Auto-Tagging**: Automatically generate and apply tags based on file content
+- **Dual-Mode Operation**: Run as a package or standalone application
+- **Python API**: Use the functionality in your own Python applications
+
+.. note::
+   The Aichemist Codex supports both Python 3.10+ and can be run as a standalone application
+   or integrated into your own projects. See the :doc:`installation` guide for details.
+
 Contents
 --------
 
@@ -29,25 +43,33 @@ Contents
    installation
    usage
    configuration
+   data_management
+   cli_reference
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
+   :caption: Tutorials
 
-   api/file_reader
-   api/file_manager
-   api/metadata
-   api/search
-   api/relationships
-   api/tagging
-   api/rollback
-   api/utils
-   api/config
+   tutorials/index
+   tutorials/quick_start
+   tutorials/tagging_workflow
+   tutorials/semantic_search
+   tutorials/file_organization
+   tutorials/advanced_api_usage
+   tutorials/custom_plugins
+   tutorials/file_relationships
+   tutorials/search_techniques
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference:
+
+   api/index
    api/models
+   api/tagging
    api/notification
-   api/project_reader
    api/output_formatter
-   api/ingest
+   api/project_reader
 
 .. toctree::
    :maxdepth: 1

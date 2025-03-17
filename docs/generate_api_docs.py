@@ -19,7 +19,12 @@ def main() -> None:
 
     # Configuration for modules to document
     api_dir = Path(__file__).resolve().parent / "api"
-    src_dir = Path(__file__).resolve().parent.parent / "backend" / "src"
+    src_dir = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "the_aichemist_codex"
+        / "backend"
+    )
 
     # Ensure the API directory exists
     api_dir.mkdir(exist_ok=True)
@@ -95,10 +100,26 @@ def generate_api_docs(
 
         # Create module documentation
         module_path = src_dir / module_name
-        # Check if init exists but don't assign to variable since we're not using it
-        (module_path / "__init__.py").exists()
+        # Check if module directory exists
+        module_exists = module_path.exists()
 
+        if not module_exists:
+            print(f"Warning: Module directory {module_path} does not exist")
+
+        # Create the package module path for importing
+        import_path = f"the_aichemist_codex.backend.{module_name}"
+
+        # Create RST file for module
         with open(api_dir / f"{module_name}.rst", "w") as f:
+            # Add a special note if module path doesn't exist
+            exists_note = ""
+            if not module_exists:
+                exists_note = (
+                    "\n.. warning::\n"
+                    "   This module documentation might be incomplete because "
+                    f"the module directory '{module_name}' was not found.\n"
+                )
+
             f.write(
                 "\n".join(
                     [
@@ -109,10 +130,12 @@ def generate_api_docs(
                         f"The {title} module provides functionality for ",
                         f"{get_module_description(module_name)}.",
                         "",
-                        f".. automodule:: backend.src.{module_name}",
+                        exists_note,
+                        f".. automodule:: {import_path}",
                         "   :members:",
                         "   :undoc-members:",
                         "   :show-inheritance:",
+                        "   :imported-members:",
                         "",
                     ]
                 )
@@ -142,26 +165,33 @@ def generate_api_docs(
             # Create documentation for each submodule
             for submodule in submodules:
                 submodule_path = module_path / f"{submodule}.py"
-                if not submodule_path.exists():
-                    submodule_path = module_path / submodule
+                submodule_dir = module_path / submodule
 
-                if submodule_path.exists():
-                    with open(api_dir / module_name / f"{submodule}.rst", "w") as f:
-                        sub_title = f"{submodule.replace('_', ' ').title()}"
-                        f.write(
-                            "\n".join(
-                                [
-                                    sub_title,
-                                    "=" * len(sub_title),
-                                    "",
-                                    f".. automodule:: backend.src.{module_name}.{submodule}",
-                                    "   :members:",
-                                    "   :undoc-members:",
-                                    "   :show-inheritance:",
-                                    "",
-                                ]
-                            )
+                if not submodule_path.exists() and not submodule_dir.exists():
+                    print(
+                        f"Warning: Submodule {submodule_path} or directory {submodule_dir} not found"
+                    )
+
+                # Create the import path for the submodule
+                submodule_import = f"{import_path}.{submodule}"
+
+                with open(api_dir / module_name / f"{submodule}.rst", "w") as f:
+                    sub_title = f"{submodule.replace('_', ' ').title()}"
+                    f.write(
+                        "\n".join(
+                            [
+                                sub_title,
+                                "=" * len(sub_title),
+                                "",
+                                f".. automodule:: {submodule_import}",
+                                "   :members:",
+                                "   :undoc-members:",
+                                "   :show-inheritance:",
+                                "   :imported-members:",
+                                "",
+                            ]
                         )
+                    )
 
 
 def create_api_index(modules: dict[str, list[str]], api_dir: Path) -> None:
