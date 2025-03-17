@@ -8,7 +8,9 @@ import logging
 from pathlib import Path
 
 from the_aichemist_codex.backend.output_formatter.json_writer import save_as_json_async
-from the_aichemist_codex.backend.output_formatter.markdown_writer import save_as_markdown
+from the_aichemist_codex.backend.output_formatter.markdown_writer import (
+    save_as_markdown,
+)
 from the_aichemist_codex.backend.utils.async_io import AsyncFileReader
 from the_aichemist_codex.backend.utils.safety import SafeFileHandler
 

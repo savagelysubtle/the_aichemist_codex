@@ -1,7 +1,7 @@
 import pytest
 
 # test_tags.py
-from backend.src.project_reader.tags import parse_tag
+from the_aichemist_codex.backend.project_reader.tags import parse_tag
 
 
 @pytest.mark.tagging

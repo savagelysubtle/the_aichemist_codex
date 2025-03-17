@@ -72,9 +72,9 @@ Example Usage
 .. code-block:: python
 
    import asyncio
-   from backend.src.file_reader import FileReader
-   from backend.src.search import SearchEngine
-   from backend.src.tagging import TagManager, TagSuggester
+   from the_aichemist_codex.backend.file_reader import FileReader
+   from the_aichemist_codex.backend.search import SearchEngine
+   from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
    from pathlib import Path
 
    async def main():

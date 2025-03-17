@@ -1,7 +1,7 @@
 import pytest
 
 # test_utils.py
-from backend.src.utils.utils import (
+from the_aichemist_codex.backend.utils.utils import (
     add,
 )  # Adjust if your actual utility function is different.
 

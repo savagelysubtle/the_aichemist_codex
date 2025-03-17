@@ -122,7 +122,9 @@ def parse_wheel_filename(
     else:
         build = ()
 
-    from the_aichemist_codex.backend.project_reader.tags import parse_tag  # type: ignore
+    from the_aichemist_codex.backend.project_reader.tags import (
+        parse_tag,  # type: ignore
+    )
 
     tags = parse_tag(parts[-1])  # type: ignore
     # Convert whatever parse_tag returns to a frozenset of strings
@@ -185,7 +187,9 @@ def setup_logging(log_dir, log_file_name="file_events.log"):
     """
     import warnings
 
-    from the_aichemist_codex.backend.config.logging_config import setup_logging as central_setup_logging
+    from the_aichemist_codex.backend.config.logging_config import (
+        setup_logging as central_setup_logging,
+    )
 
     warnings.warn(
         "This function is deprecated. Use backend.config.logging_config.setup_logging() instead.",

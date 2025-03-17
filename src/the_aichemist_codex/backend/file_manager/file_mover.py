@@ -2,18 +2,39 @@ import asyncio
 import datetime
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from the_aichemist_codex.backend.config.rules_engine import rules_engine
-from the_aichemist_codex.backend.config.settings import DATA_DIR
 from the_aichemist_codex.backend.rollback.rollback_manager import RollbackManager
 from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 from the_aichemist_codex.backend.utils.safety import SafeFileHandler
 
-from .directory_manager import DirectoryManager as DirectoryManager
+from .directory_manager import DirectoryManager
 
 logger = logging.getLogger(__name__)
 rollback_manager = RollbackManager()
+
+
+# Function to get data directory without depending on settings.py
+def get_data_dir() -> Path:
+    """
+    Get the data directory without creating circular imports.
+
+    Returns:
+        Path: The data directory
+    """
+    # Check environment variable first
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        return Path(env_data_dir)
+
+    # Fall back to a directory relative to the project root
+    return Path(__file__).resolve().parents[3] / "data"
+
+
+# Create a DirectoryManager instance for use across the module
+directory_manager = DirectoryManager(get_data_dir())
 
 
 class FileMover:
@@ -95,7 +116,7 @@ class FileMover:
         # Create a backup BEFORE attempting any move
         try:
             # Use DATA_DIR from settings for backup location
-            backup_dir = DATA_DIR / "backup/file_backups"
+            backup_dir = get_data_dir() / "backup/file_backups"
             backup_dir.mkdir(parents=True, exist_ok=True)
 
             # Create timestamped backup
@@ -114,7 +135,7 @@ class FileMover:
 
         try:
             # Ensure destination directory exists asynchronously
-            await DirectoryManager.ensure_directory(destination.parent)
+            await directory_manager.ensure_directory(destination.parent)
 
             # Check if destination already exists
             if await AsyncFileIO.exists(destination):
@@ -214,7 +235,7 @@ class FileMover:
                 )
 
                 # Ensure the target directory exists
-                await DirectoryManager.ensure_directory(target_dir)
+                await directory_manager.ensure_directory(target_dir)
 
                 # Move the file
                 target_file = target_dir / file_path.name
@@ -265,6 +286,6 @@ class FileMover:
         logger.info(f"Auto-organization target directory: {target_dir}")
 
         # Ensure the directory exists
-        await DirectoryManager.ensure_directory(target_dir)
+        await directory_manager.ensure_directory(target_dir)
 
         return target_dir

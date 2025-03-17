@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.relationships.relationship import Relationship, RelationshipType
+from the_aichemist_codex.backend.relationships.relationship import Relationship, RelationshipType
 
 
 @pytest.mark.unit

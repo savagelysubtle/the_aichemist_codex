@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from backend.src.project_reader.code_summary import process_file
+from the_aichemist_codex.backend.project_reader.code_summary import process_file
 
 
 @pytest.mark.content_processing

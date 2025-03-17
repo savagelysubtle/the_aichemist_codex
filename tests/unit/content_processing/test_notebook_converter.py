@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.project_reader.notebooks import NotebookConverter
+from the_aichemist_codex.backend.project_reader.notebooks import NotebookConverter
 
 
 @pytest.mark.content_processing

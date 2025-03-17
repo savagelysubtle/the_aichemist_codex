@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from backend.src.file_reader.ocr_parser import OCRParser
+from the_aichemist_codex.backend.file_reader.ocr_parser import OCRParser
 
 # Create a dummy ExtractionResult NamedTuple
 DummyExtractionResult = namedtuple(
@@ -37,7 +37,7 @@ async def test_ocr_parser(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     monkeypatch.setattr(cv2, "cvtColor", lambda img, code: img)
 
     # Patch extract_file in the ocr_parser module where it was imported
-    import backend.src.file_reader.ocr_parser as ocr_parser
+    import the_aichemist_codex.backend.file_reader.ocr_parser as ocr_parser
 
     monkeypatch.setattr(ocr_parser, "extract_file", dummy_extract_file)
 

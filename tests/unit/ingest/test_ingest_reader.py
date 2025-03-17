@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 # test_ingest_reader.py
-from backend.src.ingest.reader import convert_notebook, read_full_file
+from the_aichemist_codex.backend.ingest.reader import convert_notebook, read_full_file
 
 
 @pytest.mark.asyncio

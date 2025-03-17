@@ -17,7 +17,6 @@ from enum import Enum
 from pathlib import Path
 
 from the_aichemist_codex.backend.config.config_loader import config
-from the_aichemist_codex.backend.config.settings import DATA_DIR
 from the_aichemist_codex.backend.file_manager.change_detector import ChangeDetector
 from the_aichemist_codex.backend.rollback.rollback_manager import RollbackManager
 from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
@@ -25,9 +24,28 @@ from the_aichemist_codex.backend.utils.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 
+
+def get_data_dir() -> Path:
+    """
+    Get the data directory path dynamically to avoid circular imports.
+
+    Returns:
+        Path: The data directory path
+    """
+    # Check for environment variable first
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        return Path(env_data_dir).resolve()
+
+    # Fallback to a relative path from the current file
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent.parent
+    return project_root / "data"
+
+
 # Define default version storage location
-VERSION_STORAGE_DIR = DATA_DIR / "versions"
-VERSION_METADATA_DB = DATA_DIR / "version_metadata.json"
+VERSION_STORAGE_DIR = get_data_dir() / "versions"
+VERSION_METADATA_DB = get_data_dir() / "version_metadata.json"
 
 # Make sure version directories exist
 VERSION_STORAGE_DIR.mkdir(parents=True, exist_ok=True)

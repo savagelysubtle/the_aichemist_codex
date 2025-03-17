@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.src.search.providers.regex_provider import RegexSearchProvider
-from backend.src.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.search.providers.regex_provider import RegexSearchProvider
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 

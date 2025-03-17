@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.config.logging_config import setup_logging
+from the_aichemist_codex.backend.config.logging_config import setup_logging
 
 
 @pytest.mark.unit

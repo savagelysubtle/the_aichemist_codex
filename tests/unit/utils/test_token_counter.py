@@ -1,6 +1,6 @@
 import pytest
 
-from backend.src.project_reader.token_counter import TokenAnalyzer
+from the_aichemist_codex.backend.project_reader.token_counter import TokenAnalyzer
 
 
 @pytest.mark.unit

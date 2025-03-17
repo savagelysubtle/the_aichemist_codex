@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
-from backend.src.config.config_loader import CodexConfig
+from the_aichemist_codex.backend.config.config_loader import CodexConfig
 
 
 @pytest.mark.core
@@ -17,7 +17,9 @@ def test_default_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     config_file.write_text("", encoding="utf-8")
 
     # Override the CONFIG_FILE variable in config_loader.
-    monkeypatch.setattr("backend.src.config.config_loader.CONFIG_FILE", config_file)
+    monkeypatch.setattr(
+        "the_aichemist_codex.backend.config.config_loader.CONFIG_FILE", config_file
+    )
 
     config = CodexConfig()
     # Check that essential default settings are present.

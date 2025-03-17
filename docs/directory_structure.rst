@@ -22,6 +22,13 @@ The Aichemist Codex follows a modern Python project structure:
     │       ├── __init__.py           # Package initialization
     │       ├── __main__.py           # Entry point for direct execution
     │       └── backend/              # Backend modules
+    │           ├── config/           # Configuration management
+    │           ├── file_manager/     # File operations and organization
+    │           ├── metadata/         # Metadata extraction and management
+    │           ├── search/           # Search functionality
+    │           ├── relationships/    # File relationship mapping
+    │           ├── tagging/          # Auto-tagging capabilities
+    │           └── utils/            # Utility functions
     ├── tests/                        # Test suite
     │   ├── unit/                     # Unit tests
     │   ├── integration/              # Integration tests
@@ -38,6 +45,51 @@ The Aichemist Codex follows a modern Python project structure:
     ├── Makefile                      # Development tasks
     ├── pyproject.toml                # Project configuration
     └── README.md                     # Project overview
+
+Import Paths
+===========
+
+When using or extending The Aichemist Codex, use the full package path for imports:
+
+.. code-block:: python
+
+    # Correct import pattern
+    from the_aichemist_codex.backend.config import settings
+    from the_aichemist_codex.backend.file_manager import FileManager
+
+    # Incorrect - avoid these patterns
+    from backend.src.config import settings         # Old path structure
+    from ..config import settings                   # Relative import across package boundaries
+
+Within a subpackage, you can use relative imports for closely related modules:
+
+.. code-block:: python
+
+    # For imports within the same subpackage, relative imports are acceptable
+    from .file_mover import FileMover               # Same subpackage
+    from ..utils.common import get_file_hash        # Parent package reference
+
+For configuration and settings, use the recommended patterns to avoid circular imports:
+
+.. code-block:: python
+
+    # Preferred pattern for accessing data directory
+    def get_data_dir():
+        import os
+        from pathlib import Path
+
+        # Check environment variable first
+        env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+        if env_data_dir:
+            return Path(env_data_dir)
+
+        # Then check config
+        from the_aichemist_codex.backend.config.config_loader import get_config
+        config = get_config()
+        return Path(config.get("data_dir", "data"))
+
+    # Example usage
+    data_dir = get_data_dir()
 
 Source Code Organization
 =======================

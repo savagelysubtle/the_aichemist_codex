@@ -1,7 +1,7 @@
 import pytest
 
 # test_version.py
-from backend.src.project_reader.version import InvalidVersion, Version
+from the_aichemist_codex.backend.project_reader.version import InvalidVersion, Version
 
 
 @pytest.mark.unit

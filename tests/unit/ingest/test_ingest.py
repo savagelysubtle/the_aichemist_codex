@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.ingest import generate_digest
+from the_aichemist_codex.backend.ingest import generate_digest
 
 
 @pytest.mark.asyncio

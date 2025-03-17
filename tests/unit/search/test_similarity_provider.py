@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from backend.src.search.providers.similarity_provider import SimilarityProvider
+from the_aichemist_codex.backend.search.providers.similarity_provider import SimilarityProvider
 
 
 class TempFilesDict(TypedDict):

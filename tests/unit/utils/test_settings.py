@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.config.settings import (
+from the_aichemist_codex.backend.config.settings import (
     DEFAULT_IGNORE_PATTERNS,
     LOG_DIR,
     MAX_FILE_SIZE,

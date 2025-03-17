@@ -1,59 +1,69 @@
-# The Aichemist Codex Documentation
+# Documentation for The Aichemist Codex
 
-This directory contains the Sphinx documentation for The Aichemist Codex
+This directory contains the complete documentation for The Aichemist Codex
 project.
 
 ## Documentation Structure
 
-- `api/` - API reference documentation (auto-generated)
-- `_static/` - Static files (CSS, JavaScript, images)
-- `_templates/` - Custom Sphinx templates
-- `images/` - Images used in the documentation
-- `conf.py` - Sphinx configuration
-- `index.rst` - Main documentation page
-- `generate_api_docs.py` - Script to auto-generate API documentation
-- `build_docs.py` - Script to build the complete documentation
+- **User Documentation**
+
+  - `getting_started.rst` - Quick start guide for new users
+  - `installation.rst` - Installation instructions
+  - `usage.rst` - How to use the application
+  - `cli_reference.rst` - Command-line interface reference
+  - `configuration.rst` - Configuration options
+
+- **Developer Documentation**
+
+  - `development.rst` - General development guide
+  - `api/` - API documentation (auto-generated)
+  - `code_style.rst` - Coding style guidelines
+  - `code_maintenance.md` - Code maintenance procedures
+  - `code_review.md` - Code review guidelines
+  - `contributing.rst` - How to contribute to the project
+
+- **Project Information**
+
+  - `roadmap.rst` - Future development plans
+  - `roadmap/` - Detailed roadmap documents
+  - `changelog.rst` - Version history and changes
+  - `project_summary.md` - Project overview and summary
+
+- **Technical Documentation**
+  - `architecture.rst` - System architecture
+  - `data_management.rst` - Data handling and storage
+  - `directory_structure.rst` - Project structure explanation
+  - `environment.rst` - Environment setup and requirements
 
 ## Building the Documentation
 
-### Automated Build
-
-The easiest way to build the documentation is to use the provided
-`build_docs.py` script:
+To build the documentation:
 
 ```bash
 # Navigate to the docs directory
 cd docs
 
 # Build HTML documentation
-python build_docs.py
+make html
 
-# Build with clean option (removes previous build)
-python build_docs.py --clean
-
-# Build PDF documentation (requires LaTeX)
-python build_docs.py --format pdf
+# The built documentation will be in _build/html/
 ```
 
-### Manual Build
+## Documentation Tooling
 
-If you prefer to build the documentation manually:
+- Documentation is built using [Sphinx](https://www.sphinx-doc.org/)
+- API documentation is auto-generated from code docstrings
+- Both reStructuredText (.rst) and Markdown (.md) formats are supported
 
-1. Generate API documentation:
+## Contributing to Documentation
 
-   ```bash
-   python generate_api_docs.py
-   ```
+When contributing to documentation:
 
-2. Build the Sphinx documentation:
-
-   ```bash
-   # Use make (Linux/macOS)
-   make html
-
-   # Or use the make.bat file (Windows)
-   .\make.bat html
-   ```
+1. Follow the existing style and formatting
+2. Update the table of contents where necessary
+3. Run spell-check before submitting changes
+4. Test any code examples to ensure they work
+5. Build the documentation locally to preview changes
 
 ## Docstring Guidelines
 

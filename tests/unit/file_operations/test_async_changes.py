@@ -7,14 +7,16 @@ import pytest
 import yaml
 from pytest import TempPathFactory
 
-from backend.src.file_manager.directory_manager import DirectoryManager
-from backend.src.file_manager.duplicate_detector import DuplicateDetector
-from backend.src.file_manager.file_mover import FileMover
-from backend.src.file_manager.file_tree import generate_file_tree
-from backend.src.file_manager.sorter import RuleBasedSorter
-from backend.src.file_reader.file_reader import FileReader
-from backend.src.file_reader.parsers import JsonParser, TextParser
-from backend.src.utils.async_io import AsyncFileIO
+from the_aichemist_codex.backend.file_manager.directory_manager import DirectoryManager
+from the_aichemist_codex.backend.file_manager.duplicate_detector import (
+    DuplicateDetector,
+)
+from the_aichemist_codex.backend.file_manager.file_mover import FileMover
+from the_aichemist_codex.backend.file_manager.file_tree import generate_file_tree
+from the_aichemist_codex.backend.file_manager.sorter import RuleBasedSorter
+from the_aichemist_codex.backend.file_reader.file_reader import FileReader
+from the_aichemist_codex.backend.file_reader.parsers import JsonParser, TextParser
+from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 
 
 # --- Helper for YAML reading ---
@@ -103,7 +105,8 @@ async def test_file_reader_process_file() -> None:
 async def test_directory_manager() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         new_dir = Path(tmpdir) / "new_directory"
-        await DirectoryManager.ensure_directory(new_dir)
+        directory_manager = DirectoryManager(Path(tmpdir))
+        await directory_manager.ensure_directory(new_dir)
         assert new_dir.exists() and new_dir.is_dir(), (  # noqa: S101
             "Directory was not created asynchronously."  # noqa: S101
         )

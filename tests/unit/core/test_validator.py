@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.utils.validator import (
+from the_aichemist_codex.backend.utils.validator import (
     get_project_name,
 )  # For example, if this function validates a project name.
 

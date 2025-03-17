@@ -25,24 +25,59 @@ Typical usage:
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 
-from the_aichemist_codex.backend.config.settings import (
-    DATA_DIR,
-)  # Ensure settings provide configurable options if desired.
 from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
-# Define directories for trash and backup using centralized data directory
-TRASH_DIR = DATA_DIR / "trash"
-TRASH_DIR.mkdir(exist_ok=True)
-BACKUP_DIR = DATA_DIR / "backup/rollback_temp"
-BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-ROLLBACK_LOG_FILE = DATA_DIR / "rollback.json"
+# Function to get data directory without depending on settings.py
+def get_data_dir() -> Path:
+    """
+    Get the data directory without creating circular imports.
+
+    Returns:
+        Path: The data directory
+    """
+    # Check environment variable first
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        return Path(env_data_dir)
+
+    # Fall back to a directory relative to the project root
+    return Path(__file__).resolve().parents[3] / "data"
+
+
+# Define directories for trash and backup using the function to get data directory
+def get_trash_dir() -> Path:
+    """Get the trash directory."""
+    trash_dir = get_data_dir() / "trash"
+    trash_dir.mkdir(exist_ok=True)
+    return trash_dir
+
+
+def get_backup_dir() -> Path:
+    """Get the backup directory."""
+    backup_dir = get_data_dir() / "backup/rollback_temp"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    return backup_dir
+
+
+def get_rollback_log_file() -> Path:
+    """Get the rollback log file path."""
+    return get_data_dir() / "rollback.json"
+
+
+# We'll use these functions instead of the constants directly
+# TRASH_DIR = DATA_DIR / "trash"
+# TRASH_DIR.mkdir(exist_ok=True)
+# BACKUP_DIR = DATA_DIR / "backup/rollback_temp"
+# BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+# ROLLBACK_LOG_FILE = DATA_DIR / "rollback.json"
 
 
 class OperationType(Enum):
@@ -170,7 +205,7 @@ class RollbackManager:
             cls._instance = super(RollbackManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, rollback_log: Path = ROLLBACK_LOG_FILE):
+    def __init__(self, rollback_log: Path = get_rollback_log_file()):
         # Only initialize once
         if RollbackManager._initialized:
             return
@@ -386,24 +421,33 @@ class RollbackManager:
                 logger.error(f"Fallback rollback log update also failed: {nested_e}")
 
     async def _backup_file(self, file_path: Path) -> Path | None:
-        """Create a backup copy of a file before modifying it."""
+        """
+        Create a backup of a file in the backup directory.
+
+        Args:
+            file_path: Path to the file to back up
+
+        Returns:
+            Path: Path to the backup file, or None if backup failed
+        """
         try:
             if not file_path.exists():
-                logger.warning(f"Cannot backup nonexistent file: {file_path}")
                 return None
 
-            BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+            backup_dir = get_backup_dir()  # Use the function directly
             timestamp = int(datetime.now().timestamp())
-            backup_path = BACKUP_DIR / f"{file_path.name}.{timestamp}.bak"
+            backup_path = backup_dir / f"{file_path.name}.{timestamp}.bak"
+
+            # Copy the file to the backup location
             await AsyncFileIO.copy(file_path, backup_path)
-            logger.info(f"Backed up {file_path} to {backup_path}")
+            logger.info(f"Created backup of {file_path} at {backup_path}")
             return backup_path
         except Exception as e:
-            logger.error(f"Error backing up file {file_path}: {e}")
+            logger.error(f"Error creating backup of {file_path}: {e}")
             return None
 
     async def record_operation(
-        self, operation: str, source: str, destination: str | None = None
+        self, operation: str, source: str | Path, destination: str | Path | None = None
     ) -> None:
         """
         Records a new file operation for rollback. For deletion and modification,
@@ -411,12 +455,24 @@ class RollbackManager:
         """
         try:
             op_type = operation.lower()
-            backup = None
+            backup_path = None
             src_path = Path(source)
             if op_type in ("delete", "modify"):
                 backup_obj = await self._backup_file(src_path)
-                backup = str(backup_obj) if backup_obj else None
-            op = RollbackOperation(operation, source, destination, backup=backup)
+                backup_path = str(backup_obj) if backup_obj else None
+
+            # Convert string operation to OperationType enum
+            try:
+                operation_enum = OperationType[op_type.upper()]
+            except KeyError:
+                logger.warning(
+                    f"Unknown operation type: {op_type}. Using MOVE as default."
+                )
+                operation_enum = OperationType.MOVE
+
+            op = RollbackOperation(
+                operation_enum, source, destination, backup_path=backup_path
+            )
             self._undo_stack.append(op)
             self._redo_stack.clear()
             logger.info(
@@ -452,7 +508,7 @@ class RollbackManager:
         """
         Asynchronously restores a file from the trash directory to the current working directory.
         """
-        trashed_file = TRASH_DIR / file_name
+        trashed_file = get_trash_dir() / file_name
         if not trashed_file.exists():
             logger.error(f"Restore failed: {trashed_file} does not exist in trash.")
             return False
@@ -485,7 +541,7 @@ class RollbackManager:
                 except Exception as e:
                     logger.error(f"Error deleting {file} from trash: {e}")
 
-        tasks = [_delete_file(file) for file in TRASH_DIR.iterdir()]
+        tasks = [_delete_file(file) for file in get_trash_dir().iterdir()]
         await asyncio.gather(*tasks)
 
     async def undo_last_operation(self) -> bool:
@@ -791,7 +847,7 @@ class RollbackManager:
                 )
         elif op.operation_type == OperationType.DELETE:
             if src.exists():
-                trashed_file = TRASH_DIR / src.name
+                trashed_file = get_trash_dir() / src.name
                 await self._move(src, trashed_file)
                 logger.info(f"Moved deleted file {src} to trash at {trashed_file}")
             else:

@@ -510,7 +510,9 @@ class NotificationManager:
             try:
                 # Try to import the EmailSubscriber class
                 # Using a more defensive approach to handle potential missing module
-                email_module_name = "the_aichemist_codex.backend.notification.email_subscriber"
+                email_module_name = (
+                    "the_aichemist_codex.backend.notification.email_subscriber"
+                )
                 email_class_name = "EmailSubscriber"
 
                 # First check if the module exists
@@ -544,7 +546,9 @@ class NotificationManager:
             try:
                 # Try to import the WebhookSubscriber class
                 # Using a more defensive approach to handle potential missing module
-                webhook_module_name = "the_aichemist_codex.backend.notification.webhook_subscriber"
+                webhook_module_name = (
+                    "the_aichemist_codex.backend.notification.webhook_subscriber"
+                )
                 webhook_class_name = "WebhookSubscriber"
 
                 # First check if the module exists

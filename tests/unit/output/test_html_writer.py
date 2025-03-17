@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.output_formatter.html_writer import save_as_html
+from the_aichemist_codex.backend.output_formatter.html_writer import save_as_html
 
 
 @pytest.mark.asyncio

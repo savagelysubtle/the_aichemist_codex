@@ -56,6 +56,15 @@ class ImageMetadataExtractor(BaseMetadataExtractor):
         super().__init__(cache_manager)
         self.mime_detector = MimeTypeDetector()
 
+    @property
+    def supported_mime_types(self) -> list[str]:
+        """List of MIME types supported by this extractor.
+
+        Returns:
+            list[str]: A list of MIME type strings that this extractor can handle
+        """
+        return self.SUPPORTED_MIME_TYPES
+
     async def extract(
         self,
         file_path: str | Path,

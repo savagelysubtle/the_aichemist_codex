@@ -126,10 +126,10 @@ The Aichemist Codex can also be used as a library in your Python projects:
 
 ```python
 import asyncio
-from backend.src.file_reader import FileReader
-from backend.src.metadata import MetadataManager
-from backend.src.search import SearchEngine
-from backend.src.relationships import RelationshipGraph
+from the_aichemist_codex.backend.file_reader import FileReader
+from the_aichemist_codex.backend.metadata import MetadataManager
+from the_aichemist_codex.backend.search import SearchEngine
+from the_aichemist_codex.backend.relationships import RelationshipGraph
 from pathlib import Path
 
 async def main():
@@ -146,7 +146,7 @@ async def main():
     related_files = await graph.find_related(Path("project.py"))
 
     # Auto-tag files
-    from backend.src.tagging import TagManager, TagSuggester
+    from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
     tag_manager = TagManager(Path(".aichemist/tags.db"))
     await tag_manager.initialize()
     suggester = TagSuggester(tag_manager)
@@ -172,6 +172,34 @@ The Aichemist Codex follows a modular architecture with these core components:
 - **Relationship Manager**: Maps connections between files
 - **Tagging System**: Implements intelligent auto-tagging
 - **Rollback System**: Enables safe operations with undo capability
+
+### Package Structure
+
+The project follows a clean, organized package structure:
+
+```
+the_aichemist_codex/
+├── backend/
+│   ├── config/               # Configuration management
+│   ├── file_manager/         # File operations and organization
+│   ├── metadata/             # Metadata extraction and management
+│   ├── search/               # Search functionality
+│   ├── relationships/        # File relationship mapping
+│   ├── tagging/              # Auto-tagging capabilities
+│   └── utils/                # Utility functions
+├── cli/                      # Command-line interface
+└── gui/                      # (Future) Graphical user interface
+```
+
+All imports should use the full package path:
+
+```python
+# Correct import pattern
+from the_aichemist_codex.backend.config import settings
+from the_aichemist_codex.backend.file_manager import FileManager
+
+# Avoid relative imports across package boundaries
+```
 
 ## Documentation
 

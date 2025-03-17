@@ -7,7 +7,10 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.src.config.settings import determine_data_dir, determine_project_root
+from the_aichemist_codex.backend.config.settings import (
+    determine_project_root,
+    initialize_directory_manager,
+)
 
 
 @pytest.fixture
@@ -40,7 +43,7 @@ def get_test_path(path_str):
     return Path(path_str)
 
 
-@patch("backend.src.config.settings.Path.exists")
+@patch("the_aichemist_codex.backend.config.settings.Path.exists")
 def test_project_root_with_env_var(mock_exists, clean_environment):
     """Test project root detection with environment variable."""
     mock_exists.return_value = True
@@ -52,24 +55,27 @@ def test_project_root_with_env_var(mock_exists, clean_environment):
     assert result == expected_path
 
 
-@patch("backend.src.config.settings.logger")
+@patch("the_aichemist_codex.backend.config.settings.logger")
 def test_data_dir_with_env_var(mock_logger, clean_environment):
     """Test data directory with environment variable."""
     test_path = "/test/data/dir"
     os.environ["AICHEMIST_DATA_DIR"] = test_path
 
-    # Mock the PROJECT_ROOT global
-    with patch("backend.src.config.settings.PROJECT_ROOT", get_test_path("/test")):
-        result = determine_data_dir()
-        expected_path = get_test_path(test_path)
-        assert result == expected_path
+    # Call the initialize_directory_manager function
+    directory_manager = initialize_directory_manager()
+    result = directory_manager.base_dir
+    expected_path = get_test_path(test_path)
+    assert result == expected_path
 
 
-@patch("backend.src.config.settings.logger")
+@patch("the_aichemist_codex.backend.config.settings.logger")
+@patch(
+    "the_aichemist_codex.backend.config.settings.PROJECT_ROOT", get_test_path("/test")
+)
 def test_data_dir_default(mock_logger, clean_environment):
     """Test data directory default case."""
-    # Mock the PROJECT_ROOT global
-    with patch("backend.src.config.settings.PROJECT_ROOT", get_test_path("/test")):
-        result = determine_data_dir()
-        expected_path = get_test_path("/test/data")
-        assert result == expected_path
+    # Call the initialize_directory_manager function
+    directory_manager = initialize_directory_manager()
+    result = directory_manager.base_dir
+    expected_path = get_test_path("/test/data")
+    assert result == expected_path

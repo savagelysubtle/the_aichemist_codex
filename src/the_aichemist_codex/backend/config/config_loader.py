@@ -7,19 +7,32 @@ import tomli
 
 CONFIG_FILE = Path(__file__).resolve().parent / ".codexconfig"
 
+# Default configuration values to avoid circular imports
+DEFAULT_IGNORE_PATTERNS = [
+    "__pycache__",
+    "*.pyc",
+    ".git",
+    ".vscode",
+    ".idea",
+    "venv",
+    ".env",
+    ".venv",
+    "node_modules",
+]
+DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+DEFAULT_MAX_TOKENS = 4000
+
 
 class CodexConfig:
     """Loads configuration settings for The Aichemist Codex."""
 
     def __init__(self):
         """Initialize with default settings."""
-        # ✅ Delay import to avoid circular import issues
-        from .settings import DEFAULT_IGNORE_PATTERNS, MAX_FILE_SIZE, MAX_TOKENS
-
+        # Use default values defined at module level to avoid circular imports
         self.settings = {
             "ignore_patterns": DEFAULT_IGNORE_PATTERNS,
-            "max_file_size": MAX_FILE_SIZE,
-            "max_tokens": MAX_TOKENS,
+            "max_file_size": DEFAULT_MAX_FILE_SIZE,
+            "max_tokens": DEFAULT_MAX_TOKENS,
         }
         self._load_config_file()
 

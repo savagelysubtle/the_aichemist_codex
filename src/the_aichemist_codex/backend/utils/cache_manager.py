@@ -8,10 +8,33 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from the_aichemist_codex.backend.config.settings import CACHE_DIR
 from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
+
+
+def get_cache_dir() -> Path:
+    """
+    Get the cache directory path dynamically to avoid circular imports.
+
+    Returns:
+        Path: The cache directory path
+    """
+    # Check for environment variable first
+    env_cache_dir = os.environ.get("AICHEMIST_CACHE_DIR")
+    if env_cache_dir:
+        return Path(env_cache_dir).resolve()
+
+    # Check for environment variable for data directory
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        data_dir = Path(env_data_dir).resolve()
+        return data_dir / "cache"
+
+    # Fallback to a relative path from the current file
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent.parent
+    return project_root / "data" / "cache"
 
 
 class LRUCache:
@@ -48,26 +71,26 @@ class LRUCache:
 
 
 class CacheManager:
-    """Manages in-memory and disk-based caching for file metadata."""
+    """Manages both in-memory and disk-based caching."""
 
     def __init__(
         self,
-        cache_dir: Path = CACHE_DIR,
+        cache_dir: Path | None = None,
         memory_cache_size: int = 1000,
         disk_cache_ttl: int = 3600,
     ):  # 1 hour TTL by default
-        """
-        Initialize the cache manager.
+        """Initialize the cache manager with both memory and disk caches."""
+        # Use the provided cache_dir or get it dynamically
+        self.cache_dir = cache_dir if cache_dir is not None else get_cache_dir()
 
-        Args:
-            cache_dir: Directory to store disk cache files
-            memory_cache_size: Maximum number of items in memory cache
-            disk_cache_ttl: Time-to-live for disk cache entries in seconds
-        """
-        self.cache_dir = cache_dir
+        # Ensure the cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
         self.memory_cache = LRUCache(max_size=memory_cache_size)
         self.disk_cache_ttl = disk_cache_ttl
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.async_io = AsyncFileIO()
+
+        logger.debug(f"Cache manager initialized with directory: {self.cache_dir}")
 
     @staticmethod
     def sanitize_key(key: str) -> str:
@@ -114,7 +137,7 @@ class CacheManager:
         # Try disk cache
         sanitized_key = self.sanitize_key(key)
         cache_file = self.cache_dir / f"{sanitized_key}.json"
-        if await AsyncFileIO.exists(cache_file):
+        if await self.async_io.exists(cache_file):
             try:
                 # Check if cache entry is expired
                 stats = os.stat(cache_file)
@@ -122,7 +145,7 @@ class CacheManager:
                     await self.invalidate(key)
                     return None
 
-                data = await AsyncFileIO.read_json(cache_file)
+                data = await self.async_io.read_json(cache_file)
                 if data:
                     # Update memory cache
                     self.memory_cache.put(key, data)
@@ -150,7 +173,7 @@ class CacheManager:
             # Update disk cache with sanitized key
             sanitized_key = self.sanitize_key(key)
             cache_file = self.cache_dir / f"{sanitized_key}.json"
-            return await AsyncFileIO.write_json(cache_file, value)
+            return await self.async_io.write_json(cache_file, value)
         except Exception as e:
             logger.error(f"Error writing to cache for key {key}: {e}")
             return False
@@ -169,7 +192,7 @@ class CacheManager:
         # Remove from disk cache with sanitized key
         sanitized_key = self.sanitize_key(key)
         cache_file = self.cache_dir / f"{sanitized_key}.json"
-        if await AsyncFileIO.exists(cache_file):
+        if await self.async_io.exists(cache_file):
             try:
                 os.remove(cache_file)
             except Exception as e:

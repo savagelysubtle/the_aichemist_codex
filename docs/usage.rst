@@ -123,7 +123,7 @@ Working with Tags in Python
 
 .. code-block:: python
 
-   from backend.src.tagging import TagManager, TagSuggester
+   from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
    from pathlib import Path
    import asyncio
 
@@ -153,7 +153,7 @@ Working with Tags in Python
            print(f"- {suggestion['name']} (Score: {suggestion['score']})")
 
        # Using the TagSuggester for more advanced suggestions
-       from backend.src.file_reader import FileReader
+       from the_aichemist_codex.backend.file_reader import FileReader
        file_reader = FileReader()
        suggester = TagSuggester(tag_manager)
 
@@ -199,10 +199,10 @@ Basic Example
 
 .. code-block:: python
 
-   from backend.src.file_reader import FileReader
-   from backend.src.metadata import MetadataManager
-   from backend.src.search import SearchEngine
-   from backend.src.tagging import TagManager, TagSuggester
+   from the_aichemist_codex.backend.file_reader import FileReader
+   from the_aichemist_codex.backend.metadata import MetadataManager
+   from the_aichemist_codex.backend.search import SearchEngine
+   from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
    from pathlib import Path
    import asyncio
 
@@ -249,7 +249,7 @@ Working with File Relationships
 
 .. code-block:: python
 
-   from backend.src.relationships import RelationshipDetector, RelationshipGraph
+   from the_aichemist_codex.backend.relationships import RelationshipDetector, RelationshipGraph
    from pathlib import Path
    import asyncio
 

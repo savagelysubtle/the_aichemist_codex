@@ -13,11 +13,11 @@ from typing import Any
 import numpy as np
 import pytest
 
-from backend.src.config.settings import get_settings
-from backend.src.models.embeddings import TextEmbeddingModel, VectorIndex
-from backend.src.search.providers.similarity_provider import SimilarityProvider
-from backend.src.search.search_engine import SearchEngine
-from backend.src.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.config.settings import get_settings
+from the_aichemist_codex.backend.models.embeddings import TextEmbeddingModel, VectorIndex
+from the_aichemist_codex.backend.search.providers.similarity_provider import SimilarityProvider
+from the_aichemist_codex.backend.search.search_engine import SearchEngine
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
 
 
 @pytest.fixture

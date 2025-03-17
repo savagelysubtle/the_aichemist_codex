@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 from the_aichemist_codex.backend.config.config_loader import config
-from the_aichemist_codex.backend.config.settings import DEFAULT_IGNORE_PATTERNS
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +17,7 @@ class SafeFileHandler:
         try:
             return base.resolve() in target.resolve().parents
         except (FileNotFoundError, RuntimeError):
+            # If there's an error resolving paths, consider it unsafe
             return False
 
     @staticmethod
@@ -29,7 +29,7 @@ class SafeFileHandler:
         specified in the config file.
         """
         # Get combined ignore patterns (default + user configured)
-        ignore_patterns = config.get("ignore_patterns", DEFAULT_IGNORE_PATTERNS)
+        ignore_patterns = config.get("ignore_patterns", [])
 
         # Check against all patterns
         for pattern in ignore_patterns:

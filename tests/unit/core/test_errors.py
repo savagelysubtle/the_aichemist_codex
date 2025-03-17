@@ -1,7 +1,7 @@
 # test_errors.py
 import pytest
 
-from backend.src.utils.errors import NotebookProcessingError
+from the_aichemist_codex.backend.utils.errors import NotebookProcessingError
 
 
 @pytest.mark.core

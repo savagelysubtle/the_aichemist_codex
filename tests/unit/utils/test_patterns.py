@@ -1,7 +1,7 @@
 import pytest
 
 # test_patterns.py
-from backend.src.utils.patterns import pattern_matcher
+from the_aichemist_codex.backend.utils.patterns import pattern_matcher
 
 
 @pytest.mark.unit

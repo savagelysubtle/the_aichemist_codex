@@ -7,29 +7,20 @@ from pathlib import Path
 
 import pytest
 
-# Calculate the absolute path to the backend directory.
-# The structure is /project_root/backend, not /project_root/backend/backend
-# So we just need to go one level up from the tests directory
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-BACKEND_SRC_DIR = BACKEND_DIR / "src"
+# Calculate the absolute path to the project root and src directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SRC_DIR = PROJECT_ROOT / "src"
 
-# Dynamically add each package under backend/src to sys.path if it exists
-if BACKEND_SRC_DIR.exists():
-    for subdir in BACKEND_SRC_DIR.iterdir():
-        if subdir.is_dir() and (subdir / "__init__.py").exists():
-            sys.path.insert(0, str(subdir))
+# Add the src directory to sys.path
+if SRC_DIR.exists():
+    sys.path.insert(0, str(SRC_DIR))
+
+    # Also add the specific package directory
+    package_dir = SRC_DIR / "the_aichemist_codex"
+    if package_dir.exists() and (package_dir / "__init__.py").exists():
+        sys.path.insert(0, str(package_dir))
 else:
-    # If no src directory, then try to find packages directly under backend
-    for subdir in BACKEND_DIR.iterdir():
-        if (
-            subdir.is_dir()
-            and (subdir / "__init__.py").exists()
-            and subdir.name != "tests"
-        ):
-            sys.path.insert(0, str(subdir))
-
-# Also add the main backend directory itself to sys.path
-sys.path.insert(0, str(BACKEND_DIR))
+    print(f"Warning: Source directory not found at {SRC_DIR}")
 
 # Root directory of the project
 ROOT_DIR = Path(__file__).resolve().parent.parent

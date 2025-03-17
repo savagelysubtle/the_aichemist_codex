@@ -32,6 +32,10 @@ Key Features
    The Aichemist Codex supports both Python 3.10+ and can be run as a standalone application
    or integrated into your own projects. See the :doc:`installation` guide for details.
 
+.. note::
+   Detailed component-specific documentation can be found in the ``organized_markdown/``
+   directory, which contains markdown files for individual modules and components.
+
 Contents
 --------
 
@@ -80,8 +84,13 @@ Contents
    directory_structure
    contributing
    code_style
+   code_maintenance
+   code_review
+   implementation_plan
+   development_guide
    roadmap
    changelog
+   project_summary
 
 Indices and tables
 -----------------

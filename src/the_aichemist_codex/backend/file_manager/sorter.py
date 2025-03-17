@@ -36,8 +36,13 @@ class RuleBasedSorter:
             config_file (Optional[Path], optional): Path to a custom sorting rules YAML file.
                                           If None, the default rules file will be used.
         """
-        self.rules = None
         self.config_file = config_file
+        self.rules: list[dict[str, Any]] | None = None
+        # Get the data directory for FileMover
+        data_dir = Path(__file__).resolve().parents[3] / "data"
+        self.file_mover = FileMover(base_directory=data_dir)
+        self.directory_manager = DirectoryManager(base_dir=None)
+        self.pattern_cache: dict[str, bool] = {}
 
     async def load_rules(self) -> list[dict[str, Any]]:
         """
@@ -163,7 +168,9 @@ class RuleBasedSorter:
         if "keywords" in rule:
             try:
                 # ! Dynamically importing FileReader to avoid circular dependencies.
-                from the_aichemist_codex.backend.file_reader.file_reader import FileReader
+                from the_aichemist_codex.backend.file_reader.file_reader import (
+                    FileReader,
+                )
 
                 reader = FileReader()
                 metadata = await reader.process_file(file_path)
@@ -222,7 +229,7 @@ class RuleBasedSorter:
 
                         # Add safety check: ensure target_dir exists and is a valid directory
                         if not target_dir.exists():
-                            await DirectoryManager.ensure_directory(target_dir)
+                            await self.directory_manager.ensure_directory(target_dir)
                         elif not target_dir.is_dir():
                             logger.error(
                                 f"Target path {target_dir} is not a directory. Skipping rule for {file}"

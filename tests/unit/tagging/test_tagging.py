@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.tagging.hierarchy import TagHierarchy
-from backend.src.tagging.manager import TagManager
-from backend.src.tagging.schema import TagSchema
+from the_aichemist_codex.backend.tagging.hierarchy import TagHierarchy
+from the_aichemist_codex.backend.tagging.manager import TagManager
+from the_aichemist_codex.backend.tagging.schema import TagSchema
 
 
 class TestTagSchema:

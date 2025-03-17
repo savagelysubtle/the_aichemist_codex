@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.src.config.secure_config import SecureConfigManager
-from backend.src.config.settings import DATA_DIR
+from the_aichemist_codex.backend.config.secure_config import SecureConfigManager
+from the_aichemist_codex.backend.config.settings import DATA_DIR
 
 
 @pytest.fixture

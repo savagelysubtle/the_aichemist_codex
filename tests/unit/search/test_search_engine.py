@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.src.file_reader.file_metadata import FileMetadata
-from backend.src.search.providers.regex_provider import RegexSearchProvider
-from backend.src.search.search_engine import SearchEngine  # type: ignore
+from the_aichemist_codex.backend.file_reader.file_metadata import FileMetadata
+from the_aichemist_codex.backend.search.providers.regex_provider import RegexSearchProvider
+from the_aichemist_codex.backend.search.search_engine import SearchEngine  # type: ignore
 
 # Test directories
 TEST_INDEX_DIR = Path("test_search_index")

@@ -108,7 +108,8 @@ When using The Aichemist Codex as a library, you can pass configuration options 
 
 .. code-block:: python
 
-   from backend.src.tagging import TagManager, TagSuggester
+   # Import components
+   from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
    from pathlib import Path
 
    # Configure tag manager

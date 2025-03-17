@@ -9,8 +9,10 @@ from typing import Any, cast
 
 import pytest
 
-from backend.src.metadata.database_extractor import DatabaseMetadataExtractor
-from backend.src.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.metadata.database_extractor import (
+    DatabaseMetadataExtractor,
+)
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
 
 
 # Test fixtures
@@ -427,7 +429,13 @@ async def test_sqlite_corrupt_database() -> None:
         assert metadata["format"]["type"] == "sqlite"  # noqa: S101
         assert "error" in metadata  # noqa: S101
     finally:
-        os.unlink(path)
+        # On Windows, the file may still be in use, so we need to handle this gracefully
+        try:
+            os.unlink(path)
+        except PermissionError:
+            print(
+                f"Warning: Could not delete temporary file {path}. It may be locked by another process."
+            )
 
 
 @pytest.mark.asyncio

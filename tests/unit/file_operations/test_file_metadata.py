@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.file_reader.file_metadata import FileMetadata
+from the_aichemist_codex.backend.file_reader.file_metadata import FileMetadata
 
 
 @pytest.mark.file_operations

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import shutil
 import tempfile
 from collections.abc import Generator
@@ -7,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.file_manager.directory_manager import DirectoryManager
-from backend.src.rollback.rollback_manager import RollbackManager
+from the_aichemist_codex.backend.file_manager.directory_manager import DirectoryManager
 
 
 @pytest.fixture
@@ -21,40 +19,72 @@ def temp_dir() -> Generator[Path]:
 @pytest.fixture
 def dir_manager_setup(
     temp_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, Path, Path]:
+) -> tuple[Path, Path, Path, list]:
     test_dir = Path(temp_dir) / "new_dir"
     rollback_log = Path(temp_dir) / "rollback.json"
     rollback_log.write_text("[]", encoding="utf-8")
-    # Patch the module's rollback_manager
+
+    # Create a spy function to track calls
+    recorded_operations = []
+
+    async def spy_record_operation(self, operation, source, destination=None):
+        recorded_operations.append(
+            {
+                "operation": operation,
+                "source": str(source),
+                "destination": str(destination) if destination else None,
+            }
+        )
+
+    # Patch the module's rollback_manager.record_operation
+    import the_aichemist_codex.backend.rollback.rollback_manager
+
     monkeypatch.setattr(
-        DirectoryManager, "rollback_manager", RollbackManager(rollback_log=rollback_log)
+        the_aichemist_codex.backend.rollback.rollback_manager.RollbackManager,
+        "record_operation",
+        spy_record_operation,
     )
-    return test_dir, rollback_log, temp_dir
+
+    # Return the test dir, log, temp dir, and recorded operations for verification
+    return test_dir, rollback_log, temp_dir, recorded_operations
 
 
 @pytest.mark.file_operations
 @pytest.mark.unit
-def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path]) -> None:
-    test_dir, rollback_log, _ = dir_manager_setup
+def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
+    test_dir, _, _, recorded_operations = dir_manager_setup
+    # Create a DirectoryManager instance
+    dir_manager = DirectoryManager()
     # Initially, the directory should not exist.
     assert not test_dir.exists()  # noqa: S101
     # Create the directory asynchronously.
-    asyncio.run(DirectoryManager.ensure_directory(test_dir))
+    asyncio.run(dir_manager.ensure_directory(test_dir))
     # Now the directory should exist.
     assert test_dir.exists()  # noqa: S101
-    # Verify that a "create" rollback operation was recorded.
-    data = json.loads(rollback_log.read_text(encoding="utf-8"))
-    assert any(op.get("operation") == "create" for op in data)  # noqa: S101
+    # Verify that a rollback operation was recorded with the correct source path
+    assert len(recorded_operations) > 0  # noqa: S101
+    assert any(
+        op["operation"] == "create" and op["source"] == str(test_dir)
+        for op in recorded_operations
+    )  # noqa: S101
 
 
 @pytest.mark.file_operations
 @pytest.mark.unit
-def test_cleanup_empty_dirs(dir_manager_setup: tuple[Path, Path, Path]) -> None:
-    _, _, temp_dir = dir_manager_setup
+def test_cleanup_empty_dirs(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
+    _, _, temp_dir, recorded_operations = dir_manager_setup
     empty_dir = Path(temp_dir) / "empty"
     empty_dir.mkdir()
     assert empty_dir.exists()  # noqa: S101
+    # Create DirectoryManager instance
+    dir_manager = DirectoryManager()
     # Run cleanup to remove empty directories asynchronously.
-    asyncio.run(DirectoryManager.cleanup_empty_dirs(Path(temp_dir)))
+    asyncio.run(dir_manager.cleanup_empty_dirs(Path(temp_dir)))
     # The empty directory should be removed.
     assert not empty_dir.exists()  # noqa: S101
+    # Verify that a delete operation was recorded
+    assert len(recorded_operations) > 0  # noqa: S101
+    assert any(
+        op["operation"] == "delete" and op["source"] == str(empty_dir)
+        for op in recorded_operations
+    )  # noqa: S101

@@ -8,13 +8,13 @@ file change history in a SQLite database.
 import asyncio
 import json
 import logging
+import os
 import sqlite3
 import time
 from datetime import datetime
 from pathlib import Path
 
 from the_aichemist_codex.backend.config.config_loader import config
-from the_aichemist_codex.backend.config.settings import DATA_DIR
 from the_aichemist_codex.backend.file_manager.change_detector import (
     ChangeInfo,
     ChangeSeverity,
@@ -23,8 +23,21 @@ from the_aichemist_codex.backend.file_manager.change_detector import (
 
 logger = logging.getLogger(__name__)
 
-# Default location for the change history database
-CHANGE_HISTORY_DB = DATA_DIR / "change_history.db"
+
+# Create a function to determine the data directory dynamically
+def get_data_dir() -> Path:
+    """Get the data directory path dynamically to avoid circular imports."""
+    # Use environment variable if available
+    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
+    if env_data_dir:
+        return Path(env_data_dir)
+
+    # Fallback to a default location relative to this file
+    return Path(__file__).resolve().parents[3] / "data"
+
+
+# Initialize the change history database path based on the data directory
+CHANGE_HISTORY_DB = get_data_dir() / "change_history.db"
 
 
 class ChangeHistoryManager:

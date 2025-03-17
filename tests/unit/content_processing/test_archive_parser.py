@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.file_reader.parsers import ArchiveParser
+from the_aichemist_codex.backend.file_reader.parsers import ArchiveParser
 
 
 @pytest.fixture

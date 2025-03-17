@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.output_formatter.csv_writer import save_as_csv
+from the_aichemist_codex.backend.output_formatter.csv_writer import save_as_csv
 
 
 @pytest.mark.asyncio

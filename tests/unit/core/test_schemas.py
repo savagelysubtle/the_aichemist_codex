@@ -2,7 +2,7 @@
 import pytest
 from jsonschema import ValidationError, validate
 
-from backend.src.config.schemas import code_summary_schema, file_tree_schema
+from the_aichemist_codex.backend.config.schemas import code_summary_schema, file_tree_schema
 
 
 @pytest.mark.core

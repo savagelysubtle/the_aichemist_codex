@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.src.search.search_engine import SearchEngine
+from the_aichemist_codex.backend.search.search_engine import SearchEngine
 
 
 @pytest.fixture

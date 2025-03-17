@@ -290,7 +290,9 @@ class DirectoryMonitor:
             dir_config: Configuration for the directory
         """
         # Import here to avoid circular import
-        from the_aichemist_codex.backend.file_manager.file_watcher import FileEventHandler
+        from the_aichemist_codex.backend.file_manager.file_watcher import (
+            FileEventHandler,
+        )
 
         if dir_path in self.observers and self.observers[dir_path].is_alive():
             logger.warning(f"Directory already being monitored: {dir_path}")

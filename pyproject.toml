@@ -149,7 +149,14 @@ pythonpath = ["src"]
 tmp_path_retention_count = 2
 tmp_path_retention_policy = "failed"
 addopts = "--basetemp=./tmp"
-markers = ["asyncio: mark a test as an asyncio test"]
+markers = [
+    "asyncio: mark a test as an asyncio test",
+    "metadata: mark a test relating to metadata extraction",
+    "unit: mark a test as a unit test",
+    "file_operations: mark a test relating to file operations",
+    "tagging: mark a test relating to tagging",
+    "search: mark a test relating to search functionality"
+]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 

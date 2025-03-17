@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.utils.sqlasync_io import AsyncSQL
+from the_aichemist_codex.backend.utils.sqlasync_io import AsyncSQL
 
 
 @pytest.mark.asyncio
