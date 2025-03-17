@@ -8,6 +8,7 @@ from the_aichemist_codex.backend.project_reader.notebooks import NotebookConvert
 
 @pytest.mark.content_processing
 @pytest.mark.unit
+
 def test_notebook_conversion(tmp_path: Path) -> None:
     """Test extracting Python code from a Jupyter Notebook."""
     notebook_path = tmp_path / "test_notebook.ipynb"

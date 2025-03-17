@@ -494,5 +494,85 @@
         "destination": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sorted\\sort_me.txt",
         "backup": null,
         "metadata": null
+    },
+    {
+        "timestamp": 1742202888.410861,
+        "operation": 1,
+        "source": "C:\\Users\\Steve\\AppData\\Local\\Temp\\tmpko9q3q_o\\new_directory",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742202888.762944,
+        "operation": 1,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\dest",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742202888.778398,
+        "operation": 4,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\source.txt",
+        "destination": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\dest\\source.txt",
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742202889.139266,
+        "operation": 1,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sorted",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742202889.157271,
+        "operation": 4,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sort_me.txt",
+        "destination": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sorted\\sort_me.txt",
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742205832.001305,
+        "operation": 1,
+        "source": "C:\\Users\\Steve\\AppData\\Local\\Temp\\tmpq7c8um88\\new_directory",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742205832.465397,
+        "operation": 1,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\dest",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742205832.483352,
+        "operation": 4,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\source.txt",
+        "destination": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\mover0\\dest\\source.txt",
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742205832.966834,
+        "operation": 1,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sorted",
+        "destination": null,
+        "backup": null,
+        "metadata": null
+    },
+    {
+        "timestamp": 1742205832.982795,
+        "operation": 4,
+        "source": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sort_me.txt",
+        "destination": "D:\\Coding\\Python_Projects\\the_aichemist_codex\\tmp\\sorter0\\sorted\\sort_me.txt",
+        "backup": null,
+        "metadata": null
     }
 ]

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.main import select_directory
+from the_aichemist_codex.backend.main import select_directory
 
 
 # Fake implementations for GUI functions to bypass actual dialogs.
@@ -27,8 +27,8 @@ def patch_tkinter(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tkinter.messagebox, "showerror", fake_messagebox_info)
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.core
 def test_select_directory() -> None:
     # Verify that select_directory returns a valid Path object.
     result = select_directory("Test prompt")

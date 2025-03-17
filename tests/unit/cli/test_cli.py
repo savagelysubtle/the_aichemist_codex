@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from backend.cli import main, validate_directory
+from the_aichemist_codex.backend.cli import main, validate_directory
 
 
-@pytest.mark.cli
 @pytest.mark.unit
+@pytest.mark.cli
 def test_validate_directory(tmp_path: Path) -> None:
     # Create a temporary directory and ensure it validates correctly.
     d = tmp_path / "test_dir"
@@ -18,16 +18,16 @@ def test_validate_directory(tmp_path: Path) -> None:
     assert result == d.resolve()  # noqa: S101
 
 
-@pytest.mark.cli
 @pytest.mark.unit
+@pytest.mark.cli
 def test_validate_directory_failure(tmp_path: Path) -> None:
     # Ensure that a non-existent directory raises an argparse error.
     with pytest.raises(ArgumentTypeError):
         validate_directory(str(tmp_path / "nonexistent"))
 
 
-@pytest.mark.cli
 @pytest.mark.unit
+@pytest.mark.cli
 def test_cli_read_command(
     tmp_path: Path, monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]
 ) -> None:
@@ -48,10 +48,8 @@ def test_cli_read_command(
     assert "This is a test file." in captured  # noqa: S101
 
 
-@pytest.mark.cli
 @pytest.mark.unit
 @pytest.mark.cli
-@pytest.mark.unit
 def test_cli_tree_command(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     # Create a temporary directory with a file for tree generation.
     d = tmp_path / "test_tree"
@@ -74,3 +72,29 @@ def test_cli_tree_command(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
 
 
 # Additional tests for other commands can be added similarly.
+
+
+@pytest.mark.unit
+@pytest.mark.cli
+def test_main_help(capsys: CaptureFixture[str]) -> None:
+    # Test that help message is displayed
+    with pytest.raises(SystemExit):
+        monkeypatch = MonkeyPatch()
+        monkeypatch.setattr(sys, "argv", ["cli.py", "--help"])
+        main()
+
+    captured = capsys.readouterr()
+    assert "usage:" in captured.out
+
+
+@pytest.mark.unit
+@pytest.mark.cli
+def test_main_version(capsys: CaptureFixture[str]) -> None:
+    # Test that version is displayed
+    with pytest.raises(SystemExit):
+        monkeypatch = MonkeyPatch()
+        monkeypatch.setattr(sys, "argv", ["cli.py", "--version"])
+        main()
+
+    captured = capsys.readouterr()
+    assert "version" in captured.out

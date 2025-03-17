@@ -14,9 +14,10 @@ import pytest
 # For this example, we'll use mock objects
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.metadata
+@pytest.mark.metadata
+
 def test_metadata_extraction_basic() -> None:
     """Test basic metadata extraction functionality."""
     # Setup - create a mock file path and expected metadata
@@ -40,9 +41,10 @@ def test_metadata_extraction_basic() -> None:
     mock_extractor.extract.assert_called_once_with(file_path)
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.metadata
+@pytest.mark.metadata
+
 def test_metadata_extraction_empty_file() -> None:
     """Test metadata extraction with an empty file."""
     # Setup - create a mock file path
@@ -60,9 +62,9 @@ def test_metadata_extraction_empty_file() -> None:
     mock_extractor.extract.assert_called_once_with(file_path)
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.metadata
+@pytest.mark.metadata
 @pytest.mark.parametrize(
     "file_extension,expected_extractor_type",
     [
@@ -99,9 +101,10 @@ def test_extractor_factory(file_extension: str, expected_extractor_type: str) ->
     mock_factory.get_extractor.assert_called_once_with(file_path)
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.metadata
+@pytest.mark.metadata
+
 def test_metadata_extraction_integration() -> None:
     """
     Integration test for metadata extraction.

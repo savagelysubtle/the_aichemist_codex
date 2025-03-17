@@ -213,7 +213,7 @@ class TestPDFMetadataExtractor:
             mock_instance.pages = [MagicMock(), MagicMock(), MagicMock()]
 
             # Call the method
-            metadata = pdf_extractor._extract_pdf_with_pypdf("dummy_path")
+            metadata = pdf_extractor._extract_pdf_with_pypdf("dummy_path")  # type: ignore[attr-defined]
 
             # Verify metadata extraction
             assert metadata["title"] == "Test PDF"
@@ -270,7 +270,7 @@ class TestPDFMetadataExtractor:
             # Test extraction
             extractor = PDFMetadataExtractor()
             fake_pdf_path = "/path/to/test.pdf"
-            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)
+            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
             # Verify results
             assert metadata is not None
@@ -294,7 +294,7 @@ class TestPDFMetadataExtractor:
         fake_pdf_path = "/path/to/test.pdf"
 
         with pytest.raises(Exception):
-            extractor._extract_pdf_with_pypdf(fake_pdf_path)
+            extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
     @pytest.mark.skipif(not PYPDF_AVAILABLE, reason="pypdf not available")
     @patch(
@@ -310,7 +310,7 @@ class TestPDFMetadataExtractor:
         fake_pdf_path = "/path/to/test.pdf"
 
         with pytest.raises(ImportError):
-            extractor._extract_pdf_with_pypdf(fake_pdf_path)
+            extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
     @pytest.mark.skipif(not PYPDF_AVAILABLE, reason="pypdf not available")
     @patch(
@@ -347,7 +347,7 @@ class TestPDFMetadataExtractor:
             patch("os.path.exists", return_value=True),
             patch("os.path.getsize", return_value=98765),
         ):
-            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)
+            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
         assert metadata is not None
         assert metadata["title"] == "Cached PDF"

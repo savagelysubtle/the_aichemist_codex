@@ -45,3 +45,21 @@ async def test_ocr_parser(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     result = await parser.parse(dummy_image_path)
     assert "content" in result  # noqa: S101
     assert result["content"] == "Test OCR text"  # noqa: S101
+
+
+@pytest.mark.content_processing
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_ocr_parser_image(sample_image: Path) -> None:
+    """Test OCR parser with a sample image."""
+    # Skip this test if sample_image is not provided
+    if not sample_image or not sample_image.exists():
+        pytest.skip("Sample image not available")
+
+    parser = OCRParser()
+    result = await parser.parse(sample_image)
+
+    # We can't assert exact content since OCR results may vary
+    # but we can check that we got a result with content
+    assert "content" in result  # noqa: S101
+    assert isinstance(result["content"], str)  # noqa: S101

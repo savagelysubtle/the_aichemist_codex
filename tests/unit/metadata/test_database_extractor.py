@@ -278,9 +278,8 @@ def mock_cache_manager() -> Any:  # Use Any to avoid type compatibility issues
 
 
 # Actual tests
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_sqlite_metadata_extraction(sample_sqlite_db: Path) -> None:
     """Test extraction of metadata from SQLite database"""
     extractor = DatabaseMetadataExtractor()
@@ -320,9 +319,8 @@ async def test_sqlite_metadata_extraction(sample_sqlite_db: Path) -> None:
     assert "1 views" in metadata["summary"]
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_sql_dump_metadata_extraction(sample_sql_dump: Path) -> None:
     """Test extraction of metadata from SQL dump file"""
     extractor = DatabaseMetadataExtractor()
@@ -348,9 +346,8 @@ async def test_sql_dump_metadata_extraction(sample_sql_dump: Path) -> None:
     assert "2 table definitions" in metadata["summary"]
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_mysql_dump_metadata_extraction(sample_mysql_dump: Path) -> None:
     """Test extraction of metadata from MySQL dump file"""
     extractor = DatabaseMetadataExtractor()
@@ -380,9 +377,8 @@ async def test_mysql_dump_metadata_extraction(sample_mysql_dump: Path) -> None:
     assert "test_db" in metadata["summary"]  # noqa: S101
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_nonexistent_file() -> None:
     """Test handling of nonexistent files"""
     extractor = DatabaseMetadataExtractor()
@@ -392,9 +388,8 @@ async def test_nonexistent_file() -> None:
     assert metadata == {}
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_unsupported_file_format() -> None:
     """Test handling of unsupported file formats"""
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
@@ -411,9 +406,8 @@ async def test_unsupported_file_format() -> None:
         os.unlink(path)
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_sqlite_corrupt_database() -> None:
     """Test handling of corrupt SQLite databases"""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
@@ -438,9 +432,8 @@ async def test_sqlite_corrupt_database() -> None:
             )
 
 
-@pytest.mark.asyncio
-@pytest.mark.metadata
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_caching_functionality(
     sample_sqlite_db: Path, mock_cache_manager: MockCacheManager
 ) -> None:

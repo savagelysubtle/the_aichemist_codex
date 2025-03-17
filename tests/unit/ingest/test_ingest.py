@@ -6,9 +6,10 @@ import pytest
 from the_aichemist_codex.backend.ingest import generate_digest
 
 
-@pytest.mark.asyncio
 @pytest.mark.ingest
-@pytest.mark.unit
+@pytest.mark.ingest
+@pytest.mark.ingest
+
 def test_generate_digest_with_empty_dir(tmp_path: Path) -> None:
     # Create a temporary directory (this is automatically provided by
     # pytest's tmp_path fixture)

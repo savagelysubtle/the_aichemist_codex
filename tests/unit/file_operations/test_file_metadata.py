@@ -7,7 +7,8 @@ from the_aichemist_codex.backend.file_reader.file_metadata import FileMetadata
 
 
 @pytest.mark.file_operations
-@pytest.mark.unit
+@pytest.mark.metadata
+
 def test_file_metadata_instantiation() -> None:
     meta = FileMetadata(
         path=Path("test.txt"),

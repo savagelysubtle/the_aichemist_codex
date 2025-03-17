@@ -22,9 +22,9 @@ def sample_zip(tmp_path: Path) -> Path:
     return zip_path
 
 
-@pytest.mark.asyncio
 @pytest.mark.content_processing
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_archive_parser_zip(sample_zip: Path) -> None:
     """Test ArchiveParser on a ZIP archive."""
     parser = ArchiveParser()
@@ -36,9 +36,9 @@ async def test_archive_parser_zip(sample_zip: Path) -> None:
     assert result["count"] == 2  # noqa: S101
 
 
-@pytest.mark.asyncio
 @pytest.mark.content_processing
 @pytest.mark.unit
+@pytest.mark.asyncio
 async def test_archive_parser_unsupported(tmp_path: Path) -> None:
     """Test ArchiveParser raises ValueError for an unsupported format."""
     dummy_file = tmp_path / "dummy.rar"

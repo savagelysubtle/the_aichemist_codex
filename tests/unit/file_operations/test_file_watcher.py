@@ -145,7 +145,7 @@ async def test_file_watcher_debounce(monkeypatch: MonkeyPatch, tmp_path: Path) -
             if event.is_directory:
                 return
 
-            file_path = Path(event.src_path).resolve()
+            file_path = Path(str(event.src_path)).resolve()
 
             # Create a destination path in the "organized" directory
             dest_dir = self.base_directory / "organized"
@@ -251,7 +251,7 @@ async def test_file_watcher_multiple_events(
             if event.is_directory:
                 return
 
-            file_path = Path(event.src_path).resolve()
+            file_path = Path(str(event.src_path)).resolve()
 
             # If file still exists, move it
             if file_path.exists():

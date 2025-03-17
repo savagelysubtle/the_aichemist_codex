@@ -51,6 +51,7 @@ def dir_manager_setup(
 
 @pytest.mark.file_operations
 @pytest.mark.unit
+
 def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
     test_dir, _, _, recorded_operations = dir_manager_setup
     # Create a DirectoryManager instance
@@ -71,6 +72,7 @@ def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path, list]) -> N
 
 @pytest.mark.file_operations
 @pytest.mark.unit
+
 def test_cleanup_empty_dirs(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
     _, _, temp_dir, recorded_operations = dir_manager_setup
     empty_dir = Path(temp_dir) / "empty"

@@ -7,8 +7,9 @@ from pytest import MonkeyPatch
 from the_aichemist_codex.backend.config.config_loader import CodexConfig
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_default_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     # Create a temporary config directory with an empty config file.
     temp_config_dir = tmp_path / "config"

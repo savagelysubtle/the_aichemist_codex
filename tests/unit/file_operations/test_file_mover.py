@@ -54,6 +54,7 @@ def file_mover_setup(
 
 @pytest.mark.file_operations
 @pytest.mark.unit
+
 def test_move_file(file_mover_setup: tuple[FileMover, Path, Path, list, Path]) -> None:
     mover, test_file, destination_file, recorded_operations, _ = file_mover_setup
     # Use the static move_file method (which is what our code is using now)

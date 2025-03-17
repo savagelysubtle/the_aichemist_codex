@@ -6,9 +6,10 @@ import pytest
 from the_aichemist_codex.backend.ingest.reader import convert_notebook, read_full_file
 
 
-@pytest.mark.asyncio
 @pytest.mark.ingest
-@pytest.mark.unit
+@pytest.mark.ingest
+@pytest.mark.ingest
+
 def test_read_full_file(tmp_path: Path) -> None:
     # Create a sample text file.
     sample_file = tmp_path / "sample.txt"
@@ -19,9 +20,10 @@ def test_read_full_file(tmp_path: Path) -> None:
     assert sample_text in content  # noqa: S101
 
 
-@pytest.mark.asyncio
 @pytest.mark.ingest
-@pytest.mark.unit
+@pytest.mark.ingest
+@pytest.mark.ingest
+
 def test_read_full_file_fallback_encoding(tmp_path: Path) -> None:
     # Create a file encoded in latin-1.
     sample_file = tmp_path / "sample.txt"
@@ -32,9 +34,10 @@ def test_read_full_file_fallback_encoding(tmp_path: Path) -> None:
     assert sample_text in content  # noqa: S101
 
 
-@pytest.mark.asyncio
 @pytest.mark.ingest
-@pytest.mark.unit
+@pytest.mark.ingest
+@pytest.mark.ingest
+
 def test_convert_notebook(tmp_path: Path) -> None:
     # Create a dummy notebook JSON file.
     notebook_file = tmp_path / "notebook.ipynb"

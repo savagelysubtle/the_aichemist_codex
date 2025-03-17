@@ -26,8 +26,9 @@ def secure_config(temp_config_dir: Path) -> SecureConfigManager:
     return SecureConfigManager(config_file)
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_init_creates_new_key(
     temp_config_dir: Path, secure_config: SecureConfigManager
 ) -> None:
@@ -39,24 +40,27 @@ def test_init_creates_new_key(
         assert os.stat(key_file).st_mode & 0o777 == 0o600  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_get_nonexistent_key(secure_config: SecureConfigManager) -> None:
     """Test getting a nonexistent key returns the default value."""
     assert secure_config.get("nonexistent") is None  # noqa: S101
     assert secure_config.get("nonexistent", "default") == "default"  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_set_and_get(secure_config: SecureConfigManager) -> None:
     """Test setting and getting a configuration value."""
     secure_config.set("test_key", "test_value")
     assert secure_config.get("test_key") == "test_value"  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_set_and_get_complex_value(secure_config: SecureConfigManager) -> None:
     """Test setting and getting a complex configuration value."""
     complex_value = {"nested": {"key": "value", "list": [1, 2, 3], "bool": True}}
@@ -64,8 +68,9 @@ def test_set_and_get_complex_value(secure_config: SecureConfigManager) -> None:
     assert secure_config.get("complex") == complex_value  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_delete_existing_key(secure_config: SecureConfigManager) -> None:
     """Test deleting an existing configuration key."""
     secure_config.set("test_key", "test_value")
@@ -73,15 +78,17 @@ def test_delete_existing_key(secure_config: SecureConfigManager) -> None:
     assert secure_config.get("test_key") is None  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_delete_nonexistent_key(secure_config: SecureConfigManager) -> None:
     """Test deleting a nonexistent configuration key."""
     assert secure_config.delete("nonexistent") is False  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_get_all(secure_config: SecureConfigManager) -> None:
     """Test getting all configuration values."""
     test_config = {"key1": "value1", "key2": "value2"}
@@ -91,8 +98,9 @@ def test_get_all(secure_config: SecureConfigManager) -> None:
     assert secure_config.get_all() == test_config  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_clear(secure_config: SecureConfigManager) -> None:
     """Test clearing all configuration values."""
     secure_config.set("test_key", "test_value")
@@ -100,8 +108,9 @@ def test_clear(secure_config: SecureConfigManager) -> None:
     assert secure_config.get_all() == {}  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_persistence(temp_config_dir: Path) -> None:
     """Test that configuration persists between instances."""
     config_file = temp_config_dir / "secure_config.enc"
@@ -115,8 +124,9 @@ def test_persistence(temp_config_dir: Path) -> None:
     assert config2.get("test_key") == "test_value"  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_key_rotation(secure_config: SecureConfigManager) -> None:
     """Test key rotation functionality."""
     # Set initial value
@@ -136,8 +146,9 @@ def test_key_rotation(secure_config: SecureConfigManager) -> None:
         assert os.stat(key_file).st_mode & 0o777 == 0o600  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_environment_key(temp_config_dir: Path) -> None:
     """Test using encryption key from environment."""
     # Generate a valid Fernet key
@@ -154,8 +165,9 @@ def test_environment_key(temp_config_dir: Path) -> None:
         assert config.get("test_key") == "test_value"  # noqa: S101
 
 
-@pytest.mark.core
 @pytest.mark.unit
+@pytest.mark.unit
+
 def test_invalid_config_file(secure_config: SecureConfigManager) -> None:
     """Test handling of invalid configuration file."""
     # Write invalid data to config file
