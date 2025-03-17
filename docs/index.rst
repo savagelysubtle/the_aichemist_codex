@@ -53,6 +53,8 @@ Contents
    :maxdepth: 1
    :caption: Development
 
+   development
+   environment
    contributing
    code_style
    roadmap
