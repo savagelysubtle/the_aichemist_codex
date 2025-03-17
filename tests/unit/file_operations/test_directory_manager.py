@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -19,15 +20,17 @@ def temp_dir() -> Generator[Path]:
 @pytest.fixture
 def dir_manager_setup(
     temp_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, Path, Path, list]:
+) -> tuple[Path, Path, Path, list[dict[str, str | None]]]:
     test_dir = Path(temp_dir) / "new_dir"
     rollback_log = Path(temp_dir) / "rollback.json"
     rollback_log.write_text("[]", encoding="utf-8")
 
     # Create a spy function to track calls
-    recorded_operations = []
+    recorded_operations: list[dict[str, str | None]] = []
 
-    async def spy_record_operation(self, operation, source, destination=None):
+    async def spy_record_operation(
+        self: Any, operation: str, source: Path, destination: Path | None = None
+    ) -> None:
         recorded_operations.append(
             {
                 "operation": operation,
@@ -51,8 +54,9 @@ def dir_manager_setup(
 
 @pytest.mark.file_operations
 @pytest.mark.unit
-
-def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
+def test_ensure_directory(
+    dir_manager_setup: tuple[Path, Path, Path, list[dict[str, str | None]]],
+) -> None:
     test_dir, _, _, recorded_operations = dir_manager_setup
     # Create a DirectoryManager instance
     dir_manager = DirectoryManager()
@@ -72,8 +76,9 @@ def test_ensure_directory(dir_manager_setup: tuple[Path, Path, Path, list]) -> N
 
 @pytest.mark.file_operations
 @pytest.mark.unit
-
-def test_cleanup_empty_dirs(dir_manager_setup: tuple[Path, Path, Path, list]) -> None:
+def test_cleanup_empty_dirs(
+    dir_manager_setup: tuple[Path, Path, Path, list[dict[str, str | None]]],
+) -> None:
     _, _, temp_dir, recorded_operations = dir_manager_setup
     empty_dir = Path(temp_dir) / "empty"
     empty_dir.mkdir()

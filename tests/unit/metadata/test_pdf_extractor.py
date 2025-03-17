@@ -4,6 +4,7 @@ This module contains unit tests for the PDFMetadataExtractor class.
 """
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +16,7 @@ from the_aichemist_codex.backend.metadata.pdf_extractor import (
 
 
 @pytest.fixture
-def pdf_extractor():
+def pdf_extractor() -> PDFMetadataExtractor:
     """Fixture for creating a PDF extractor instance."""
     return PDFMetadataExtractor()
 
@@ -87,7 +88,7 @@ class TestPDFMetadataExtractor:
         pdf_extractor.cache_manager = cache_manager
 
         # Mock cache hit
-        cached_data = {"metadata_type": "pdf", "cached": True}
+        cached_data: dict[str, Any] = {"metadata_type": "pdf", "cached": True}
         cache_manager.get.return_value = cached_data
 
         # Test extraction with cache hit
@@ -190,8 +191,8 @@ class TestPDFMetadataExtractor:
             patch(
                 "the_aichemist_codex.backend.metadata.pdf_extractor.PdfReader"
             ) as mock_reader,
-            patch("os.path.getsize", return_value=12345) as mock_getsize,
-            patch("os.path.exists", return_value=True) as mock_exists,
+            patch("os.path.getsize", return_value=12345),
+            patch("os.path.exists", return_value=True),
         ):
             # Set up the mock reader
             mock_instance = MagicMock()
@@ -213,7 +214,9 @@ class TestPDFMetadataExtractor:
             mock_instance.pages = [MagicMock(), MagicMock(), MagicMock()]
 
             # Call the method
-            metadata = pdf_extractor._extract_pdf_with_pypdf("dummy_path")  # type: ignore[attr-defined]
+            metadata: dict[str, Any] = pdf_extractor._extract_pdf_with_pypdf(  # type: ignore[attr-defined]
+                "dummy_path"
+            )
 
             # Verify metadata extraction
             assert metadata["title"] == "Test PDF"
@@ -224,7 +227,7 @@ class TestPDFMetadataExtractor:
         "the_aichemist_codex.backend.utils.mime_type_detector.MimeTypeDetector.get_mime_type",
         return_value=("application/pdf", 1.0),
     )
-    def test_constructor(self, mock_get_mime):
+    def test_constructor(self, mock_get_mime: MagicMock) -> None:
         """Test PDF extractor initialization."""
         extractor = PDFMetadataExtractor()
         assert extractor is not None
@@ -236,7 +239,9 @@ class TestPDFMetadataExtractor:
         return_value=("application/pdf", 1.0),
     )
     @patch("the_aichemist_codex.backend.metadata.pdf_extractor.PdfReader")
-    def test_extract_basic_pdf_metadata(self, mock_pdf_reader, mock_get_mime):
+    def test_extract_basic_pdf_metadata(
+        self, mock_pdf_reader: MagicMock, mock_get_mime: MagicMock
+    ) -> None:
         """Test basic metadata extraction from PDF using PyPDF2."""
         # Setup mocks
         mock_get_mime.return_value = ("application/pdf", 1.0)
@@ -270,7 +275,7 @@ class TestPDFMetadataExtractor:
             # Test extraction
             extractor = PDFMetadataExtractor()
             fake_pdf_path = "/path/to/test.pdf"
-            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
+            metadata: dict[str, Any] = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
             # Verify results
             assert metadata is not None
@@ -285,15 +290,17 @@ class TestPDFMetadataExtractor:
         return_value=("application/pdf", 1.0),
     )
     @patch("the_aichemist_codex.backend.metadata.pdf_extractor.PdfReader")
-    def test_extract_pdf_with_error(self, mock_pdf_reader, mock_get_mime):
+    def test_extract_pdf_with_error(
+        self, mock_pdf_reader: MagicMock, mock_get_mime: MagicMock
+    ) -> None:
         """Test handling of errors during PDF extraction."""
         mock_get_mime.return_value = ("application/pdf", 1.0)
-        mock_pdf_reader.side_effect = Exception("Failed to read PDF")
+        mock_pdf_reader.side_effect = ValueError("Failed to read PDF")
 
         extractor = PDFMetadataExtractor()
         fake_pdf_path = "/path/to/test.pdf"
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
     @pytest.mark.skipif(not PYPDF_AVAILABLE, reason="pypdf not available")
@@ -302,7 +309,7 @@ class TestPDFMetadataExtractor:
         return_value=("application/pdf", 1.0),
     )
     @patch("the_aichemist_codex.backend.metadata.pdf_extractor.PYPDF_AVAILABLE", False)
-    def test_extract_without_pypdf_direct(self, mock_get_mime):
+    def test_extract_without_pypdf_direct(self, mock_get_mime: MagicMock) -> None:
         """Test behavior when PyPDF2 is not available using direct method call."""
         mock_get_mime.return_value = ("application/pdf", 1.0)
 
@@ -320,8 +327,11 @@ class TestPDFMetadataExtractor:
     @patch("the_aichemist_codex.backend.metadata.pdf_extractor.PdfReader")
     @patch("the_aichemist_codex.backend.utils.cache_manager.CacheManager")
     def test_extract_with_cache_direct(
-        self, mock_cache_manager, mock_pdf_reader, mock_get_mime
-    ):
+        self,
+        mock_cache_manager: MagicMock,
+        mock_pdf_reader: MagicMock,
+        mock_get_mime: MagicMock,
+    ) -> None:
         """Test extraction with cache functionality using direct method call."""
         # Setup mocks
         mock_get_mime.return_value = ("application/pdf", 1.0)
@@ -347,7 +357,7 @@ class TestPDFMetadataExtractor:
             patch("os.path.exists", return_value=True),
             patch("os.path.getsize", return_value=98765),
         ):
-            metadata = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
+            metadata: dict[str, Any] = extractor._extract_pdf_with_pypdf(fake_pdf_path)  # type: ignore[attr-defined]
 
         assert metadata is not None
         assert metadata["title"] == "Cached PDF"

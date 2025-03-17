@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pytest import MonkeyPatch
@@ -13,7 +14,7 @@ from the_aichemist_codex.backend.file_manager.file_mover import FileMover
 @pytest.fixture
 def file_mover_setup(
     monkeypatch: MonkeyPatch,
-) -> Generator[tuple[FileMover, Path, Path, list, Path]]:
+) -> Generator[tuple[FileMover, Path, Path, list[dict[str, str | None]], Path]]:
     temp_dir = tempfile.mkdtemp()
     base_dir = Path(temp_dir)
     test_file = base_dir / "test.txt"
@@ -21,9 +22,11 @@ def file_mover_setup(
     destination_file = base_dir / "dest" / "test.txt"
 
     # Create a spy function to track calls
-    recorded_operations = []
+    recorded_operations: list[dict[str, str | None]] = []
 
-    async def spy_record_operation(self, operation, source, destination=None):
+    async def spy_record_operation(
+        self: Any, operation: str, source: Path, destination: Path | None = None
+    ) -> None:
         recorded_operations.append(
             {
                 "operation": operation,
@@ -54,8 +57,9 @@ def file_mover_setup(
 
 @pytest.mark.file_operations
 @pytest.mark.unit
-
-def test_move_file(file_mover_setup: tuple[FileMover, Path, Path, list, Path]) -> None:
+def test_move_file(
+    file_mover_setup: tuple[FileMover, Path, Path, list[dict[str, str | None]], Path],
+) -> None:
     mover, test_file, destination_file, recorded_operations, _ = file_mover_setup
     # Use the static move_file method (which is what our code is using now)
     asyncio.run(FileMover.move_file(test_file, destination_file))

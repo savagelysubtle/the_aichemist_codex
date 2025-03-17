@@ -4,10 +4,11 @@ import os
 import shutil
 import sqlite3
 import tempfile
-from collections.abc import AsyncIterator, Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 
 from the_aichemist_codex.backend.tagging.hierarchy import TagHierarchy
 from the_aichemist_codex.backend.tagging.manager import TagManager
@@ -101,8 +102,8 @@ class TestTagManager:
         if db_path.exists():
             os.unlink(db_path)
 
-    @pytest.fixture
-    async def tag_manager(self, db_path: Path) -> AsyncIterator[TagManager]:
+    @pytest_asyncio.fixture
+    async def tag_manager(self, db_path: Path) -> AsyncGenerator[TagManager]:
         """Create a TagManager instance."""
         manager = TagManager(db_path)
         await manager.initialize()
@@ -565,7 +566,6 @@ class TestTagHierarchy:
         assert [tag["name"] for tag in path] == ["root", "parent2"]  # noqa: S101
 
     @pytest.mark.tagging
-    @pytest.mark.asyncio
     @pytest.mark.unit
     def test_export_taxonomy(self, hierarchy: TagHierarchy) -> None:
         """Test exporting the tag hierarchy as a nested dictionary."""

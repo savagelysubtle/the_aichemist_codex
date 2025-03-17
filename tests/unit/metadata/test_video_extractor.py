@@ -14,14 +14,14 @@ from the_aichemist_codex.backend.metadata.video_extractor import VideoMetadataEx
 
 
 @pytest.fixture
-def video_extractor():
+def video_extractor() -> VideoMetadataExtractor:
     """Create a video metadata extractor instance for testing."""
     return VideoMetadataExtractor()
 
 
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_supported_mime_types(video_extractor):
+def test_supported_mime_types(video_extractor: VideoMetadataExtractor) -> None:
     """Test the supported_mime_types property returns the correct MIME types."""
     mime_types = video_extractor.supported_mime_types
 
@@ -36,7 +36,7 @@ def test_supported_mime_types(video_extractor):
 @pytest.mark.metadata
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_extension_mapping(video_extractor):
+async def test_extension_mapping(video_extractor: VideoMetadataExtractor) -> None:
     """Test that file extension mapping contains expected entries."""
     # Access the extension mapping directly from the class
     mapping = VideoMetadataExtractor.EXTENSION_MAPPING
@@ -54,7 +54,9 @@ async def test_extension_mapping(video_extractor):
 @pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-async def test_extract_nonexistent_file(mock_mediainfo, video_extractor):
+async def test_extract_nonexistent_file(
+    mock_mediainfo: mock.MagicMock, video_extractor: VideoMetadataExtractor
+) -> None:
     """Test extraction of metadata from a nonexistent file."""
     # Mock the get_mime_type method to avoid detection attempt
     with mock.patch(
@@ -78,7 +80,9 @@ async def test_extract_nonexistent_file(mock_mediainfo, video_extractor):
 @pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-async def test_extract_unsupported_mime_type(mock_mediainfo, video_extractor):
+async def test_extract_unsupported_mime_type(
+    mock_mediainfo: mock.MagicMock, video_extractor: VideoMetadataExtractor
+) -> None:
     """Test extraction with an unsupported MIME type."""
     # Create a temporary file
     tmp_file = Path("test_file.txt")
@@ -107,7 +111,9 @@ async def test_extract_unsupported_mime_type(mock_mediainfo, video_extractor):
 @pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-async def test_cache_usage(mock_cache_manager, video_extractor):
+async def test_cache_usage(
+    mock_cache_manager: mock.MagicMock, video_extractor: VideoMetadataExtractor
+) -> None:
     """Test that the cache is properly used."""
     # Set up the cache mock
     mock_cache = mock.MagicMock()
@@ -153,7 +159,9 @@ async def test_cache_usage(mock_cache_manager, video_extractor):
 @pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-async def test_extract_no_available_methods(video_extractor):
+async def test_extract_no_available_methods(
+    video_extractor: VideoMetadataExtractor,
+) -> None:
     """Test extraction when no processing methods are available."""
     test_file = Path("test_video.mp4")
     test_file.write_text("Mock video content")
@@ -181,7 +189,9 @@ async def test_extract_no_available_methods(video_extractor):
 @pytest.mark.asyncio
 @pytest.mark.metadata
 @pytest.mark.unit
-async def test_extract_with_mediainfo(mock_parse, video_extractor):
+async def test_extract_with_mediainfo(
+    mock_parse: mock.MagicMock, video_extractor: VideoMetadataExtractor
+) -> None:
     """Test extraction using MediaInfo."""
     # Create the test file
     test_file = Path("test_video.mp4")
@@ -257,7 +267,7 @@ async def test_extract_with_mediainfo(mock_parse, video_extractor):
 
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_parse_bitrate():
+def test_parse_bitrate() -> None:
     """Test the _parse_bitrate helper method."""
     video_extractor = VideoMetadataExtractor()
 
@@ -279,7 +289,7 @@ def test_parse_bitrate():
 
 @pytest.mark.metadata
 @pytest.mark.unit
-def test_format_duration():
+def test_format_duration() -> None:
     """Test the _format_duration helper method."""
     video_extractor = VideoMetadataExtractor()
 

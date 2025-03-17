@@ -286,7 +286,7 @@ node_modules/
 **/CodingPython_Projectsthe_aichemist_codextmp/
 *_build/
 *_output/
-_MAIN_*.toc
+*.toc
 *.dump
 *.pyc
 *_autosave.kra

@@ -8,10 +8,10 @@
 - **Priority**: HIGHEST - Fundamental structural change that will affect all
   other work
 - **Tasks**:
-  - [ ] Create `src/the_aichemist_codex` directory structure
-  - [ ] Move backend modules into this structure
+  - [x] Create `src/the_aichemist_codex` directory structure
+  - [x] Move backend modules into this structure
   - [ ] Update imports to use absolute paths
-  - [ ] Configure `pyproject.toml` for src layout
+  - [x] Configure `pyproject.toml` for src layout
   - [ ] Fix broken tests and imports after migration
   - [ ] Create initial CI pipeline to validate the new structure
 
@@ -20,10 +20,11 @@
 - **Why**: Supports the src layout and establishes modern dependencies
 - **Priority**: HIGH - Direct complement to src layout migration
 - **Tasks**:
-  - [ ] Replace `requirements.txt` with `pyproject.toml`
-  - [ ] Set up Poetry or PDM for dependency management
-  - [ ] Define development vs. production dependencies
-  - [ ] Ensure reproducible builds with lockfiles
+  - [x] Configure `pyproject.toml` for package management
+  - [x] Set up UV for dependency management
+  - [x] Define development vs. production dependencies
+  - [x] Create configuration for managing file locking issues on Windows
+  - [ ] Implement comprehensive dependency documentation
 
 ### 3. Standardize Data Directory
 
@@ -31,10 +32,12 @@
   file tracking/versioning work
 - **Priority**: HIGH - Directly supports current Phase 2 focus areas
 - **Tasks**:
-  - [ ] Implement centralized data directory discovery in `settings.py`
-  - [ ] Update all file operations to use this central definition
-  - [ ] Add environment variable support for data directory override
-  - [ ] Document data directory structure and purpose
+  - [x] Implement centralized data directory discovery in `settings.py`
+  - [x] Create DirectoryManager for standardized directory access
+  - [x] Add environment variable support for data directory override
+  - [x] Establish standard subdirectories (cache, logs, exports, etc.)
+  - [x] Document data directory structure and purpose (in
+        `data_directory_config.md` and `data_management.rst`)
 
 ## Phase 2: Code Quality Improvements (Short-Term)
 
@@ -44,10 +47,12 @@
   system
 - **Priority**: HIGH - Critical for system stability in current development
 - **Tasks**:
-  - [ ] Run `fix_circular_imports.py` to identify problems
+  - [x] Create `fix_circular_imports.py` to identify problems
+  - [ ] Apply fixes identified by the tool
   - [ ] Move shared code to `common.py` modules
   - [ ] Implement dependency injection
   - [ ] Create proper interfaces/abstract base classes
+  - [x] Document solutions for circular imports in `code_maintenance.md`
 
 ### 2. Modularize Large Files
 
@@ -63,10 +68,11 @@
 - **Why**: Safer, more flexible configuration supports new features
 - **Priority**: MEDIUM - Needed for expanding format support and integrations
 - **Tasks**:
-  - [ ] Create typed configuration schemas
-  - [ ] Add validation for all configuration
-  - [ ] Support multiple configuration sources
-  - [ ] Add configuration documentation
+  - [x] Create typed configuration schemas
+  - [x] Add validation for all configuration
+  - [x] Support multiple configuration sources (env vars, files)
+  - [x] Document configuration in `configuration.rst`
+  - [ ] Update all modules to use the new configuration system
 
 ## Phase 3: Architecture Refinement (Medium-Term)
 
@@ -117,9 +123,12 @@
 - **Why**: Makes the codebase more accessible
 - **Priority**: MEDIUM-LOW - Can be improved incrementally
 - **Tasks**:
+  - [x] Create Sphinx documentation framework
+  - [x] Set up RST documentation structure
   - [ ] Add docstrings for all public methods
-  - [ ] Create architecture documentation
+  - [x] Document architecture in directory_structure.rst
   - [ ] Document service interfaces
+  - [x] Document data directory and configuration
   - [ ] Add usage examples
 
 ### 3. Prepare for AI Integration
@@ -136,20 +145,20 @@
 
 1. **Immediate Focus** (Next 2 Weeks):
 
-   - Standardize data directory
-   - Fix circular dependencies
+   - Complete absolute imports update
+   - Apply fixes identified by `fix_circular_imports.py`
    - Create service interfaces
 
 2. **Short-term** (1 Month):
 
-   - Adopt src layout
-   - Modernize packaging
+   - Finish remaining src layout tasks
+   - Update all modules to use the new configuration system
    - Modularize large files
 
 3. **Medium-term** (2-3 Months):
 
    - Add domain models
-   - Improve configuration
+   - Add docstrings for all public methods
    - Enhance testing
 
 4. **Long-term** (3+ Months):
