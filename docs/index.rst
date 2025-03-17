@@ -77,6 +77,7 @@ Contents
 
    development
    environment
+   directory_structure
    contributing
    code_style
    roadmap
