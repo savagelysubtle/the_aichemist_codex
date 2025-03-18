@@ -255,3 +255,11 @@ async def initialize_application_async(
         config_file=config_file,
         enable_logging=enable_logging,
     )
+
+
+# Initialize and register metadata extractors
+def _initialize_metadata_extractors():
+    """Initialize metadata extractors and register them with the metadata manager."""
+    logger.info("Initializing metadata extractors")
+    registry = Registry.get_instance()
+    metadata_manager = registry

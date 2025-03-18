@@ -295,4 +295,5 @@ class AudioExtractor(Extractor):
             except UnicodeDecodeError:
                 return str(value)
         else:
+            # Convert other types to string
             return str(value)

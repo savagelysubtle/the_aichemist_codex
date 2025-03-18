@@ -233,8 +233,8 @@ class Registry:
 
     @property
     def metadata_manager(self):
-        """Get the MetadataManager implementation."""
-        return self.get("metadata_manager")
+        """Get the metadata manager."""
+        return self._lazy_load("metadata_manager", None, self._create_metadata_manager)
 
     @property
     def search_engine(self) -> SearchEngine:
@@ -471,6 +471,11 @@ class Registry:
 
     def _create_output_formatter(self) -> OutputFormatter:
         from .domain.output_
+
+    def _create_metadata_manager(self):
+        """Create the metadata manager."""
+        from .domain.metadata import MetadataManager
+        return MetadataManager(self)
 
 
 # Decorator for lazy initialization of services
