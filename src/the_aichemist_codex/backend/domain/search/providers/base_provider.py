@@ -1,8 +1,8 @@
 """
-Base class for search providers.
+Base search provider implementation.
 
-This module contains the base implementation of a search provider
-that can be extended by specific provider types.
+This module provides a base implementation for search providers,
+with common utilities and helper methods for specific providers.
 """
 
 import logging
@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class BaseSearchProvider(SearchProvider, ABC):
-    """Base implementation for search providers."""
+    """
+    Base implementation of the SearchProvider interface.
+
+    This class provides common functionality for search providers,
+    including initialization and cleanup.
+    """
 
     def __init__(self):
         """Initialize the base search provider."""
@@ -27,8 +32,8 @@ class BaseSearchProvider(SearchProvider, ABC):
         """
         Initialize the search provider.
 
-        Raises:
-            SearchError: If initialization fails
+        This method prepares the provider for use by initializing
+        internal data structures.
         """
         if self._initialized:
             logger.debug(f"{self._provider_type} provider already initialized")
@@ -50,10 +55,9 @@ class BaseSearchProvider(SearchProvider, ABC):
 
     async def close(self) -> None:
         """
-        Close the search provider and free resources.
+        Close the search provider and release resources.
 
-        Raises:
-            SearchError: If closing fails
+        This method cleans up resources used by the provider.
         """
         if not self._initialized:
             logger.debug(f"{self._provider_type} provider not initialized")

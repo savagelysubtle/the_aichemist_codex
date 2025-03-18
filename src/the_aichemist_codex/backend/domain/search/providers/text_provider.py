@@ -1,334 +1,370 @@
 """
 Text search provider implementation.
 
-This module provides a basic text search capability using simple string matching
-techniques for searching through content.
+This module provides a simple text-based search provider using
+string matching techniques.
 """
 
 import logging
-from typing import Any
+import os
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
-from the_aichemist_codex.backend.core.models import FileMetadata, SearchResult
-from the_aichemist_codex.backend.domain.search.providers.base_provider import (
-    BaseSearchProvider,
-)
+from ....core.exceptions import SearchError
+from ....registry import Registry
+from ...search.utils.result_ranking import rank_results
+from .base_provider import BaseSearchProvider
 
 logger = logging.getLogger(__name__)
 
 
 class TextSearchProvider(BaseSearchProvider):
-    """Implements a simple text search provider."""
+    """
+    Simple text-based search provider.
 
-    def __init__(self, case_sensitive: bool = False):
-        """
-        Initialize the text search provider.
+    This provider performs basic text searches using string matching techniques.
+    It's efficient for small to medium-sized datasets but not optimized for
+    large-scale searching.
+    """
 
-        Args:
-            case_sensitive: Whether to perform case-sensitive search
-        """
-        self._case_sensitive = case_sensitive
-        self._content_cache = {}  # Simple in-memory cache of content for searching
+    def __init__(self):
+        """Initialize the text search provider."""
         super().__init__()
+        self._registry = Registry.get_instance()
+        self._file_cache: Dict[str, str] = {}
+        self._max_results = 100
+        self._max_cache_size = 50  # Maximum number of files to cache
 
     async def _initialize_provider(self) -> None:
         """Initialize the text search provider."""
-        # Nothing special to initialize for basic text search
-        pass
+        # Load config if needed
+        config = self._registry.config_provider
+        self._max_results = config.get_config("search.text.max_results", 100)
+        self._max_cache_size = config.get_config("search.text.max_cache_size", 50)
 
     async def _close_provider(self) -> None:
         """Close the text search provider."""
-        # Clear any cached content
-        self._content_cache.clear()
+        # Clear the cache
+        self._file_cache.clear()
 
-    async def _perform_search(
-        self, query: str, options: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    async def search(
+        self, query: str, options: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         """
-        Perform text search.
+        Search for text in files.
 
         Args:
-            query: The text to search for
-            options: Search options including:
-                - case_sensitive: Override default case sensitivity
-                - content_types: List of content types to search in
-                - max_results: Maximum number of results to return
-                - include_content: Whether to include the matched content in results
-                - content_preview_length: Length of content preview to include
+            query: Search query string
+            options: Optional search parameters
+                - case_sensitive: Whether to perform case-sensitive search (default: False)
+                - whole_word: Whether to match whole words only (default: False)
+                - max_results: Maximum number of results to return (default: 100)
+                - paths: List of paths to search in (default: all indexed paths)
+                - file_extensions: List of file extensions to search (default: all text files)
 
         Returns:
-            List of search results as dictionaries
+            List of search results, each containing file path, snippet, and score
         """
+        self._ensure_initialized()
+        options = options or {}
+
         # Get search options
-        case_sensitive = options.get("case_sensitive", self._case_sensitive)
-        content_types = options.get("content_types", [])
-        max_results = options.get("max_results", 100)
-        include_content = options.get("include_content", False)
-        preview_length = options.get("content_preview_length", 100)
+        case_sensitive = options.get("case_sensitive", False)
+        whole_word = options.get("whole_word", False)
+        max_results = options.get("max_results", self._max_results)
+        paths = options.get("paths", [])
+        file_extensions = options.get("file_extensions", [])
 
-        # Get content to search through (in a real implementation, this would
-        # likely query a database or file system)
-        content_items = await self._get_searchable_content(content_types)
+        # Convert paths to list if it's a single string
+        if isinstance(paths, str):
+            paths = [paths]
 
-        # Prepare query
-        search_query = query if case_sensitive else query.lower()
+        # Prepare the search pattern
+        if whole_word:
+            pattern = r'\b' + re.escape(query) + r'\b'
+        else:
+            pattern = re.escape(query)
 
-        # Perform search
-        results = []
-        for item in content_items:
-            item_id = item.get("id")
-            item_content = item.get("content", "")
-            item_metadata = item.get("metadata", {})
+        flags = 0 if case_sensitive else re.IGNORECASE
 
-            # Prepare content for matching
-            match_content = item_content if case_sensitive else item_content.lower()
+        try:
+            # Find files to search
+            files_to_search = await self._find_files_to_search(paths, file_extensions)
 
-            # Find all matches
-            matches = self._find_matches(match_content, search_query)
+            # Perform the search
+            results = []
+            for file_path in files_to_search:
+                try:
+                    # Get file content
+                    content = await self._get_file_content(file_path)
 
-            if matches:
-                # Create search result for each match
-                for match_position, context in matches:
-                    result = self._create_search_result(
-                        item_id,
-                        item_metadata,
-                        match_position,
-                        context,
-                        include_content,
-                        preview_length,
-                    )
-                    results.append(result)
+                    # Search for matches
+                    matches = list(re.finditer(pattern, content, flags))
 
-                    # Respect max results limit
-                    if len(results) >= max_results:
-                        logger.debug(f"Reached max results limit ({max_results})")
-                        break
+                    if matches:
+                        # Create a result for each match
+                        for match in matches[:10]:  # Limit to 10 matches per file
+                            # Extract snippet context
+                            snippet = self._extract_snippet(content, match.start(), match.end())
 
-            # Respect max results limit
-            if len(results) >= max_results:
-                break
+                            # Calculate score (simple count-based score for now)
+                            score = 1.0 / (len(results) + 1)  # Higher score for first results
 
-        return results
+                            results.append({
+                                "file_path": str(file_path),
+                                "snippet": snippet,
+                                "score": score,
+                                "match_position": match.start(),
+                                "match_length": match.end() - match.start()
+                            })
+                except Exception as e:
+                    logger.warning(f"Error searching file {file_path}: {e}")
 
-    def _get_provider_options(self) -> dict[str, Any]:
+            # Rank and limit results
+            ranked_results = rank_results(results)
+            return ranked_results[:max_results]
+
+        except Exception as e:
+            logger.error(f"Error in text search: {e}")
+            raise SearchError(
+                f"Text search failed: {e}",
+                provider_id=self.get_provider_type(),
+                query=query,
+                operation="search",
+                details={"options": options}
+            ) from e
+
+    async def get_supported_options(self) -> Dict[str, Any]:
         """
-        Get the options supported by the text search provider.
+        Get supported options for this search provider.
 
         Returns:
-            Dictionary of supported options
+            Dictionary of supported options and their descriptions
         """
         return {
             "case_sensitive": {
                 "type": "boolean",
-                "description": "Whether to perform case-sensitive search",
-                "default": self._case_sensitive,
+                "default": False,
+                "description": "Whether to perform case-sensitive search"
             },
-            "content_types": {
-                "type": "array",
-                "description": "List of content types to search in",
-                "default": [],
+            "whole_word": {
+                "type": "boolean",
+                "default": False,
+                "description": "Whether to match whole words only"
             },
             "max_results": {
                 "type": "integer",
-                "description": "Maximum number of results to return",
-                "default": 100,
+                "default": self._max_results,
+                "description": "Maximum number of results to return"
             },
-            "include_content": {
-                "type": "boolean",
-                "description": "Whether to include the matched content in results",
-                "default": False,
+            "paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+                "description": "List of paths to search in (empty for all)"
             },
-            "content_preview_length": {
-                "type": "integer",
-                "description": "Length of content preview to include",
-                "default": 100,
-            },
+            "file_extensions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+                "description": "List of file extensions to search (empty for all text files)"
+            }
         }
 
-    def _get_provider_type(self) -> str:
+    async def get_provider_type(self) -> str:
         """
-        Get the provider type identifier.
+        Get the type identifier for this search provider.
 
         Returns:
-            String identifier for this provider type
+            Provider type string
         """
         return "text"
 
-    async def _get_searchable_content(
-        self, content_types: list[str]
-    ) -> list[dict[str, Any]]:
+    async def index_file(self, file_path: str, file_type: str = None) -> None:
         """
-        Get content that can be searched through.
+        Index a file for searching.
 
-        In a real implementation, this would query a database or file system.
-        For this example, we return mock data.
+        For the text provider, this simply adds the file to the cache
+        if it's a text file.
 
         Args:
-            content_types: List of content types to filter by
-
-        Returns:
-            List of content items with their metadata
-        """
-        # In a real implementation, this would fetch content from a database or files
-        # For now, we'll return some mock data if the cache is empty
-        if not self._content_cache:
-            # Mock some content for demonstration purposes
-            self._content_cache = [
-                {
-                    "id": "doc1",
-                    "content": "This is a sample document about AI and machine learning.",
-                    "metadata": {
-                        "title": "AI Introduction",
-                        "type": "document",
-                        "path": "/docs/ai-intro.txt",
-                        "created": "2023-01-01T12:00:00Z",
-                    },
-                },
-                {
-                    "id": "doc2",
-                    "content": "Python is a versatile programming language used in data science.",
-                    "metadata": {
-                        "title": "Python Overview",
-                        "type": "document",
-                        "path": "/docs/python.txt",
-                        "created": "2023-01-02T12:00:00Z",
-                    },
-                },
-            ]
-
-        # Filter by content types if specified
-        if content_types:
-            return [
-                item
-                for item in self._content_cache
-                if item.get("metadata", {}).get("type") in content_types
-            ]
-
-        return self._content_cache
-
-    def _find_matches(self, content: str, query: str) -> list[tuple[int, str]]:
-        """
-        Find all matches of the query in the content.
-
-        Args:
-            content: The content to search in
-            query: The search query
-
-        Returns:
-            List of tuples (position, context) for each match
-        """
-        matches = []
-        position = 0
-
-        while True:
-            position = content.find(query, position)
-            if position == -1:
-                break
-
-            # Extract context around the match
-            start = max(0, position - 50)
-            end = min(len(content), position + len(query) + 50)
-            context = content[start:end]
-
-            matches.append((position, context))
-            position += len(query)
-
-        return matches
-
-    def _create_search_result(
-        self,
-        item_id: str,
-        metadata: dict[str, Any],
-        match_position: int,
-        context: str,
-        include_content: bool,
-        preview_length: int,
-    ) -> dict[str, Any]:
-        """
-        Create a search result dictionary.
-
-        Args:
-            item_id: ID of the matched item
-            metadata: Item metadata
-            match_position: Position of the match in the content
-            context: Context around the match
-            include_content: Whether to include full content
-            preview_length: Length of content preview
-
-        Returns:
-            Search result dictionary
-        """
-        # Create a file metadata object from the metadata dictionary
-        file_meta = FileMetadata(
-            id=metadata.get("id", item_id),
-            name=metadata.get("title", ""),
-            path=metadata.get("path", ""),
-            size=metadata.get("size", 0),
-            created_time=metadata.get("created", ""),
-            modified_time=metadata.get("modified", ""),
-            content_type=metadata.get("type", ""),
-            metadata=metadata,
-        )
-
-        # Create the search result
-        result = SearchResult(
-            id=f"{item_id}_{match_position}",
-            score=1.0,  # Simple matching has no relevance score
-            file=file_meta,
-            match_position=match_position,
-            match_context=context,
-            matched_terms=[],  # Not tracking specific terms in simple text search
-        )
-
-        # Convert to dictionary for the API
-        return result.to_dict()
-
-    async def add_content(
-        self, content_id: str, content: str, metadata: dict[str, Any]
-    ) -> None:
-        """
-        Add content to the search index.
-
-        Args:
-            content_id: Unique identifier for the content
-            content: The content text
-            metadata: Content metadata
+            file_path: Path to the file to index
+            file_type: Optional file type hint
         """
         self._ensure_initialized()
 
-        # Add to in-memory cache
-        self._content_cache.append(
-            {"id": content_id, "content": content, "metadata": metadata}
-        )
+        try:
+            # Check if the file is a text file
+            if not self._is_text_file(file_path):
+                return
 
-        logger.debug(f"Added content with ID {content_id} to text search index")
+            # Add to cache if needed
+            if len(self._file_cache) < self._max_cache_size:
+                await self._get_file_content(file_path)
+        except Exception as e:
+            logger.warning(f"Error indexing file {file_path}: {e}")
 
-    async def remove_content(self, content_id: str) -> bool:
+    async def remove_file_from_index(self, file_path: str) -> None:
         """
-        Remove content from the search index.
+        Remove a file from the index.
+
+        For the text provider, this removes the file from the cache.
 
         Args:
-            content_id: Unique identifier for the content to remove
-
-        Returns:
-            True if content was removed, False if not found
+            file_path: Path to the file to remove
         """
         self._ensure_initialized()
 
-        initial_length = len(self._content_cache)
-        self._content_cache = [
-            item for item in self._content_cache if item.get("id") != content_id
-        ]
+        # Remove from cache if present
+        if file_path in self._file_cache:
+            del self._file_cache[file_path]
 
-        removed = len(self._content_cache) < initial_length
-        if removed:
-            logger.debug(f"Removed content with ID {content_id} from text search index")
-        else:
-            logger.debug(f"Content with ID {content_id} not found in text search index")
+    async def _find_files_to_search(
+        self, paths: List[str], file_extensions: List[str]
+    ) -> List[str]:
+        """
+        Find files to search based on paths and extensions.
 
-        return removed
+        Args:
+            paths: List of paths to search in
+            file_extensions: List of file extensions to search
 
-    async def clear_index(self) -> None:
-        """Clear all content from the search index."""
-        self._ensure_initialized()
-        self._content_cache.clear()
-        logger.debug("Cleared text search index")
+        Returns:
+            List of file paths to search
+        """
+        # Get file manager to find files
+        file_manager = self._registry.file_manager
+
+        files_to_search = []
+
+        # If no paths specified, use default search paths
+        if not paths:
+            # Get project paths
+            project_paths = self._registry.project_paths
+            paths = [str(project_paths.get_project_root())]
+
+        # Find all files in the specified paths
+        for path in paths:
+            try:
+                # Different behavior based on whether path is file or directory
+                path_obj = Path(path)
+                if path_obj.is_file():
+                    # Single file
+                    if self._matches_extensions(path, file_extensions):
+                        files_to_search.append(path)
+                else:
+                    # Directory - walk and find files
+                    for root, _, files in os.walk(path):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            if self._matches_extensions(file_path, file_extensions):
+                                files_to_search.append(file_path)
+            except Exception as e:
+                logger.warning(f"Error finding files in {path}: {e}")
+
+        # Filter to include only text files
+        return [file for file in files_to_search if self._is_text_file(file)]
+
+    def _matches_extensions(self, file_path: str, extensions: List[str]) -> bool:
+        """
+        Check if a file matches the specified extensions.
+
+        Args:
+            file_path: Path to the file
+            extensions: List of extensions to match (without dot)
+
+        Returns:
+            True if the file matches, False otherwise
+        """
+        # If no extensions specified, match all
+        if not extensions:
+            return True
+
+        # Get file extension (without dot)
+        _, ext = os.path.splitext(file_path)
+        ext = ext[1:] if ext.startswith(".") else ext
+
+        # Check if extension matches
+        return ext.lower() in [e.lower() for e in extensions]
+
+    def _is_text_file(self, file_path: str) -> bool:
+        """
+        Check if a file is a text file based on extension.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            True if the file is likely a text file, False otherwise
+        """
+        # Common text file extensions
+        text_extensions = {
+            "txt", "md", "markdown", "rst", "py", "js", "ts", "html", "htm", "css",
+            "json", "xml", "yaml", "yml", "ini", "toml", "c", "cpp", "h", "hpp",
+            "java", "cs", "go", "rs", "sh", "bat", "ps1", "log", "csv", "tsv"
+        }
+
+        # Get file extension (without dot)
+        _, ext = os.path.splitext(file_path)
+        ext = ext[1:] if ext.startswith(".") else ext
+
+        return ext.lower() in text_extensions
+
+    async def _get_file_content(self, file_path: str) -> str:
+        """
+        Get the content of a file, using cache if available.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            File content as string
+        """
+        # Check cache first
+        if file_path in self._file_cache:
+            return self._file_cache[file_path]
+
+        # Read file content
+        file_reader = self._registry.file_reader
+        try:
+            content = await file_reader.read_text(file_path)
+
+            # Update cache
+            if len(self._file_cache) >= self._max_cache_size:
+                # Remove a random entry if cache is full
+                self._file_cache.pop(next(iter(self._file_cache)))
+
+            self._file_cache[file_path] = content
+            return content
+        except Exception as e:
+            logger.warning(f"Error reading file {file_path}: {e}")
+            return ""
+
+    def _extract_snippet(self, content: str, match_start: int, match_end: int, context_size: int = 50) -> str:
+        """
+        Extract a snippet of text around a match.
+
+        Args:
+            content: The full content string
+            match_start: Start position of the match
+            match_end: End position of the match
+            context_size: Number of characters to include before and after match
+
+        Returns:
+            Snippet of text with context around the match
+        """
+        # Calculate snippet range
+        start = max(0, match_start - context_size)
+        end = min(len(content), match_end + context_size)
+
+        # Extract the snippet
+        snippet = content[start:end]
+
+        # Add ellipsis if needed
+        if start > 0:
+            snippet = "..." + snippet
+        if end < len(content):
+            snippet = snippet + "..."
+
+        return snippet

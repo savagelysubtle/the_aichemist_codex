@@ -161,6 +161,21 @@ class ApplicationBootstrap:
         index_manager = registry.index_manager
         await index_manager.initialize()
 
+        # Initialize FileManager
+        logger.info("Initializing FileManager...")
+        file_manager = registry.file_manager
+        await file_manager.initialize()
+
+        # Initialize RollbackManager
+        logger.info("Initializing RollbackManager...")
+        rollback_manager = registry.rollback_manager
+        await rollback_manager.initialize()
+
+        # Initialize OutputFormatter
+        logger.info("Initializing OutputFormatter...")
+        output_formatter = registry.output_formatter
+        await output_formatter.initialize()
+
         logger.info("Application initialization complete.")
         return registry
 

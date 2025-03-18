@@ -29,6 +29,9 @@ from .core.interfaces import (
     TaggingManager,
     AnalyticsManager,
     UserManager,
+    FileManager,
+    RollbackManager,
+    OutputFormatter,
 )
 
 # Type variable for generic methods
@@ -333,6 +336,18 @@ class Registry:
         """
         return self._lazy_load("user_manager", UserManager, self._create_user_manager)
 
+    @property
+    def file_manager(self) -> FileManager:
+        return self._lazy_load("file_manager", FileManager, self._create_file_manager)
+
+    @property
+    def rollback_manager(self) -> RollbackManager:
+        return self._lazy_load("rollback_manager", RollbackManager, self._create_rollback_manager)
+
+    @property
+    def output_formatter(self) -> OutputFormatter:
+        return self._lazy_load("output_formatter", OutputFormatter, self._create_output_formatter)
+
     def _create_file_reader(self) -> FileReader:
         """
         Create the FileReader instance.
@@ -445,6 +460,17 @@ class Registry:
 
     def _create_directory_manager(self) -> DirectoryManager:
         # ... existing code ...
+
+    def _create_file_manager(self) -> FileManager:
+        from .domain.file_manager.file_manager import FileManagerImpl
+        return FileManagerImpl()
+
+    def _create_rollback_manager(self) -> RollbackManager:
+        from .domain.rollback.rollback_manager import RollbackManagerImpl
+        return RollbackManagerImpl()
+
+    def _create_output_formatter(self) -> OutputFormatter:
+        from .domain.output_
 
 
 # Decorator for lazy initialization of services

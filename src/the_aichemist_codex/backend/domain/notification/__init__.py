@@ -1,28 +1,27 @@
 """
-Notification module for AIChemist Codex.
+Notification system package.
 
-This module provides functionality for sending and managing
-notifications within the application.
+This package provides a system for sending notifications to subscribers
+through various channels.
 """
 
-from the_aichemist_codex.backend.domain.notification.models import (
-    Notification,
-    NotificationDelivery,
-    NotificationLevel,
-    Subscriber,
-    SubscriptionChannel,
+from .models import Notification, NotificationLevel, NotificationStatus, Subscriber
+from .notification_manager import NotificationManagerImpl
+from .channels import (
+    BaseNotificationChannel,
+    ConsoleNotificationChannel,
+    FileNotificationChannel,
+    EmailNotificationChannel
 )
-from the_aichemist_codex.backend.domain.notification.notification_manager import (
-    NotificationManagerImpl,
-)
-from the_aichemist_codex.backend.domain.notification.schema import NotificationSchema
 
 __all__ = [
     "Notification",
-    "NotificationDelivery",
     "NotificationLevel",
-    "NotificationManagerImpl",
-    "NotificationSchema",
+    "NotificationStatus",
     "Subscriber",
-    "SubscriptionChannel",
+    "NotificationManagerImpl",
+    "BaseNotificationChannel",
+    "ConsoleNotificationChannel",
+    "FileNotificationChannel",
+    "EmailNotificationChannel"
 ]

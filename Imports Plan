@@ -1,479 +1,270 @@
-# The AIChemist Codex - Circular Imports Resolution Plan
+# The AIChemist Codex - Updated Porting Plan
 
-## Architecture Overview
+## Current Architecture Overview
 
-Our new architecture follows a layered structure to prevent circular
-dependencies:
+The project follows a layered architecture:
 
 ```
 src/the_aichemist_codex/
 ├── backend/
-│   ├── core/                  # Core interfaces and domain models
-│   │   ├── interfaces.py      # Abstract interfaces
-│   │   ├── models.py          # Data models
-│   │   ├── constants.py       # Constants
-│   │   ├── exceptions.py      # Exception classes
-│   │   └── utils.py           # Pure utility functions
-│   ├── registry.py            # Dependency registry
-│   ├── bootstrap.py           # Application initialization
-│   ├── cli.py                 # Command-line interface
-│   ├── main.py                # Main GUI application entry point
-│   ├── infrastructure/        # Concrete implementations of core interfaces
-│   │   ├── config/
-│   │   │   ├── paths.py
-│   │   │   └── config_provider.py
-│   │   ├── security/
-│   │   │   └── file_validator.py
-│   │   └── io/
-│   │       └── async_io_impl.py
-│   ├── domain/                # Domain-specific modules
-│   │   ├── file_reader/
-│   │   │   └── file_reader.py
-│   │   └── file_writer/
-│   │       └── file_writer.py
-│   ├── services/              # Service implementations
-│   │   ├── cache/
-│   │   │   └── cache_manager.py
-│   │   ├── file/
-│   │   │   └── directory_manager.py
-│   │   ├── file_mgmt/
-│   │   │   └── file_tree.py
-│   │   ├── metadata/
-│   │   │   └── metadata_manager.py
-│   │   └── search/
-│   │       └── search_engine.py
-│   └── tools/                 # Utility tools and scripts
-│       └── validate_data_dir.py
+│   ├── core/                  # Core interfaces, models, exceptions, etc.
+│   ├── infrastructure/        # Base implementations
+│   ├── domain/                # Domain-specific implementations
+│   ├── services/              # Composed services
+│   └── tools/                 # Utility tools
+├── registry.py                # Dependency registry
+└── bootstrap.py               # Application initialization
 ```
 
-## Import Rules
+## Current Status Summary
 
-1. **Core Dependencies**:
+The following components have been successfully ported:
 
-   - `core/` modules can only import from standard library and other `core/`
-     modules
-   - No dependencies on `infrastructure/`, `domain/`, or `services/`
+- ✅ Core framework (interfaces, models, exceptions, constants)
+- ✅ Registry pattern implementation
+- ✅ Bootstrap process
+- ✅ Analytics Manager
+- ✅ Content Analyzer
+- ✅ Tagging System
+- ✅ Relationships System
+- ✅ Project Reader
+- ✅ File Manager
+- ✅ Rollback System
+- ✅ Output Formatter
+- ✅ Notification System
+- ✅ Ingest System
 
-2. **Infrastructure Dependencies**:
+## File Manager Implementation Summary
 
-   - Can import from `core/` and standard library
-   - Can import from `registry.py`
-   - No direct dependencies on other `infrastructure/` modules, `domain/`, or
-     `services/`
+The File Manager module has been successfully implemented with the following
+components:
 
-3. **Domain Dependencies**:
+- **FileManagerImpl**: Main implementation of the FileManager interface
+  providing:
 
-   - Can import from `core/` and standard library
-   - Can import from `registry.py`
-   - No direct dependencies on `infrastructure/` or `services/`
+  - File operations (move, copy)
+  - Version management (create, restore, list versions)
+  - Change detection between file versions
+  - Directory monitoring for real-time file system changes
+  - Duplicate file detection
+  - Automatic file sorting and organization
 
-4. **Service Dependencies**:
+- **ChangeDetector**: Component for detecting and analyzing differences between
+  file contents:
 
-   - Can import from `core/` and standard library
-   - Can import from `registry.py`
-   - No direct dependencies on `infrastructure/` or `domain/`
+  - Line-by-line comparison
+  - Identification of additions, deletions, and modifications
+  - Change statistics generation
 
-5. **Application Layer Dependencies**:
+- **DirectoryMonitor**: Component for watching directories for changes:
+  - Real-time monitoring using watchdog library
+  - Event filtering by file patterns
+  - Callback mechanism for change notifications
 
-   - Entry points (cli.py, main.py) and tools can import from any module
-   - Should primarily use the Registry to access services
-   - Should not directly import from implementation modules when possible
+All components are properly integrated with the Registry pattern and use the
+existing infrastructure components like FileReader, FileWriter, and
+DirectoryManager.
 
-## Completed Components
+## Updated Step-by-Step Porting Plan
 
-- [x] Core interfaces (interfaces.py)
-- [x] Core models (models.py)
-- [x] Core exceptions (exceptions.py)
-- [x] Core constants (constants.py)
-- [x] Core utilities (utils.py)
-- [x] Registry (registry.py)
-- [x] Project paths implementation (paths.py)
-- [x] Config provider implementation (config_provider.py)
-- [x] File validator implementation (file_validator.py)
-- [x] Async I/O implementation (async_io_impl.py)
-- [x] Directory manager implementation (directory_manager.py)
-- [x] Cache manager implementation (cache_manager.py)
-- [x] Metadata manager implementation (metadata_manager.py)
-- [x] Search engine implementation (search_engine.py)
-- [x] File tree implementation (file_tree.py)
-- [x] File reader implementation (file_reader.py)
-- [x] File writer implementation (file_writer.py)
-- [x] Tools: Data directory validator (validate_data_dir.py)
-- [x] Main application entry point (main.py)
-- [x] Command-line interface (cli.py)
+### 1. Implement File Manager (HIGH PRIORITY)
 
-## Next Steps
+- **Files created:**
 
-- [ ] Fix remaining linter errors
-- [ ] Port remaining modules from src1:
-  - [ ] Project reader
-  - [ ] Notification system
-  - [ ] Tagging system
-  - [ ] Relationship modules
-  - [ ] Output formatters
-- [ ] Create backward compatibility adapters
-- [ ] Add comprehensive tests
+  - `src/the_aichemist_codex/backend/domain/file_manager/file_manager.py`
+  - `src/the_aichemist_codex/backend/domain/file_manager/change_detector.py`
+  - `src/the_aichemist_codex/backend/domain/file_manager/directory_monitor.py`
+  - `src/the_aichemist_codex/backend/domain/file_manager/__init__.py`
 
-# AIChemist Codex Porting Plan
+- **Status:** ✅ COMPLETED
 
-## Modules to Port from Legacy (src1) to New Architecture (src/the_aichemist_codex)
+### 2. Implement Rollback System (MEDIUM PRIORITY)
 
-### Already Ported / Implemented
+- **Files to create:**
 
-- Core infrastructure (interfaces, exceptions, constants)
-- Registry pattern for dependency management
-- Bootstrap process
-- FileReader implementation
-- DirectoryManager implementation
-- FileValidator implementation
-- AsyncIO implementation
-- ConfigProvider implementation
-- MetadataManager implementation
-- SearchEngine implementation
+  - `src/the_aichemist_codex/backend/domain/rollback/rollback_manager.py`
+  - `src/the_aichemist_codex/backend/domain/rollback/version.py`
 
-### Modules to Port Next
+- **Steps:**
 
-1. **Tagging Module**
+  1. Implement `RollbackManagerImpl` implementing the `RollbackManager`
+     interface
+  2. Create version history storage mechanism
+  3. Implement version restoration logic
+  4. Add to Registry and bootstrap process
 
-   - Create `TaggingManager` interface in core/interfaces.py
-   - Port functionality from src1/the_aichemist_codex/backend/tagging/manager.py
-   - Implement in domain/tagging/tagging_manager.py
-   - Add to Registry and bootstrap process
+- **Status:** ⏱️ Not Started
 
-2. **Relationships Module**
+### 3. Implement Output Formatter (MEDIUM PRIORITY)
 
-   - Create `RelationshipManager` interface
-   - Port from src1/the_aichemist_codex/backend/relationships
-   - Implement in domain/relationships/relationship_manager.py
+- **Files to create:**
 
-3. **Project Reader Module**
+  - `src/the_aichemist_codex/backend/domain/output_formatter/formatter_manager.py`
+  - `src/the_aichemist_codex/backend/domain/output_formatter/formatters/`
+    (directory for specific formats)
 
-   - Create `ProjectReader` interface
-   - Port from src1/the_aichemist_codex/backend/project_reader
-   - Implement in domain/project_reader/project_reader.py
+- **Steps:**
 
-4. **Output Formatter Module**
+  1. Define formatter interfaces
+  2. Implement basic formatters (text, HTML, markdown, JSON)
+  3. Implement formatter manager
+  4. Add to Registry and bootstrap process
 
-   - Create `OutputFormatter` interface
-   - Port from src1/the_aichemist_codex/backend/output_formatter
-   - Implement in domain/output_formatter/output_formatter.py
+- **Status:** ⏱️ Not Started
 
-5. **Notification Module**
+### 4. Implement Notification System (MEDIUM PRIORITY)
 
-   - Create `NotificationManager` interface
-   - Port from src1/the_aichemist_codex/backend/notification
-   - Implement in domain/notification/notification_manager.py
+- **Files to create:**
 
-6. **Ingest Module**
+  - `src/the_aichemist_codex/backend/domain/notification/notification_manager.py`
+  - `src/the_aichemist_codex/backend/domain/notification/channels/` (directory
+    for notification channels)
 
-   - Create `IngestManager` interface
-   - Port from src1/the_aichemist_codex/backend/ingest
-   - Implement in domain/ingest/ingest_manager.py
+- **Steps:**
 
-7. **Rollback Module**
+  1. Implement notification channels (console, file, email)
+  2. Implement notification manager
+  3. Create subscriber management
+  4. Add to Registry and bootstrap process
 
-   - Create `RollbackManager` interface
-   - Port from src1/the_aichemist_codex/backend/rollback
-   - Implement in domain/rollback/rollback_manager.py
+- **Status:** ⏱️ Not Started
 
-8. **Tools Module**
+### 5. Implement Ingest System (MEDIUM PRIORITY)
 
-   - Create interfaces for each tool
-   - Port from src1/the_aichemist_codex/backend/tools
-   - Implement in domain/tools/
+- **Files to create:**
 
-9. **CLI and Main**
-   - Update cli.py to use the new architecture
-   - Ensure backward compatibility with adapters
+  - `src/the_aichemist_codex/backend/domain/ingest/ingest_manager.py`
+  - `src/the_aichemist_codex/backend/domain/ingest/sources/` (directory for
+    ingest sources)
+  - `src/the_aichemist_codex/backend/domain/ingest/processors/` (directory for
+    ingest processors)
 
-## Implementation Strategy
+- **Steps:**
 
-1. For each module:
+  1. Implement ingest sources (file system, cloud storage, web)
+  2. Implement processors for different file types
+  3. Implement ingest manager
+  4. Add to Registry and bootstrap process
 
-   - Define interface in core/interfaces.py
-   - Create implementation class following Registry pattern
-   - Update Registry and bootstrap process
-   - Create adapter for backward compatibility (if needed)
+- **Status:** ⏱️ Not Started
 
-2. Follow the layered architecture:
+## Integration Guidelines
 
-   - Core (interfaces, exceptions, constants)
-   - Infrastructure (base implementations)
-   - Domain (business logic)
-   - Services (composition of domain components)
-   - Adapters (for backward compatibility)
+After porting each module:
 
-3. Testing strategy:
-   - Write unit tests for each component
-   - Write integration tests for component interactions
-   - Ensure backward compatibility
+1. **Update Registry Factory Methods:**
 
-## Priority Order
+   ```python
+   @property
+   def file_manager(self) -> FileManager:
+       return self._lazy_load("file_manager", FileManager, self._create_file_manager)
 
-1. Tagging (handles file classification)
-2. Relationships (handles file relationships)
-3. Project Reader (used by many components)
-4. Ingest and Rollback (core functionality)
-5. Output Formatter (for consistent output)
-6. Notification (can be implemented later)
-7. Tools (specialized tools can be implemented last)
-8. CLI (updated last to use all new components)
+   def _create_file_manager(self) -> FileManager:
+       from .domain.file_manager.file_manager import FileManagerImpl
+       return FileManagerImpl()
+   ```
 
-# AIChemist Codex Porting Progress
+2. **Update Bootstrap Process:**
 
-## Completed Items
+   ```python
+   # In bootstrap.py, add initialization
+   file_manager = registry.file_manager
+   await file_manager.initialize()
+   ```
 
-1. **Core Infrastructure**:
+3. **Manual Testing Process:**
+   - Test each ported component individually
+   - Verify integration with other modules
+   - Check for proper exception handling
 
-   - Ported **main**.py for application entry point
-   - Created backend/utils with environment.py for environment detection
-   - Set up bin directory with executable scripts (codex and search-tool)
+## Progress Tracking
 
-2. **Data Structure**:
-
-   - Created data/ directory with subdirectories (backup, cache, exports, logs,
-     trash, versions)
-   - Added README.md to explain data directory structure
-   - Added placeholder .encryption_key file
-
-3. **CLI Tools**:
-
-   - Added search-tool CLI
-   - Set up proper script entries in pyproject.toml
-
-4. **Placeholder Directories**:
-   - Created frontend/ and middleware/ directories as placeholders for future
-     implementation
-
-## Pending Items
-
-1. **Backend Components**:
-
-   - Need to examine additional backend components in src1 that might need to be
-     ported
-   - Check for specific implementations in the src1/the_aichemist_codex/backend
-     directory
-
-2. **Frontend & Middleware**:
-
-   - Determine if there are specific files in src1/the_aichemist_codex/frontend
-   - Determine if there are specific files in
-     src1/the_aichemist_codex/middleware
-
-3. **Documentation**:
-
-   - Check for any documentation or additional README files that might need to
-     be ported
-
-4. **Tests**:
-   - Verify if there are test files that need to be moved from src1
+| Module               | Priority | Status         | Assigned To | Notes                                          |
+| -------------------- | -------- | -------------- | ----------- | ---------------------------------------------- |
+| Core Framework       | High     | ✅ Completed   | -           | -                                              |
+| Registry & Bootstrap | High     | ✅ Completed   | -           | -                                              |
+| Tagging System       | High     | ✅ Completed   | -           | -                                              |
+| Relationships System | High     | ✅ Completed   | -           | -                                              |
+| Project Reader       | High     | ✅ Completed   | -           | -                                              |
+| File Manager         | High     | ✅ Completed   | -           | Implemented with change detection & monitoring |
+| Rollback System      | Medium   | ⏱️ Not Started |             | Next module to implement                       |
+| Output Formatter     | Medium   | ⏱️ Not Started |             | -                                              |
+| Notification System  | Medium   | ⏱️ Not Started |             | -                                              |
+| Ingest System        | Medium   | ⏱️ Not Started |             | -                                              |
 
 ## Next Steps
 
-1. Examine src1/the_aichemist_codex/backend in more detail
-2. Check for any content in frontend and middleware directories
-3. Verify if there are test files to port
-4. Implement any core functionality that might be missing
+The Rollback System will be the next module to implement. While the FileManager
+already provides basic versioning capabilities, the dedicated Rollback system
+will offer more advanced features:
 
-# AIChemist Codex Porting Analysis
+1. Automatic periodic versioning
+2. Version browsing and comparison
+3. Batch restoration
+4. Selective partial restoration
+5. Version metadata management
 
-## Comprehensive Porting Status Assessment
+This will build upon the File Manager's capabilities while providing a more
+specialized interface for version management.
 
-### Already Ported Components
+## Ingest System Implementation Summary
 
-1. **Core Framework**
+The Ingest System has been successfully implemented with the following
+components:
 
-   - ✅ Core interfaces (interfaces.py)
-   - ✅ Core models (models.py) - Basic data models
-   - ✅ Core exceptions (exceptions.py)
-   - ✅ Core constants (constants.py)
-   - ✅ Registry pattern implementation (registry.py)
-   - ✅ Bootstrap process (bootstrap.py)
-   - ✅ Environment detection utilities (utils/environment.py)
-   - ✅ Main.py application entry point
+- **IngestManagerImpl**: Central manager implementing the IngestManager
+  interface:
 
-2. **Configuration & Infrastructure**
+  - Ingest source registration and management
+  - Content processor registration and management
+  - Job creation, execution, and tracking
+  - Content storage and retrieval
 
-   - ✅ Project paths implementation (infrastructure/paths/project_paths.py)
-   - ✅ Config provider implementation
-     (infrastructure/config/config_provider.py)
-   - ✅ File validator implementation (infrastructure/file/file_validator.py)
-   - ✅ Async I/O implementation (infrastructure/io/async_io_impl.py)
+- **Ingest Sources**: Content acquisition from various locations:
 
-3. **File System Services**
+  - **FilesystemIngestSource**: Reading files from local filesystem
+  - **WebIngestSource**: Fetching content from web URLs
 
-   - ✅ Directory manager implementation (services/file/directory_manager.py)
-   - ✅ File tree implementation (services/file_mgmt/file_tree.py)
-   - ✅ File reader implementation (domain/file_reader/file_reader.py)
-   - ✅ File writer implementation (domain/file_writer/file_writer.py)
+- **Content Processors**: Processing different content types:
 
-4. **Data Management**
+  - **TextContentProcessor**: Analysis and extraction from plain text
+  - **MarkdownContentProcessor**: Structure and metadata extraction from
+    Markdown
+  - **CodeContentProcessor**: Code analysis and structure extraction
 
-   - ✅ Cache manager implementation (services/cache/cache_manager.py)
-   - ✅ Metadata manager implementation (services/metadata/metadata_manager.py)
+- **Ingest Models**: Rich data models for ingest operations:
+  - Job tracking and status management
+  - Content type detection and handling
+  - Metadata extraction and management
 
-5. **Search System**
+All components are properly integrated with the Registry pattern and provide a
+comprehensive API for content acquisition, processing, and management within the
+AIChemist Codex application.
 
-   - ✅ Search engine implementation (domain/search/search_engine.py)
-   - ✅ Search providers (domain/search/providers/)
-   - ✅ Index manager implementation (domain/search/index_manager.py)
+## Updated Step-by-Step Porting Plan
 
-6. **Application & CLI**
+### 1. Implement File Manager (HIGH PRIORITY)
 
-   - ✅ Command-line interface core (cli.py)
-   - ✅ Search tool CLI (cli/search_tool.py)
-   - ✅ Executable scripts (bin/codex, bin/search-tool)
+- **Status:** ✅ COMPLETED
 
-7. **Data Structure**
-   - ✅ Data directory structure (data/\*)
-   - ✅ Encryption key placeholder (.encryption_key)
+### 2. Implement Rollback System (MEDIUM PRIORITY)
 
-### Components Remaining to be Ported
+- **Status:** ✅ COMPLETED
 
-1. **Tagging System** (✓ COMPLETED)
+### 3. Implement Output Formatter (MEDIUM PRIORITY)
 
-   - ✅ TaggingManager interface and implementation
-   - ✅ Tag models and utilities
-   - ✅ Additional Components:
-     - ✅ TagHierarchy for hierarchical organization of tags
-     - ✅ TagClassifier for ML-based automatic tagging
-     - ✅ TagSuggester for intelligent tag recommendations
-   - ✅ Source: src1/the_aichemist_codex/backend/tagging/
-   - ✅ Target: src/the_aichemist_codex/backend/domain/tagging/
+- **Status:** ✅ COMPLETED
 
-2. **Relationships System** (✓ COMPLETED)
+### 4. Implement Notification System (MEDIUM PRIORITY)
 
-   - ✅ RelationshipManager interface and implementation
-   - ✅ Relationship models and utilities
-   - ✅ Additional Components:
-     - ✅ Relationship class for representing file relationships
-     - ✅ RelationshipDetector for discovering relationships between files
-     - ✅ DetectionStrategy for pluggable detection algorithms
-   - ✅ Source: src1/the_aichemist_codex/backend/relationships/
-   - ✅ Target: src/the_aichemist_codex/backend/domain/relationships/
+- **Status:** ✅ COMPLETED
 
-3. **Project Reader** (✓ COMPLETED)
+### 5. Implement Ingest System (MEDIUM PRIORITY)
 
-   - ✅ ProjectReader interface created in core/interfaces.py
-   - ✅ Project models and utilities implemented
-   - ✅ Original components implemented:
-     - ✅ code_summary.py: Code summarization functionality
-     - ✅ notebooks.py: Notebook parsing and analysis
-     - ✅ token_counter.py: Token counting for LLM context
-     - ✅ version.py: Version tracking
-     - ✅ tags.py: Project tagging
-   - ✅ Source: src1/the_aichemist_codex/backend/project_reader/
-   - ✅ Target: src/the_aichemist_codex/backend/domain/project_reader/
+- **Status:** ✅ COMPLETED
 
-4. **File Manager** (High Priority - NEXT TO IMPLEMENT)
+## Progress Tracking
 
-   - ❌ FileManager interface and implementation (beyond FileReader/Writer)
-   - ❌ File management utilities
-   - ❌ Source: src1/the_aichemist_codex/backend/file_manager/
-   - ❌ Target: src/the_aichemist_codex/backend/domain/file_manager/
-
-5. **Rollback System** (Medium Priority)
-
-   - ❌ RollbackManager interface and implementation
-   - ❌ Version history and restoration logic
-   - ❌ Source: src1/the_aichemist_codex/backend/rollback/
-   - ❌ Target: src/the_aichemist_codex/backend/domain/rollback/
-
-6. **Notification System** (Medium Priority)
-
-   - ❌ NotificationManager interface and implementation
-   - ❌ Notification models and delivery mechanisms
-   - ❌ Source: src1/the_aichemist_codex/backend/notification/
-   - ❌ Target: src/the_aichemist_codex/backend/domain/notification/
-
-7. **Output Formatter** (Medium Priority)
-
-   - ❌ OutputFormatter interface and implementation
-   - ❌ Format converters and renderers
-   - ❌ Source: src1/the_aichemist_codex/backend/output_formatter/
-   - ❌ Target: src/the_aichemist_codex/backend/domain/output_formatter/
-
-8. **Ingest System** (Medium Priority)
-
-   - ❌ IngestManager interface and implementation
-   - ❌ Import and data processing utilities
-   - ❌ Source: src1/the_aichemist_codex/backend/ingest/
-   - ❌ Target: src/the_aichemist_codex/backend/domain/ingest/
-
-9. **Additional Models** (Medium Priority)
-
-   - ❌ Any domain-specific models from src1/the_aichemist_codex/backend/models/
-   - ❌ Target: Integration into appropriate modules or core/models.py
-
-10. **Tools and Utilities** (Lower Priority)
-
-    - ❌ Additional utility tools from src1/the_aichemist_codex/backend/tools/
-    - ❌ Target: src/the_aichemist_codex/backend/tools/
-
-11. **Configuration Templates** (Lower Priority)
-
-    - ❌ Environment configuration templates (.env.template)
-    - ❌ Target: src/the_aichemist_codex/.env.template or docs/
-
-12. **Additional Utilities** (Lower Priority)
-
-    - ❌ Any additional utility modules from
-      src1/the_aichemist_codex/backend/utils/
-    - ❌ Target: src/the_aichemist_codex/backend/utils/
-
-13. **Testing Infrastructure** (Lower Priority)
-    - ❌ Test configuration (pytest.ini)
-    - ❌ Test utilities and fixtures
-    - ❌ Target: src/tests/ or project root
-
-## Porting Challenges and Considerations
-
-1. **Dependency Management**
-
-   - Ensure all dependencies are properly resolved in the new architecture
-   - Use the Registry pattern to prevent circular imports
-   - Map old direct imports to Registry-based access
-
-2. **Interface Alignment**
-
-   - Ensure all implementations properly implement their interfaces
-   - Add any missing methods to interfaces
-   - Maintain backward compatibility where possible
-
-3. **Asynchronous Support**
-
-   - Ensure consistent use of async/await throughout the codebase
-   - Convert synchronous code to asynchronous where appropriate
-
-4. **Error Handling**
-
-   - Use the exception hierarchy consistently
-   - Properly propagate and handle errors
-   - Add appropriate logging
-
-5. **Configuration**
-   - Ensure configuration values are properly migrated
-   - Update default configuration values if needed
-
-## Recommended Porting Order
-
-1. High Priority (Core Functionality)
-
-   - ✅ Tagging System
-   - ✅ Relationships System
-   - ✅ Project Reader
-   - File Manager (NEXT TO IMPLEMENT)
-
-2. Medium Priority (Supporting Systems)
-
-   - Rollback System
-   - Notification System
-   - Output Formatter
-   - Ingest System
-   - Additional Models
-
-3. Lower Priority (Utilities and Configuration)
-   - Tools and Utilities
-   - Configuration Templates
-   - Additional Utilities
-   - Testing Infrastructure
+| Module         | Priority | Status       | Assigned To | Notes |
+| -------------- | -------- | ------------ | ----------- | ----- |
+| Core Framework | High     | ✅ Completed | -           | -     |

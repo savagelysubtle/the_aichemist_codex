@@ -1,93 +1,69 @@
 """
 Search engine implementation.
 
-This module provides a unified interface for searching across various providers
-and data sources within the AIChemist Codex.
+This module provides the main search engine functionality for finding content
+across different sources using various search providers.
 """
 
 import logging
-from typing import Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Type, Union
 
-from the_aichemist_codex.backend.core.exceptions import SearchError
-from the_aichemist_codex.backend.core.interfaces import SearchEngine, SearchProvider
+from ...core.exceptions import SearchError
+from ...core.interfaces import SearchEngine, SearchProvider
+from ...registry import Registry
 
 logger = logging.getLogger(__name__)
 
 
 class SearchEngineImpl(SearchEngine):
-    """Implementation of the search engine."""
+    """Implementation of the search engine interface."""
 
     def __init__(self):
         """Initialize the search engine."""
-        self._providers = {}  # type: Dict[str, SearchProvider]
-        self._default_providers = set()  # type: Set[str]
+        self._registry = Registry.get_instance()
+        self._providers: Dict[str, SearchProvider] = {}
+        self._default_providers: Set[str] = set()
         self._initialized = False
 
     async def initialize(self) -> None:
         """
-        Initialize the search engine and its providers.
+        Initialize the search engine.
 
-        Raises:
-            SearchError: If initialization fails
+        This method prepares the search engine for use by initializing
+        internal data structures.
         """
         if self._initialized:
-            logger.debug("Search engine already initialized")
             return
 
-        try:
-            logger.info("Initializing search engine")
-
-            # Initialize all registered providers
-            for provider_id, provider in self._providers.items():
-                try:
-                    await provider.initialize()
-                    logger.info(f"Initialized search provider: {provider_id}")
-                except Exception as e:
-                    logger.error(f"Failed to initialize provider {provider_id}: {e}")
-                    # We continue even if some providers fail to initialize
-
-            self._initialized = True
-            logger.info("Search engine initialized successfully")
-        except Exception as e:
-            error_msg = f"Failed to initialize search engine: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+        logger.info("Initializing search engine")
+        self._initialized = True
 
     async def close(self) -> None:
         """
-        Close the search engine and its providers.
+        Close the search engine and release resources.
 
-        Raises:
-            SearchError: If closing fails
+        This method closes all search providers and cleans up resources.
         """
-        if not self._initialized:
-            logger.debug("Search engine not initialized")
-            return
+        logger.info("Closing search engine")
 
-        try:
-            logger.info("Closing search engine")
+        # Close all providers
+        for provider_id, provider in self._providers.items():
+            try:
+                await provider.close()
+                logger.debug(f"Closed search provider: {provider_id}")
+            except Exception as e:
+                logger.error(f"Error closing search provider {provider_id}: {e}")
 
-            # Close all registered providers
-            for provider_id, provider in self._providers.items():
-                try:
-                    await provider.close()
-                    logger.info(f"Closed search provider: {provider_id}")
-                except Exception as e:
-                    logger.error(f"Failed to close provider {provider_id}: {e}")
-                    # We continue even if some providers fail to close
-
-            self._initialized = False
-            logger.info("Search engine closed successfully")
-        except Exception as e:
-            error_msg = f"Failed to close search engine: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+        self._providers.clear()
+        self._default_providers.clear()
+        self._initialized = False
 
     async def register_provider(
         self, provider_id: str, provider: SearchProvider, is_default: bool = False
     ) -> None:
         """
-        Register a search provider with the engine.
+        Register a search provider with the search engine.
 
         Args:
             provider_id: Unique identifier for the provider
@@ -95,254 +71,294 @@ class SearchEngineImpl(SearchEngine):
             is_default: Whether this provider should be used by default
 
         Raises:
-            SearchError: If registration fails
+            SearchError: If a provider with the same ID is already registered
         """
-        try:
-            if provider_id in self._providers:
-                logger.warning(f"Replacing existing provider with ID '{provider_id}'")
+        self._ensure_initialized()
 
-            logger.info(f"Registering search provider: {provider_id}")
-            self._providers[provider_id] = provider
+        if provider_id in self._providers:
+            raise SearchError(
+                f"Search provider '{provider_id}' is already registered",
+                provider_id=provider_id
+            )
 
-            if is_default:
-                self._default_providers.add(provider_id)
-                logger.info(f"Added {provider_id} as a default search provider")
+        # Initialize the provider
+        await provider.initialize()
 
-            # Initialize the provider if the engine is already initialized
-            if self._initialized:
-                await provider.initialize()
+        # Register the provider
+        self._providers[provider_id] = provider
+        if is_default:
+            self._default_providers.add(provider_id)
 
-        except Exception as e:
-            error_msg = f"Failed to register provider {provider_id}: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+        logger.info(f"Registered search provider: {provider_id} (default: {is_default})")
 
     async def unregister_provider(self, provider_id: str) -> bool:
         """
-        Unregister a search provider from the engine.
+        Unregister a search provider.
 
         Args:
-            provider_id: Identifier of the provider to remove
+            provider_id: Identifier of the provider to unregister
 
         Returns:
-            True if the provider was removed, False if not found
-
-        Raises:
-            SearchError: If unregistration fails
+            True if the provider was unregistered, False if not found
         """
+        self._ensure_initialized()
+
+        if provider_id not in self._providers:
+            logger.warning(f"Search provider not found: {provider_id}")
+            return False
+
+        # Get the provider
+        provider = self._providers[provider_id]
+
+        # Close the provider
         try:
-            if provider_id not in self._providers:
-                logger.warning(f"No provider found with ID '{provider_id}'")
-                return False
-
-            logger.info(f"Unregistering search provider: {provider_id}")
-
-            # Close the provider if the engine is initialized
-            if self._initialized:
-                try:
-                    await self._providers[provider_id].close()
-                except Exception as e:
-                    logger.warning(f"Error closing provider {provider_id}: {e}")
-
-            # Remove from providers dictionary
-            del self._providers[provider_id]
-
-            # Remove from default providers if present
-            if provider_id in self._default_providers:
-                self._default_providers.remove(provider_id)
-
-            logger.info(f"Unregistered search provider: {provider_id}")
-            return True
-
+            await provider.close()
         except Exception as e:
-            error_msg = f"Failed to unregister provider {provider_id}: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+            logger.error(f"Error closing search provider {provider_id}: {e}")
 
-    async def get_provider(self, provider_id: str) -> SearchProvider | None:
-        """
-        Get a search provider by its ID.
+        # Remove the provider
+        del self._providers[provider_id]
+        self._default_providers.discard(provider_id)
 
-        Args:
-            provider_id: Identifier of the provider to retrieve
-
-        Returns:
-            The search provider or None if not found
-        """
-        return self._providers.get(provider_id)
-
-    async def list_providers(self) -> list[dict[str, Any]]:
-        """
-        List all registered search providers.
-
-        Returns:
-            List of provider details (id, type, is_default)
-        """
-        result = []
-
-        for provider_id, provider in self._providers.items():
-            try:
-                provider_type = await provider.get_provider_type()
-                result.append(
-                    {
-                        "id": provider_id,
-                        "type": provider_type,
-                        "is_default": provider_id in self._default_providers,
-                    }
-                )
-            except Exception as e:
-                logger.warning(f"Error getting provider details for {provider_id}: {e}")
-                result.append(
-                    {
-                        "id": provider_id,
-                        "type": "unknown",
-                        "is_default": provider_id in self._default_providers,
-                        "error": str(e),
-                    }
-                )
-
-        return result
+        logger.info(f"Unregistered search provider: {provider_id}")
+        return True
 
     async def search(
-        self,
-        query: str,
-        provider_id: str | None = None,
-        options: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        self, query: str, search_type: str = "text", options: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         """
-        Perform a search using the specified provider or default providers.
+        Search for content using a specific search type.
 
         Args:
-            query: The search query
-            provider_id: ID of the provider to use, or None to use defaults
-            options: Provider-specific search options
+            query: Search query string
+            search_type: Type of search to perform (provider ID)
+            options: Optional search parameters
 
         Returns:
-            List of search results
+            List of search results as dictionaries
 
         Raises:
-            SearchError: If the search fails or no providers are available
+            SearchError: If the search type is not supported or search fails
         """
         self._ensure_initialized()
-
-        if not query:
-            logger.warning("Empty search query provided")
-            return []
-
         options = options or {}
 
+        # Check if the search type is valid
+        if search_type not in self._providers:
+            raise SearchError(
+                f"Unsupported search type: {search_type}",
+                provider_id=search_type,
+                query=query
+            )
+
+        # Get the provider
+        provider = self._providers[search_type]
+
         try:
-            # Determine which providers to use
-            providers_to_use = {}
-
-            if provider_id:
-                # Use the specified provider
-                if provider_id not in self._providers:
-                    raise SearchError(f"No provider found with ID '{provider_id}'")
-                providers_to_use[provider_id] = self._providers[provider_id]
-            else:
-                # Use default providers
-                if not self._default_providers:
-                    raise SearchError("No default search providers configured")
-
-                for default_id in self._default_providers:
-                    providers_to_use[default_id] = self._providers[default_id]
-
-            if not providers_to_use:
-                raise SearchError("No search providers available")
-
-            # Perform search with each provider
-            results = []
-            errors = []
-
-            for pid, provider in providers_to_use.items():
-                try:
-                    logger.debug(f"Searching with provider {pid}")
-                    provider_results = await provider.search(query, options)
-
-                    # Add provider ID to each result
-                    for result in provider_results:
-                        result["provider_id"] = pid
-
-                    results.extend(provider_results)
-                    logger.debug(
-                        f"Provider {pid} returned {len(provider_results)} results"
-                    )
-                except Exception as e:
-                    error_msg = f"Error searching with provider {pid}: {e}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-
-            # Sort results by score (if available)
-            if results:
-                results.sort(key=lambda r: r.get("score", 0), reverse=True)
-
-            # If all providers failed, raise an error
-            if errors and not results:
-                raise SearchError(f"All search providers failed: {'; '.join(errors)}")
-
+            # Perform the search
+            results = await provider.search(query, options)
             return results
-
-        except SearchError:
-            # Re-raise SearchError as is
-            raise
         except Exception as e:
-            error_msg = f"Error performing search: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+            logger.error(f"Error during {search_type} search: {e}")
+            raise SearchError(
+                f"Search failed: {e}",
+                provider_id=search_type,
+                query=query,
+                operation="search",
+                details={"options": options}
+            ) from e
 
-    async def get_search_options(
-        self, provider_id: str | None = None
-    ) -> dict[str, Any]:
+    async def multi_search(
+        self, query: str, search_types: List[str] = None, options: Dict[str, Any] = None
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Get the search options supported by a provider or all providers.
+        Search across multiple providers.
 
         Args:
-            provider_id: ID of the provider to get options for, or None for all
+            query: Search query string
+            search_types: List of search types to use (provider IDs)
+            options: Optional search parameters
 
         Returns:
-            Dictionary of provider options
+            Dictionary mapping search types to results lists
 
         Raises:
-            SearchError: If the operation fails or provider not found
+            SearchError: If search fails
+        """
+        self._ensure_initialized()
+        options = options or {}
+
+        # If no search types are specified, use default providers
+        if not search_types:
+            search_types = list(self._default_providers)
+
+        if not search_types:
+            logger.warning("No search types specified and no default providers available")
+            return {}
+
+        results = {}
+        errors = []
+
+        # Perform search with each provider
+        for search_type in search_types:
+            try:
+                # Check if the search type is valid
+                if search_type not in self._providers:
+                    logger.warning(f"Unsupported search type: {search_type}")
+                    continue
+
+                # Perform the search
+                provider = self._providers[search_type]
+                provider_results = await provider.search(query, options)
+                results[search_type] = provider_results
+            except Exception as e:
+                logger.error(f"Error during {search_type} search: {e}")
+                errors.append(f"{search_type}: {str(e)}")
+                results[search_type] = []
+
+        # If all providers failed, raise an error
+        if errors and len(errors) == len(search_types):
+            raise SearchError(
+                "All search providers failed",
+                query=query,
+                operation="multi_search",
+                details={"errors": errors}
+            )
+
+        return results
+
+    async def index_file(self, file_path: str, file_type: str = None) -> None:
+        """
+        Index a file for searching.
+
+        Args:
+            file_path: Path to the file to index
+            file_type: Optional file type hint
+
+        Raises:
+            SearchError: If indexing fails
         """
         self._ensure_initialized()
 
+        # Index the file with all providers
+        for provider_id, provider in self._providers.items():
+            try:
+                # Check if the provider supports indexing
+                if hasattr(provider, "index_file"):
+                    await provider.index_file(file_path, file_type)
+                    logger.debug(f"Indexed file {file_path} with provider {provider_id}")
+            except Exception as e:
+                logger.error(f"Error indexing file {file_path} with provider {provider_id}: {e}")
+                # Continue with other providers even if one fails
+
+    async def remove_file_from_index(self, file_path: str) -> None:
+        """
+        Remove a file from the search index.
+
+        Args:
+            file_path: Path to the file to remove
+
+        Raises:
+            SearchError: If removal fails
+        """
+        self._ensure_initialized()
+
+        # Remove the file from all providers
+        for provider_id, provider in self._providers.items():
+            try:
+                # Check if the provider supports removing from index
+                if hasattr(provider, "remove_file_from_index"):
+                    await provider.remove_file_from_index(file_path)
+                    logger.debug(f"Removed file {file_path} from provider {provider_id} index")
+            except Exception as e:
+                logger.error(f"Error removing file {file_path} from provider {provider_id} index: {e}")
+                # Continue with other providers even if one fails
+
+    async def get_available_search_types(self) -> List[str]:
+        """
+        Get a list of available search types (provider IDs).
+
+        Returns:
+            List of available search type identifiers
+        """
+        self._ensure_initialized()
+        return list(self._providers.keys())
+
+    async def get_search_options(self, search_type: str) -> Dict[str, Any]:
+        """
+        Get supported options for a search type.
+
+        Args:
+            search_type: Type of search (provider ID)
+
+        Returns:
+            Dictionary of supported options
+
+        Raises:
+            SearchError: If the search type is not supported
+        """
+        self._ensure_initialized()
+
+        # Check if the search type is valid
+        if search_type not in self._providers:
+            raise SearchError(
+                f"Unsupported search type: {search_type}",
+                provider_id=search_type
+            )
+
+        # Get the provider
+        provider = self._providers[search_type]
+
         try:
-            result = {}
-
-            if provider_id:
-                # Get options for the specified provider
-                if provider_id not in self._providers:
-                    raise SearchError(f"No provider found with ID '{provider_id}'")
-
-                provider = self._providers[provider_id]
-                result[provider_id] = await provider.get_supported_options()
-            else:
-                # Get options for all providers
-                for pid, provider in self._providers.items():
-                    try:
-                        result[pid] = await provider.get_supported_options()
-                    except Exception as e:
-                        logger.error(f"Error getting options for provider {pid}: {e}")
-                        result[pid] = {"error": str(e)}
-
-            return result
-
-        except SearchError:
-            # Re-raise SearchError as is
-            raise
+            # Get supported options
+            return await provider.get_supported_options()
         except Exception as e:
-            error_msg = f"Error getting search options: {e}"
-            logger.error(error_msg)
-            raise SearchError(error_msg) from e
+            logger.error(f"Error getting options for search type {search_type}: {e}")
+            raise SearchError(
+                f"Failed to get search options: {e}",
+                provider_id=search_type,
+                operation="get_options"
+            ) from e
+
+    async def reindex_all(self) -> None:
+        """
+        Rebuild the entire search index.
+
+        This method triggers a complete reindexing for all providers.
+
+        Raises:
+            SearchError: If reindexing fails
+        """
+        self._ensure_initialized()
+
+        errors = []
+
+        # Reindex with all providers
+        for provider_id, provider in self._providers.items():
+            try:
+                # Check if the provider supports reindexing
+                if hasattr(provider, "reindex_all"):
+                    await provider.reindex_all()
+                    logger.info(f"Reindexed all content with provider {provider_id}")
+            except Exception as e:
+                error_msg = f"Error reindexing with provider {provider_id}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        # If all providers failed, raise an error
+        if errors and len(errors) == len(self._providers):
+            raise SearchError(
+                "Reindexing failed for all providers",
+                operation="reindex_all",
+                details={"errors": errors}
+            )
 
     def _ensure_initialized(self) -> None:
         """
         Ensure the search engine is initialized.
 
         Raises:
-            SearchError: If the engine is not initialized
+            SearchError: If the search engine is not initialized
         """
         if not self._initialized:
-            raise SearchError("Search engine not initialized")
+            raise SearchError("Search engine is not initialized")

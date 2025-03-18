@@ -406,3 +406,35 @@ class ProjectReaderError(AiChemistError):
         """
         super().__init__(message, details)
         self.file_path = str(file_path) if file_path else None
+
+
+class FileManagerError(AiChemistError):
+    """
+    Exception raised for file management related errors.
+
+    This exception is raised when file operations like moving, copying,
+    versioning, or directory monitoring encounter errors.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        file_path: str | Path | None = None,
+        operation: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Initialize a FileManagerError.
+
+        Args:
+            message: Error message
+            file_path: Path to the file that caused the error (optional)
+            operation: The operation that failed (optional)
+            details: Additional error details (optional)
+        """
+        if isinstance(details, dict):
+            super().__init__(message, str(details))
+        else:
+            super().__init__(message)
+        self.file_path = str(file_path) if file_path else None
+        self.operation = operation

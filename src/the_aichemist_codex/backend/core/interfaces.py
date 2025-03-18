@@ -2490,3 +2490,225 @@ class ProjectReader(ABC):
             Estimated token count
         """
         pass
+
+
+class FileManager(ABC):
+    """
+    Interface for file management operations.
+
+    This interface provides methods for managing files including moving, copying,
+    detecting changes, versioning, and monitoring directories for changes.
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """
+        Initialize the file manager.
+
+        Raises:
+            FileError: If initialization fails.
+        """
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """
+        Close any resources used by the file manager.
+        """
+        pass
+
+    @abstractmethod
+    async def move_file(self, source_path: Path, destination_path: Path, create_dirs: bool = True) -> Path:
+        """
+        Move a file from source to destination.
+
+        Args:
+            source_path: Path to the source file.
+            destination_path: Destination path for the file.
+            create_dirs: Whether to create destination directories if they don't exist.
+
+        Returns:
+            The path to the moved file.
+
+        Raises:
+            FileError: If the move operation fails.
+        """
+        pass
+
+    @abstractmethod
+    async def copy_file(self, source_path: Path, destination_path: Path, create_dirs: bool = True) -> Path:
+        """
+        Copy a file from source to destination.
+
+        Args:
+            source_path: Path to the source file.
+            destination_path: Destination path for the file.
+            create_dirs: Whether to create destination directories if they don't exist.
+
+        Returns:
+            The path to the copied file.
+
+        Raises:
+            FileError: If the copy operation fails.
+        """
+        pass
+
+    @abstractmethod
+    async def create_version(self, file_path: Path, version_tag: str = None) -> str:
+        """
+        Create a version of a file.
+
+        Args:
+            file_path: Path to the file to version.
+            version_tag: Optional tag to identify the version.
+
+        Returns:
+            The version identifier.
+
+        Raises:
+            FileError: If the versioning operation fails.
+        """
+        pass
+
+    @abstractmethod
+    async def restore_version(self, file_path: Path, version_id: str, restore_path: Path = None) -> Path:
+        """
+        Restore a file to a previous version.
+
+        Args:
+            file_path: Path to the file to restore.
+            version_id: Version identifier.
+            restore_path: Optional path to restore to (if None, restores to original location).
+
+        Returns:
+            The path to the restored file.
+
+        Raises:
+            FileError: If the restore operation fails.
+        """
+        pass
+
+    @abstractmethod
+    async def get_file_versions(self, file_path: Path) -> list[dict[str, Any]]:
+        """
+        Get a list of versions for a file.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            A list of version dictionaries, each containing version details.
+
+        Raises:
+            FileError: If retrieving versions fails.
+        """
+        pass
+
+    @abstractmethod
+    async def detect_changes(
+        self, file_path: Path, reference_path: Path = None, reference_content: str = None
+    ) -> dict[str, Any]:
+        """
+        Detect changes between two versions of a file.
+
+        Args:
+            file_path: Path to the current file.
+            reference_path: Path to the reference file (optional).
+            reference_content: Reference content as a string (optional).
+
+        Returns:
+            A dictionary containing change information.
+
+        Raises:
+            FileError: If change detection fails.
+        """
+        pass
+
+    @abstractmethod
+    async def monitor_directory(
+        self,
+        directory: Path,
+        recursive: bool = False,
+        callback = None,
+        patterns: list[str] = None
+    ) -> str:
+        """
+        Start monitoring a directory for changes.
+
+        Args:
+            directory: Path to the directory to monitor.
+            recursive: Whether to monitor subdirectories.
+            callback: Function to call when a change is detected.
+            patterns: File patterns to monitor (e.g., "*.py", "*.txt").
+
+        Returns:
+            A monitor ID that can be used to stop monitoring.
+
+        Raises:
+            FileError: If setting up monitoring fails.
+        """
+        pass
+
+    @abstractmethod
+    async def stop_monitoring(self, monitor_id: str) -> bool:
+        """
+        Stop monitoring a directory.
+
+        Args:
+            monitor_id: The monitor ID returned by monitor_directory.
+
+        Returns:
+            True if monitoring was successfully stopped, False otherwise.
+
+        Raises:
+            FileError: If stopping monitoring fails.
+        """
+        pass
+
+    @abstractmethod
+    async def find_duplicates(
+        self,
+        directory: Path,
+        recursive: bool = True,
+        compare_method: str = "hash"
+    ) -> dict[str, list[Path]]:
+        """
+        Find duplicate files in a directory.
+
+        Args:
+            directory: Path to the directory to scan.
+            recursive: Whether to scan subdirectories.
+            compare_method: Method to use for comparing files ("hash", "size", or "content").
+
+        Returns:
+            A dictionary mapping hashes to lists of file paths with that hash.
+
+        Raises:
+            FileError: If finding duplicates fails.
+        """
+        pass
+
+    @abstractmethod
+    async def sort_files(
+        self,
+        directory: Path,
+        output_directory: Path = None,
+        rules: dict[str, str] = None,
+        move_files: bool = False
+    ) -> dict[str, list[Path]]:
+        """
+        Sort files according to rules.
+
+        Args:
+            directory: Path to the directory containing files to sort.
+            output_directory: Path to the directory to sort files into.
+            rules: Dictionary mapping patterns to destination subdirectories.
+            move_files: Whether to move files (True) or copy them (False).
+
+        Returns:
+            A dictionary mapping destination directories to lists of file paths.
+
+        Raises:
+            FileError: If sorting files fails.
+        """
+        pass
