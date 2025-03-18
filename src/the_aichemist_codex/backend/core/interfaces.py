@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 # Import shared models for types that don't create circular imports
-from .models import SearchResult
 
 if TYPE_CHECKING:
     # Forward references for types that might create circular dependencies
@@ -537,10 +536,7 @@ class SearchEngine(ABC):
 
     @abstractmethod
     async def search(
-        self,
-        query: str,
-        search_type: str = "text",
-        options: dict[str, Any] = None
+        self, query: str, search_type: str = "text", options: dict[str, Any] = None
     ) -> list[dict[str, Any]]:
         """
         Perform a search using the specified search type.
@@ -560,10 +556,7 @@ class SearchEngine(ABC):
 
     @abstractmethod
     async def multi_search(
-        self,
-        query: str,
-        search_types: list[str],
-        options: dict[str, Any] = None
+        self, query: str, search_types: list[str], options: dict[str, Any] = None
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Perform multiple searches with the same query.
@@ -582,11 +575,7 @@ class SearchEngine(ABC):
         pass
 
     @abstractmethod
-    async def index_file(
-        self,
-        file_path: str,
-        file_type: str = None
-    ) -> None:
+    async def index_file(self, file_path: str, file_type: str = None) -> None:
         """
         Index a file for searching.
 
@@ -1913,7 +1902,7 @@ class UserManager(ABC):
         email: str,
         password: str,
         full_name: str | None = None,
-        role: str = "user"
+        role: str = "user",
     ) -> dict[str, Any]:
         """
         Create a new user.
@@ -1984,9 +1973,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def update_user(
-        self,
-        user_id: str,
-        updates: dict[str, Any]
+        self, user_id: str, updates: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Update user information.
@@ -2022,9 +2009,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def authenticate(
-        self,
-        username_or_email: str,
-        password: str
+        self, username_or_email: str, password: str
     ) -> dict[str, Any] | None:
         """
         Authenticate a user with username/email and password.
@@ -2045,10 +2030,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def change_password(
-        self,
-        user_id: str,
-        current_password: str,
-        new_password: str
+        self, user_id: str, current_password: str, new_password: str
     ) -> bool:
         """
         Change a user's password.
@@ -2068,11 +2050,7 @@ class UserManager(ABC):
         pass
 
     @abstractmethod
-    async def reset_password(
-        self,
-        user_id: str,
-        new_password: str
-    ) -> bool:
+    async def reset_password(self, user_id: str, new_password: str) -> bool:
         """
         Reset a user's password (admin function).
 
@@ -2090,10 +2068,7 @@ class UserManager(ABC):
         pass
 
     @abstractmethod
-    async def get_user_preferences(
-        self,
-        user_id: str
-    ) -> dict[str, Any]:
+    async def get_user_preferences(self, user_id: str) -> dict[str, Any]:
         """
         Get user preferences.
 
@@ -2110,9 +2085,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def update_preferences(
-        self,
-        user_id: str,
-        preferences: dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Update user preferences.
@@ -2131,10 +2104,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def check_permission(
-        self,
-        user_id: str,
-        permission: str,
-        resource_id: str | None = None
+        self, user_id: str, permission: str, resource_id: str | None = None
     ) -> bool:
         """
         Check if a user has a specific permission.
@@ -2154,10 +2124,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def grant_permission(
-        self,
-        user_id: str,
-        permission: str,
-        resource_id: str | None = None
+        self, user_id: str, permission: str, resource_id: str | None = None
     ) -> bool:
         """
         Grant a permission to a user.
@@ -2177,10 +2144,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def revoke_permission(
-        self,
-        user_id: str,
-        permission: str,
-        resource_id: str | None = None
+        self, user_id: str, permission: str, resource_id: str | None = None
     ) -> bool:
         """
         Revoke a permission from a user.
@@ -2199,10 +2163,7 @@ class UserManager(ABC):
         pass
 
     @abstractmethod
-    async def get_user_permissions(
-        self,
-        user_id: str
-    ) -> list[dict[str, Any]]:
+    async def get_user_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """
         Get all permissions for a user.
 
@@ -2223,7 +2184,7 @@ class UserManager(ABC):
         query: str | None = None,
         role: str | None = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> list[dict[str, Any]]:
         """
         List users, optionally filtered.
@@ -2244,9 +2205,7 @@ class UserManager(ABC):
 
     @abstractmethod
     async def count_users(
-        self,
-        query: str | None = None,
-        role: str | None = None
+        self, query: str | None = None, role: str | None = None
     ) -> int:
         """
         Count users, optionally filtered.
@@ -2301,9 +2260,7 @@ class SearchProvider(ABC):
 
     @abstractmethod
     async def search(
-        self,
-        query: str,
-        options: dict[str, Any] = None
+        self, query: str, options: dict[str, Any] = None
     ) -> list[dict[str, Any]]:
         """
         Perform a search using this provider.
@@ -2377,10 +2334,7 @@ class IndexManager(ABC):
 
     @abstractmethod
     async def add_document(
-        self,
-        doc_id: str,
-        content: str,
-        metadata: dict[str, Any] = None
+        self, doc_id: str, content: str, metadata: dict[str, Any] = None
     ) -> None:
         """
         Add a document to the index.
@@ -2397,10 +2351,7 @@ class IndexManager(ABC):
 
     @abstractmethod
     async def update_document(
-        self,
-        doc_id: str,
-        content: str = None,
-        metadata: dict[str, Any] = None
+        self, doc_id: str, content: str = None, metadata: dict[str, Any] = None
     ) -> None:
         """
         Update an existing document in the index.
@@ -2458,5 +2409,84 @@ class IndexManager(ABC):
 
         Raises:
             SearchError: If clearing fails
+        """
+        pass
+
+
+class ProjectReader(ABC):
+    """
+    Interface for project structure analysis and code reading.
+
+    This interface defines methods for reading, analyzing, and summarizing
+    code projects, extracting information about structure, functions,
+    and other code elements.
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """
+        Initialize the project reader.
+
+        Raises:
+            Exception: If initialization fails
+        """
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close any resources used by the project reader."""
+        pass
+
+    @abstractmethod
+    async def summarize_project(
+        self,
+        directory: Path,
+        output_markdown: Path | None = None,
+        output_json: Path | None = None,
+    ) -> dict[str, Any]:
+        """
+        Generate a summary of the project in the specified directory.
+
+        Args:
+            directory: Path to the project directory
+            output_markdown: Optional path to save markdown summary
+            output_json: Optional path to save JSON summary
+
+        Returns:
+            Dictionary containing project summary data
+
+        Raises:
+            ProjectReaderError: If summarization fails
+            FileError: If the directory does not exist or is not readable
+        """
+        pass
+
+    @abstractmethod
+    async def convert_notebook(self, notebook_path: Path) -> str:
+        """
+        Convert a Jupyter notebook to a Python script.
+
+        Args:
+            notebook_path: Path to the notebook file
+
+        Returns:
+            String containing the Python script
+
+        Raises:
+            ProjectReaderError: If conversion fails
+            FileError: If the notebook file does not exist or is not readable
+        """
+        pass
+
+    @abstractmethod
+    def estimate_tokens(self, text: str) -> int:
+        """
+        Estimate the number of tokens in a text string.
+
+        Args:
+            text: The text to analyze
+
+        Returns:
+            Estimated token count
         """
         pass

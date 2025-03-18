@@ -18,6 +18,7 @@ from ..core.interfaces import (
     FileValidator,
     MetadataManager,
     ProjectPaths,
+    ProjectReader,
     SearchEngine,
 )
 
@@ -57,6 +58,7 @@ class Registry:
         self._file_reader: FileReader | None = None
         self._metadata_manager: MetadataManager | None = None
         self._search_engine: SearchEngine | None = None
+        self._project_reader: ProjectReader | None = None
 
     def register_implementation(self, interface_type: type, implementation_instance):
         """Register an implementation for an interface."""
@@ -80,6 +82,8 @@ class Registry:
             self._metadata_manager = implementation_instance
         elif interface_type == SearchEngine:
             self._search_engine = implementation_instance
+        elif interface_type == ProjectReader:
+            self._project_reader = implementation_instance
         else:
             raise ValueError(f"Unknown interface type: {interface_type}")
 
@@ -184,3 +188,13 @@ class Registry:
 
             self._search_engine = SearchEngineImpl()
         return self._search_engine
+
+    @property
+    def project_reader(self) -> ProjectReader:
+        """Get the project reader service."""
+        if self._project_reader is None:
+            # Import here to avoid circular imports
+            from ..domain.project_reader.project_reader import ProjectReaderImpl
+
+            self._project_reader = ProjectReaderImpl()
+        return self._project_reader

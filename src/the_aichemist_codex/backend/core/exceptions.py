@@ -6,6 +6,7 @@ These exceptions provide a consistent way of handling errors and
 propagating them to the appropriate error handlers.
 """
 
+from pathlib import Path
 from typing import Any
 
 
@@ -379,3 +380,29 @@ class UserError(AiChemistError):
         self.operation = operation
         self.details = details or {}
         super().__init__(message)
+
+
+class ProjectReaderError(AiChemistError):
+    """
+    Base exception for errors related to project reading and analysis.
+
+    This exception is raised when there are issues with reading,
+    analyzing, or summarizing project files and code.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        file_path: str | Path | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Initialize a ProjectReaderError.
+
+        Args:
+            message: Error message
+            file_path: Path to the file that caused the error (optional)
+            details: Additional error details (optional)
+        """
+        super().__init__(message, details)
+        self.file_path = str(file_path) if file_path else None
