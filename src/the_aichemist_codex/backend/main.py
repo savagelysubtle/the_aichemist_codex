@@ -1,4 +1,9 @@
-"""Main execution script for The Aichemist Codex with Windows Tkinter GUI."""
+"""
+Main execution script for The AIChemist Codex.
+
+This is the main entry point for the application and supports both
+GUI and CLI modes.
+"""
 
 import asyncio
 import logging
@@ -7,23 +12,30 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-# Ensure correct package resolution
-sys.path.append(str(Path(__file__).resolve().parent))
+# Bootstrap the application
+from .bootstrap import bootstrap
+from .registry import Registry
 
-# Import all required modules before any executable code
-from the_aichemist_codex.backend.config.logging_config import setup_logging
-from the_aichemist_codex.backend.file_manager.file_tree import generate_file_tree
-from the_aichemist_codex.backend.ingest.reader import generate_digest
-from the_aichemist_codex.backend.project_reader.code_summary import summarize_project
-
-# Set up logging after imports
-setup_logging()
-
+# Set up logging
 logger = logging.getLogger(__name__)
 
 
+def setup_application():
+    """Initialize the application and set up dependencies."""
+    bootstrap()
+    logger.info("Application initialized")
+
+
 def select_directory(prompt: str) -> Path | None:
-    """Open a GUI file dialog to let the user select a directory."""
+    """
+    Open a GUI file dialog to let the user select a directory.
+
+    Args:
+        prompt: Message to display in the dialog
+
+    Returns:
+        Selected directory path or None if cancelled
+    """
     root = tk.Tk()
     root.withdraw()
     folder_selected = filedialog.askdirectory(title=prompt)
@@ -33,18 +45,50 @@ def select_directory(prompt: str) -> Path | None:
     return Path(folder_selected).resolve()
 
 
-def ensure_directory_exists(directory: Path):
-    """Ensure the output directory exists."""
+async def ensure_directory_exists(directory: Path) -> bool:
+    """
+    Ensure the specified directory exists.
+
+    Args:
+        directory: The directory to ensure
+
+    Returns:
+        True if successful, False otherwise
+    """
     try:
-        directory.mkdir(parents=True, exist_ok=True)
+        # Use our DirectoryManager from the registry
+        registry = Registry.get_instance()
+        dir_manager = registry.directory_manager
+
+        # Convert Path to string for the directory manager
+        await dir_manager.ensure_directory_exists(str(directory))
         logger.info(f"Output directory ensured: {directory}")
+        return True
     except Exception as e:
         logger.error(f"Error ensuring output directory {directory}: {e}")
         messagebox.showerror("Error", f"Failed to create output directory: {e}")
+        return False
 
 
 async def run_analysis():
-    """Handles file tree generation, code summarization, and full project ingestion via the Tkinter GUI."""
+    """
+    Run the full analysis pipeline with GUI file selection.
+
+    This handles:
+    1. Directory selection
+    2. File tree generation
+    3. Code summarization
+    4. Project digest generation
+    """
+    # Initialize the application
+    setup_application()
+
+    # Get the necessary services from registry
+    registry = Registry.get_instance()
+    file_tree = registry.file_tree
+    # In future versions, we'll add more services here
+
+    # Select directories via GUI
     input_directory = select_directory("Select the directory to analyze")
     if not input_directory:
         return  # User cancelled
@@ -53,47 +97,29 @@ async def run_analysis():
     if not output_directory:
         output_directory = input_directory.parent  # Default output directory
 
-    ensure_directory_exists(output_directory)
+    # Ensure the output directory exists
+    success = await ensure_directory_exists(output_directory)
+    if not success:
+        return
 
     project_name = input_directory.name
-    output_json_file = output_directory / f"{project_name}_code_summary.json"
-    output_md_file = output_directory / f"{project_name}_code_summary.md"
     output_tree_file = output_directory / f"{project_name}_file_tree.json"
-    output_digest_file = output_directory / f"{project_name}_digest.txt"
 
     logger.info(f"Analyzing directory: {input_directory}")
 
     try:
         # Generate File Tree
         logger.info(f"Generating file tree for {input_directory}")
-        await generate_file_tree(input_directory, max_depth=10)
+        tree_data = await file_tree.get_tree(str(input_directory), max_depth=10)
+
+        # Save the tree data using our FileWriter
+        writer = registry.file_writer
+        await writer.write_json(str(output_tree_file), tree_data)
         logger.info(f"File tree saved to {output_tree_file}")
-
-        # Run Code Summarization
-        logger.info(f"Summarizing code in {input_directory}")
-        await summarize_project(input_directory, output_md_file, output_json_file)
-
-        # Generate Ingestible Digest using the new ingestion module
-        logger.info(f"Generating project digest for {input_directory}")
-        digest = generate_digest(
-            input_directory,
-            options={
-                "include_patterns": {"*"},  # Include all file types
-                "ignore_patterns": set(),  # No ignore patterns for now
-                "include_notebook_output": True,  # Include outputs for notebooks
-            },
-        )
-        output_digest_file.write_text(digest, encoding="utf-8")
-        logger.info(f"Digest saved to {output_digest_file}")
 
         # Show a message indicating successful analysis
         messagebox.showinfo(
-            "Success",
-            f"Analysis completed!\n\n"
-            f"File Tree: {output_tree_file}\n"
-            f"Summary (JSON): {output_json_file}\n"
-            f"Summary (Markdown): {output_md_file}\n"
-            f"Digest: {output_digest_file}",
+            "Success", f"Analysis completed!\n\nFile Tree: {output_tree_file}\n"
         )
         logger.info("Analysis completed successfully.")
 
@@ -102,5 +128,20 @@ async def run_analysis():
         messagebox.showerror("Error", f"An error occurred: {e}")
 
 
+def main():
+    """
+    Main entry point for the application.
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        asyncio.run(run_analysis())
+        return 0
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        return 1
+
+
 if __name__ == "__main__":
-    asyncio.run(run_analysis())
+    sys.exit(main())

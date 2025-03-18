@@ -1,0 +1,160 @@
+---
+description: Details on using the Registry pattern to prevent circular imports
+globs: **/*.py
+alwaysApply: true
+---
+# Registry Pattern
+
+## 1. What is the Registry Pattern?
+
+The Registry pattern provides a central location to store and retrieve objects instead of importing them directly. In our architecture, it's the key mechanism for preventing circular imports:
+
+```
+┌─────────────┐      ┌─────────────┐
+│ Module A    │      │ Module B    │
+│             │      │             │
+│ Uses B      │─────>│ Uses A      │
+└─────────────┘      └─────────────┘
+       │                    │
+       │                    │
+       ▼                    ▼
+┌─────────────────────────────────┐
+│          Registry               │
+│                                 │
+│ Holds instances of A and B      │
+└─────────────────────────────────┘
+```
+
+## 2. Core Registry Implementation
+
+Our Registry is a singleton that provides lazy initialization of services:
+
+```python
+class Registry:
+    """Singleton registry for managing dependencies."""
+
+    _instance = None
+
+    @classmethod
+    def get_instance(cls) -> "Registry":
+        """Get the singleton instance."""
+        if cls._instance is None:
+            cls._instance = Registry()
+        return cls._instance
+
+    # Properties to access services
+    @property
+    def file_reader(self) -> FileReader:
+        return self._lazy_load("file_reader", FileReader, self._create_file_reader)
+
+    # Factory methods
+    def _create_file_reader(self) -> FileReader:
+        from .domain.file_reader.file_reader import FileReaderImpl
+        return FileReaderImpl()
+```
+
+## 3. Using the Registry in Your Code
+
+### Obtaining Services
+
+Always obtain services through the Registry:
+
+```python
+from ...registry import Registry
+
+# Get the registry instance
+registry = Registry.get_instance()
+
+# Access a service
+file_reader = registry.file_reader
+result = file_reader.read_text("path/to/file.txt")
+```
+
+### Implementing New Services
+
+1. Define the interface in `core/interfaces.py`:
+   ```python
+   class MyService(ABC):
+       @abstractmethod
+       def do_something(self) -> str:
+           pass
+   ```
+
+2. Add a property to the Registry:
+   ```python
+   @property
+   def my_service(self) -> MyService:
+       return self._lazy_load("my_service", MyService, self._create_my_service)
+
+   def _create_my_service(self) -> MyService:
+       from .domain.my_service.my_service import MyServiceImpl
+       return MyServiceImpl()
+   ```
+
+3. Implement the service:
+   ```python
+   from ...core.interfaces import MyService as MyServiceInterface
+   from ...registry import Registry
+
+   class MyServiceImpl(MyServiceInterface):
+       def __init__(self):
+           self._registry = Registry.get_instance()
+           # Access other services via registry
+           self._another_service = self._registry.another_service
+
+       def do_something(self) -> str:
+           # Implementation here
+           return "Result"
+   ```
+
+## 4. Bootstrapping the Application
+
+The bootstrap process initializes the Registry with all the services in the correct order:
+
+```python
+def bootstrap():
+    """Initialize the application."""
+    # Get registry
+    registry = Registry.get_instance()
+
+    # Register services (this triggers lazy loading)
+    paths = registry.project_paths
+    config = registry.config_provider
+    # etc.
+
+    return registry
+```
+
+Always call bootstrap at the start of your application:
+
+```python
+from .bootstrap import bootstrap
+
+# Initialize application
+bootstrap()
+
+# Now the registry is ready to use
+registry = Registry.get_instance()
+```
+
+## 5. Benefits of the Registry Pattern
+
+1. **Breaks Circular Dependencies**: Services don't directly import each other
+2. **Lazy Initialization**: Services are only created when needed
+3. **Centralized Configuration**: All services can be configured in one place
+4. **Testability**: Services can be easily mocked or replaced for testing
+5. **Flexibility**: Implementations can be changed without modifying client code
+
+## 6. Potential Pitfalls
+
+1. **Service Locator Anti-Pattern**: Avoid using the Registry directly in business logic
+2. **Hidden Dependencies**: Dependencies aren't explicit in function signatures
+3. **Singleton State**: Be careful with mutable state in the Registry
+
+## 7. Best Practices
+
+1. **Interface-Based Design**: Always define interfaces in the core layer
+2. **Explicit Initialization**: Call bootstrap explicitly at application startup
+3. **Factory Methods**: Use factory methods in the Registry to create services
+4. **Dependency Injection**: Consider injecting the Registry into service constructors
+5. **Testing**: Create a test Registry with mock implementations for testing

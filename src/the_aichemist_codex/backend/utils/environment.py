@@ -1,89 +1,120 @@
-"""Environment detection utilities for dual-mode operation."""
+"""Environment detection and configuration utilities."""
 
 import os
 from pathlib import Path
 
-from the_aichemist_codex.backend.config.settings import determine_project_root
-
 
 def is_development_mode() -> bool:
     """
-    Detect if running in development mode (not installed as package).
+    Detect if running in development mode.
 
-    This checks if we're running from source directories or as an installed package.
+    Development mode is detected by:
+    1. Presence of AICHEMIST_DEV_MODE environment variable
+    2. Being run directly from the source directory
+    3. Being run from a git clone (presence of .git directory)
 
     Returns:
-        bool: True if running from source, False if installed as package
+        bool: True if running in development mode, False otherwise
     """
-    # Check explicit environment variable first
+    # Check for explicit development mode env var
     if os.environ.get("AICHEMIST_DEV_MODE"):
         return True
 
-    # Check if running from source directory structure
-    module_path = Path(__file__).resolve()
-    src_parent = "src"
-
-    # If we're in a src/the_aichemist_codex structure, we're in development mode
-    return src_parent in module_path.parts
-
-
-def get_import_mode() -> str:
-    """
-    Determine how the package was imported.
-
-    Returns:
-        str: "package" if installed and imported as a package,
-             "standalone" if running from source,
-             "editable" if installed in development/editable mode
-    """
-    if is_development_mode():
-        return "standalone"
-
-    # Check for editable install
+    # Check if running directly from source
     try:
-        import importlib.metadata
-        import sys
-        from importlib.util import find_spec
+        module_path = Path(__file__).resolve().parent.parent.parent.parent
+        src_path = module_path.parent
 
-        # More reliable way to detect editable installs
-        # If the package is installed in editable mode, the spec will point to the source directory
-        spec = find_spec("the_aichemist_codex")
-        if spec and spec.origin:
-            origin_path = Path(spec.origin).resolve()
-            if "site-packages" not in str(origin_path) and "src" in origin_path.parts:
-                return "editable"
-    except (ImportError, ModuleNotFoundError):
+        # Check for setup.py or pyproject.toml in parent directory
+        if (src_path / "pyproject.toml").exists():
+            # Check for .git folder to distinguish between installed and development
+            if (src_path.parent / ".git").exists():
+                return True
+    except Exception:
         pass
 
-    return "package"
+    return False
 
 
-def get_project_root() -> Path:
+def get_app_config_dir() -> Path:
     """
-    Get the project root directory regardless of execution context.
+    Get the application configuration directory.
 
-    This function builds on top of determine_project_root() from settings
-    but adds additional logic specific to package vs. standalone mode.
+    In development mode, this is a local directory in the project.
+    In installed mode, this is in the user's home directory.
 
     Returns:
-        Path: The project root directory
+        Path: Path to the configuration directory
     """
-    # Use the existing project root detection
-    return determine_project_root()
-
-
-def get_package_dir() -> Path:
-    """
-    Get the package installation directory when running as an installed package.
-
-    Returns:
-        Path: The package installation directory
-    """
-    # If in development mode, return the src/the_aichemist_codex directory
     if is_development_mode():
-        return Path(__file__).resolve().parents[2]
+        # Use a local config directory for development
+        module_path = Path(__file__).resolve().parent.parent.parent.parent
+        return module_path.parent / "config"
+    else:
+        # Use platform-specific config locations for installed mode
+        import platformdirs
 
-    # If installed, return the site-packages directory for the package
-    import the_aichemist_codex
+        return Path(platformdirs.user_config_dir("aichemist-codex"))
 
-    return Path(the_aichemist_codex.__file__).resolve().parent
+
+def get_app_data_dir() -> Path:
+    """
+    Get the application data directory.
+
+    In development mode, this is a local directory in the project.
+    In installed mode, this is in the user's home directory.
+
+    Returns:
+        Path: Path to the data directory
+    """
+    if is_development_mode():
+        # Use a local data directory for development
+        module_path = Path(__file__).resolve().parent.parent.parent.parent
+        return module_path.parent / "data"
+    else:
+        # Use platform-specific data locations for installed mode
+        import platformdirs
+
+        return Path(platformdirs.user_data_dir("aichemist-codex"))
+
+
+def get_app_cache_dir() -> Path:
+    """
+    Get the application cache directory.
+
+    In development mode, this is a local directory in the project.
+    In installed mode, this is in the user's home directory.
+
+    Returns:
+        Path: Path to the cache directory
+    """
+    if is_development_mode():
+        # Use a local cache directory for development
+        module_path = Path(__file__).resolve().parent.parent.parent.parent
+        return module_path.parent / "cache"
+    else:
+        # Use platform-specific cache locations for installed mode
+        import platformdirs
+
+        return Path(platformdirs.user_cache_dir("aichemist-codex"))
+
+
+def get_app_log_dir() -> Path:
+    """
+    Get the application log directory.
+
+    In development mode, this is a local directory in the project.
+    In installed mode, this is in the user's home directory.
+
+    Returns:
+        Path: Path to the log directory
+    """
+    if is_development_mode():
+        # Use a local log directory for development
+        module_path = Path(__file__).resolve().parent.parent.parent.parent
+        return module_path.parent / "logs"
+    else:
+        # Use platform-specific log locations for installed mode
+        import platformdirs
+
+        return Path(platformdirs.user_log_dir("aichemist-codex"))

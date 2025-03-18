@@ -1,0 +1,220 @@
+# The AIChemist Codex - Circular Imports Resolution Plan
+
+## Architecture Overview
+
+Our new architecture follows a layered structure to prevent circular
+dependencies:
+
+```
+src/the_aichemist_codex/
+├── backend/
+│   ├── core/                  # Core interfaces and domain models
+│   │   ├── interfaces.py      # Abstract interfaces
+│   │   ├── models.py          # Data models
+│   │   ├── constants.py       # Constants
+│   │   ├── exceptions.py      # Exception classes
+│   │   └── utils.py           # Pure utility functions
+│   ├── registry.py            # Dependency registry
+│   ├── bootstrap.py           # Application initialization
+│   ├── cli.py                 # Command-line interface
+│   ├── main.py                # Main GUI application entry point
+│   ├── infrastructure/        # Concrete implementations of core interfaces
+│   │   ├── config/
+│   │   │   ├── paths.py
+│   │   │   └── config_provider.py
+│   │   ├── security/
+│   │   │   └── file_validator.py
+│   │   └── io/
+│   │       └── async_io_impl.py
+│   ├── domain/                # Domain-specific modules
+│   │   ├── file_reader/
+│   │   │   └── file_reader.py
+│   │   └── file_writer/
+│   │       └── file_writer.py
+│   ├── services/              # Service implementations
+│   │   ├── cache/
+│   │   │   └── cache_manager.py
+│   │   ├── file/
+│   │   │   └── directory_manager.py
+│   │   ├── file_mgmt/
+│   │   │   └── file_tree.py
+│   │   ├── metadata/
+│   │   │   └── metadata_manager.py
+│   │   └── search/
+│   │       └── search_engine.py
+│   └── tools/                 # Utility tools and scripts
+│       └── validate_data_dir.py
+```
+
+## Import Rules
+
+1. **Core Dependencies**:
+
+   - `core/` modules can only import from standard library and other `core/`
+     modules
+   - No dependencies on `infrastructure/`, `domain/`, or `services/`
+
+2. **Infrastructure Dependencies**:
+
+   - Can import from `core/` and standard library
+   - Can import from `registry.py`
+   - No direct dependencies on other `infrastructure/` modules, `domain/`, or
+     `services/`
+
+3. **Domain Dependencies**:
+
+   - Can import from `core/` and standard library
+   - Can import from `registry.py`
+   - No direct dependencies on `infrastructure/` or `services/`
+
+4. **Service Dependencies**:
+
+   - Can import from `core/` and standard library
+   - Can import from `registry.py`
+   - No direct dependencies on `infrastructure/` or `domain/`
+
+5. **Application Layer Dependencies**:
+
+   - Entry points (cli.py, main.py) and tools can import from any module
+   - Should primarily use the Registry to access services
+   - Should not directly import from implementation modules when possible
+
+## Completed Components
+
+- [x] Core interfaces (interfaces.py)
+- [x] Core models (models.py)
+- [x] Core exceptions (exceptions.py)
+- [x] Core constants (constants.py)
+- [x] Core utilities (utils.py)
+- [x] Registry (registry.py)
+- [x] Project paths implementation (paths.py)
+- [x] Config provider implementation (config_provider.py)
+- [x] File validator implementation (file_validator.py)
+- [x] Async I/O implementation (async_io_impl.py)
+- [x] Directory manager implementation (directory_manager.py)
+- [x] Cache manager implementation (cache_manager.py)
+- [x] Metadata manager implementation (metadata_manager.py)
+- [x] Search engine implementation (search_engine.py)
+- [x] File tree implementation (file_tree.py)
+- [x] File reader implementation (file_reader.py)
+- [x] File writer implementation (file_writer.py)
+- [x] Tools: Data directory validator (validate_data_dir.py)
+- [x] Main application entry point (main.py)
+- [x] Command-line interface (cli.py)
+
+## Next Steps
+
+- [ ] Fix remaining linter errors
+- [ ] Port remaining modules from src1:
+  - [ ] Project reader
+  - [ ] Notification system
+  - [ ] Tagging system
+  - [ ] Relationship modules
+  - [ ] Output formatters
+- [ ] Create backward compatibility adapters
+- [ ] Add comprehensive tests
+
+# AIChemist Codex Porting Plan
+
+## Modules to Port from Legacy (src1) to New Architecture (src/the_aichemist_codex)
+
+### Already Ported / Implemented
+
+- Core infrastructure (interfaces, exceptions, constants)
+- Registry pattern for dependency management
+- Bootstrap process
+- FileReader implementation
+- DirectoryManager implementation
+- FileValidator implementation
+- AsyncIO implementation
+- ConfigProvider implementation
+- MetadataManager implementation
+- SearchEngine implementation
+
+### Modules to Port Next
+
+1. **Tagging Module**
+
+   - Create `TaggingManager` interface in core/interfaces.py
+   - Port functionality from src1/the_aichemist_codex/backend/tagging/manager.py
+   - Implement in domain/tagging/tagging_manager.py
+   - Add to Registry and bootstrap process
+
+2. **Relationships Module**
+
+   - Create `RelationshipManager` interface
+   - Port from src1/the_aichemist_codex/backend/relationships
+   - Implement in domain/relationships/relationship_manager.py
+
+3. **Project Reader Module**
+
+   - Create `ProjectReader` interface
+   - Port from src1/the_aichemist_codex/backend/project_reader
+   - Implement in domain/project_reader/project_reader.py
+
+4. **Output Formatter Module**
+
+   - Create `OutputFormatter` interface
+   - Port from src1/the_aichemist_codex/backend/output_formatter
+   - Implement in domain/output_formatter/output_formatter.py
+
+5. **Notification Module**
+
+   - Create `NotificationManager` interface
+   - Port from src1/the_aichemist_codex/backend/notification
+   - Implement in domain/notification/notification_manager.py
+
+6. **Ingest Module**
+
+   - Create `IngestManager` interface
+   - Port from src1/the_aichemist_codex/backend/ingest
+   - Implement in domain/ingest/ingest_manager.py
+
+7. **Rollback Module**
+
+   - Create `RollbackManager` interface
+   - Port from src1/the_aichemist_codex/backend/rollback
+   - Implement in domain/rollback/rollback_manager.py
+
+8. **Tools Module**
+
+   - Create interfaces for each tool
+   - Port from src1/the_aichemist_codex/backend/tools
+   - Implement in domain/tools/
+
+9. **CLI and Main**
+   - Update cli.py to use the new architecture
+   - Ensure backward compatibility with adapters
+
+## Implementation Strategy
+
+1. For each module:
+
+   - Define interface in core/interfaces.py
+   - Create implementation class following Registry pattern
+   - Update Registry and bootstrap process
+   - Create adapter for backward compatibility (if needed)
+
+2. Follow the layered architecture:
+
+   - Core (interfaces, exceptions, constants)
+   - Infrastructure (base implementations)
+   - Domain (business logic)
+   - Services (composition of domain components)
+   - Adapters (for backward compatibility)
+
+3. Testing strategy:
+   - Write unit tests for each component
+   - Write integration tests for component interactions
+   - Ensure backward compatibility
+
+## Priority Order
+
+1. Tagging (handles file classification)
+2. Relationships (handles file relationships)
+3. Project Reader (used by many components)
+4. Ingest and Rollback (core functionality)
+5. Output Formatter (for consistent output)
+6. Notification (can be implemented later)
+7. Tools (specialized tools can be implemented last)
+8. CLI (updated last to use all new components)

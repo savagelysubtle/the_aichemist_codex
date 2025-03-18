@@ -1,0 +1,188 @@
+---
+description: Guidelines for structuring modules in the aichemist codebase
+globs: **/*.py
+alwaysApply: true
+---
+# Module Structure Guidelines
+
+## 1. Overall Project Structure
+
+The AIChemist Codex project follows a layered architecture:
+
+```
+src/the_aichemist_codex/
+├── backend/
+│   ├── core/               # Core interfaces, exceptions, constants
+│   ├── infrastructure/     # Base implementations
+│   ├── domain/             # Business logic implementations
+│   ├── adapters/           # Adapter layer for compatibility
+│   └── utils/              # Utility functions
+├── registry.py             # Registry for dependency injection
+├── bootstrap.py            # Application initialization
+└── main.py                 # Entry point
+```
+
+## 2. Module Structure
+
+Each module should follow this structure:
+
+```python
+"""Module docstring explaining purpose and usage."""
+
+# Standard library imports
+import os
+import sys
+from typing import Dict, List, Optional, Union, Any, TYPE_CHECKING
+
+# Third-party imports
+import yaml
+import numpy as np
+
+# Application imports - core interfaces
+from ...core.interfaces import (
+    FileReader as FileReaderInterface,
+    ConfigProvider as ConfigProviderInterface
+)
+from ...core.exceptions import FileError, ConfigError
+from ...core.constants import MAX_FILE_SIZE_MB
+
+# Registry import (if needed)
+from ...registry import Registry
+
+# Module constants
+DEFAULT_TIMEOUT = 30
+ALLOWED_EXTENSIONS = [".txt", ".pdf", ".md"]
+
+# Implementation class
+class FileReaderImpl(FileReaderInterface):
+    """Implementation class docstring."""
+
+    def __init__(self) -> None:
+        """Initialize the class."""
+        self._registry = Registry.get_instance()
+        self._config = self._registry.config_provider
+
+    # Method implementations...
+
+# Helper functions
+def _sanitize_path(path: str) -> str:
+    """Internal helper function."""
+    return os.path.normpath(path)
+
+# Export symbols to make imports cleaner
+__all__ = ["FileReaderImpl"]
+```
+
+## 3. Imports Organization
+
+Follow this order for imports:
+
+1. Module docstring
+2. Standard library imports (sorted alphabetically)
+3. Third-party imports (sorted alphabetically)
+4. First-party imports (from our application)
+   - Core interfaces, exceptions, constants
+   - Registry import
+   - Other application imports
+5. Module constants
+6. Classes and functions
+7. Helper functions
+8. __all__ declaration
+
+## 4. Interface and Implementation Structure
+
+### Interfaces (in core/interfaces.py)
+
+```python
+class FileReader(ABC):
+    """Interface for reading files."""
+
+    @abstractmethod
+    def read_text(self, path: str) -> str:
+        """Read a text file."""
+        pass
+
+    @abstractmethod
+    def read_json(self, path: str) -> Dict[str, Any]:
+        """Read a JSON file."""
+        pass
+```
+
+### Implementations
+
+```python
+class FileReaderImpl(FileReaderInterface):
+    """Implementation of the FileReader interface."""
+
+    def __init__(self) -> None:
+        self._registry = Registry.get_instance()
+        self._validator = self._registry.file_validator
+
+    def read_text(self, path: str) -> str:
+        """Read a text file."""
+        self._validator.validate_path(path)
+        # Implementation...
+
+    def read_json(self, path: str) -> Dict[str, Any]:
+        """Read a JSON file."""
+        self._validator.validate_path(path)
+        # Implementation...
+```
+
+## 5. Package __init__.py Files
+
+For better import structure, export symbols in __init__.py files:
+
+```python
+# domain/file_reader/__init__.py
+from .file_reader import FileReaderImpl
+
+__all__ = ["FileReaderImpl"]
+```
+
+This allows importing like:
+```python
+from ...domain.file_reader import FileReaderImpl
+```
+
+## 6. Implementing New Services
+
+When creating a new service:
+
+1. Define the interface in `core/interfaces.py`
+2. Create the implementation in the appropriate domain directory
+3. Add the service to the Registry
+4. Add factory methods to create the service
+5. Update the bootstrap process if needed
+
+## 7. Type Annotations
+
+Always use type hints:
+
+```python
+def process_data(data: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Process the data and return results."""
+    # Implementation...
+```
+
+For forward references and circular imports, use `TYPE_CHECKING`:
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .complex_type import ComplexType
+
+def process(data: str) -> 'ComplexType':
+    # Implementation...
+```
+
+## 8. __all__ Declaration
+
+Always include an `__all__` declaration at the end of your module:
+
+```python
+__all__ = ["FileReaderImpl", "helper_function"]
+```
+
+This helps with imports and makes it clear what the module exports.

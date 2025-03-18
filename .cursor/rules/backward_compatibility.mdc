@@ -1,0 +1,211 @@
+---
+description: Guidelines for maintaining backward compatibility during refactoring
+globs: **/*.py
+alwaysApply: true
+---
+# Backward Compatibility Guidelines
+
+## 1. Adapter Pattern
+
+When refactoring code, use the Adapter pattern to maintain backward compatibility:
+
+```
+┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+│ Legacy Code   │────>│    Adapter    │────>│  New System   │
+└───────────────┘     └───────────────┘     └───────────────┘
+```
+
+## 2. Creating Adapters
+
+### 2.1 Adapter Class Structure
+
+```python
+from typing import Dict, Any
+
+# Import legacy dependencies
+from ...legacy.module import legacy_function
+
+# Import new system
+from ...registry import Registry
+from ...core.interfaces import NewInterface
+
+class LegacyAdapter:
+    """Adapter for maintaining backward compatibility with legacy code."""
+
+    def __init__(self):
+        self._registry = Registry.get_instance()
+        self._new_service = self._registry.new_service
+
+    def legacy_method(self, param1: str, param2: int) -> Dict[str, Any]:
+        """Adapt legacy method to use new service."""
+        # Convert legacy parameters to new format if needed
+        new_param = self._convert_param(param1, param2)
+
+        # Call new service
+        result = self._new_service.new_method(new_param)
+
+        # Convert result back to legacy format if needed
+        legacy_result = self._convert_result(result)
+
+        return legacy_result
+
+    def _convert_param(self, param1: str, param2: int) -> Dict[str, Any]:
+        """Convert legacy parameters to new format."""
+        return {"key1": param1, "key2": param2}
+
+    def _convert_result(self, result: Any) -> Dict[str, Any]:
+        """Convert new result to legacy format."""
+        return {"result": result, "status": "success"}
+```
+
+## 3. Function-Level Adapters
+
+For simpler cases, create function adapters:
+
+```python
+# Original legacy function
+def legacy_search(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
+    """Legacy search function."""
+    # Import inside function to avoid circular imports
+    from ...registry import Registry
+
+    # Get the new search engine
+    registry = Registry.get_instance()
+    search_engine = registry.search_engine
+
+    # Convert parameters if needed
+    search_params = {"query": query, "limit": max_results}
+
+    # Call new service
+    results = search_engine.search(search_params)
+
+    # Convert results to legacy format
+    return [{"title": r.title, "path": r.path, "score": r.score} for r in results]
+```
+
+## 4. Module-Level Compatibility
+
+For module-level compatibility, create adapter modules:
+
+```python
+# legacy_compat.py
+"""Compatibility module for legacy code."""
+
+# Import new system
+from ...registry import Registry
+
+# Legacy API functions
+def get_file_content(file_path: str) -> str:
+    """Get file content (legacy API)."""
+    registry = Registry.get_instance()
+    file_reader = registry.file_reader
+    return file_reader.read_text(file_path)
+
+def save_file_content(file_path: str, content: str) -> bool:
+    """Save file content (legacy API)."""
+    registry = Registry.get_instance()
+    file_writer = registry.file_writer
+    file_writer.write_text(file_path, content)
+    return True
+```
+
+## 5. Deprecation Warnings
+
+Include deprecation warnings in adapter code:
+
+```python
+import warnings
+
+def legacy_function(param: str) -> str:
+    """Legacy function that will be deprecated."""
+    warnings.warn(
+        "legacy_function is deprecated and will be removed in version 2.0. "
+        "Use new_service.new_method() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    registry = Registry.get_instance()
+    new_service = registry.new_service
+    return new_service.new_method(param)
+```
+
+## 6. Testing Adapters
+
+Always test adapters to ensure they maintain compatibility:
+
+```python
+def test_legacy_adapter():
+    # Arrange
+    registry_mock = MagicMock()
+    new_service_mock = MagicMock()
+    new_service_mock.new_method.return_value = {"data": "result"}
+    registry_mock.new_service = new_service_mock
+
+    with patch('src.the_aichemist_codex.registry.Registry.get_instance', return_value=registry_mock):
+        adapter = LegacyAdapter()
+
+        # Act
+        result = adapter.legacy_method("test", 42)
+
+        # Assert
+        new_service_mock.new_method.assert_called_once_with({"key1": "test", "key2": 42})
+        assert result == {"result": {"data": "result"}, "status": "success"}
+```
+
+## 7. Migration Strategy
+
+Follow this process for migrating from legacy code:
+
+1. Create interfaces for new functionality
+2. Implement the new functionality
+3. Create adapters for backward compatibility
+4. Update client code to use the Registry
+5. Gradually migrate legacy calls to use the new system directly
+6. Eventually remove adapters when no longer needed
+
+## 8. Documentation
+
+Always document compatibility concerns:
+
+```python
+class LegacyAdapter:
+    """
+    Adapter for maintaining backward compatibility with legacy code.
+
+    This adapter provides backward compatibility for the old API while
+    using the new implementation under the hood.
+
+    Deprecated:
+        This adapter will be removed in version 2.0. Client code should
+        migrate to using the new API directly.
+
+    Example migration:
+
+        # Old code
+        result = legacy_function("param")
+
+        # New code
+        registry = Registry.get_instance()
+        new_service = registry.new_service
+        result = new_service.new_method("param")
+    """
+```
+
+## 9. Configuration for Backward Compatibility
+
+Use configuration to control backward compatibility features:
+
+```python
+def process_request(request):
+    registry = Registry.get_instance()
+    config = registry.config_provider
+
+    # Check if we should use legacy processing
+    if config.get_config("features.use_legacy_processing"):
+        return _legacy_processing(request)
+    else:
+        return _new_processing(request)
+```
+
+This allows for gradual migration and feature flagging.

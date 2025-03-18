@@ -1,0 +1,190 @@
+---
+description: Troubleshooting and fixing common linter errors in the project
+globs: **/*.py
+alwaysApply: true
+---
+# Troubleshooting Linter Errors
+
+## 1. "Unknown Import Symbol" Errors
+
+This error occurs when the linter can't find a symbol you're trying to import. Common fixes:
+
+### Quick Fix Checklist:
+1. Check if the symbol is actually defined in the source module
+2. Verify the import path is correct
+3. Make sure the symbol is exported in the module's `__init__.py`
+4. Check for typos in both the import statement and class/function name
+
+### Example Solutions:
+
+```python
+# ERROR: "DirectoryError" is unknown import symbol
+from ...core.exceptions import DirectoryError
+
+# FIX: Ensure DirectoryError is defined in exceptions.py, then use:
+from ...core.exceptions import DirectoryError, UnsafePathError  # Import all needed errors at once
+```
+
+```python
+# ERROR: "FileMetadata" is not defined
+def get_metadata(self, file_path: str) -> FileMetadata:
+
+# FIX: Add the proper import at the top of the file
+from ...core.models import FileMetadata
+
+# ALTERNATIVE FIX: Use a string literal for forward reference
+def get_metadata(self, file_path: str) -> "FileMetadata":
+```
+
+## 2. Type Checking Errors
+
+Type checking errors often occur when using types from modules that would create circular imports.
+
+### Forward References
+
+Use string literals for type annotations to break circular dependencies:
+
+```python
+# Instead of this (which requires importing Result)
+def process_item(item: Item) -> Result:
+    ...
+
+# Use this (which doesn't require importing Result)
+def process_item(item: Item) -> "Result":
+    ...
+```
+
+### TYPE_CHECKING Block
+
+Import types conditionally for type-checking only:
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .result_module import Result  # Only imported during type checking
+
+def process_item(item: Item) -> "Result":
+    ...
+```
+
+### Re-exports in __init__.py
+
+Centralize types in `__init__.py` files to simplify imports:
+
+```python
+# In core/__init__.py
+from .models import FileMetadata, SearchResult
+from .exceptions import FileError, DirectoryError
+
+# In other modules
+from ...core import FileMetadata, FileError  # Simpler import path
+```
+
+## 3. Import Resolution Strategies
+
+### Absolute vs. Relative Imports
+
+- Use **absolute imports** for core modules and when the relative path would be too complex
+- Use **relative imports** for closely related modules within the same package
+
+```python
+# Absolute import (good for core modules)
+from the_aichemist_codex.backend.core.interfaces import FileReader
+
+# Relative import (good for modules in the same package)
+from ..utils import validate_path
+```
+
+### Handling Implementation Classes
+
+Always get implementation classes through the Registry:
+
+```python
+# AVOID directly importing implementations
+from ...domain.file_reader.file_reader import FileReaderImpl
+
+# INSTEAD use the Registry
+from ...registry import Registry
+registry = Registry.get_instance()
+file_reader = registry.file_reader  # Gets the FileReaderImpl instance
+```
+
+## 4. Common Patterns for Fixing Linter Errors
+
+### Generic Import Fixes
+
+```python
+# If you're not sure which exceptions you need:
+from ...core.exceptions import (
+    AiChemistError,  # Base exception
+    FileError,       # File-related errors
+    DirectoryError,  # Directory-related errors
+    UnsafePathError, # Path safety errors
+    ConfigError,     # Configuration errors
+)
+
+# If you're not sure which models you need:
+from ...core.models import (
+    FileMetadata,    # File metadata model
+    SearchResult,    # Search result model
+    DirectoryInfo,   # Directory info model
+)
+```
+
+### Interface Implementation
+
+Ensure implementation classes correctly implement their interfaces:
+
+```python
+from ...core.interfaces import FileReader as FileReaderInterface
+
+class FileReaderImpl(FileReaderInterface):
+    """Implementation of the FileReader interface."""
+
+    # Implement all methods from the interface
+    def read_text(self, file_path: str) -> str:
+        ...
+```
+
+### Export Symbols in __init__.py
+
+Make sure symbols are exported in `__init__.py` files:
+
+```python
+# In core/exceptions/__init__.py
+from .base import AiChemistError
+from .file import FileError, DirectoryError, UnsafePathError
+from .config import ConfigError
+
+# This makes these symbols available when importing from the package
+```
+
+## 5. Debugging Linter Errors
+
+When facing persistent linter errors:
+
+1. **Run the linter with detailed output**:
+   ```bash
+   mypy --show-error-context --show-column-numbers src/
+   ```
+
+2. **Check the module structure** with `__all__`:
+   ```python
+   # In the module where symbols are defined, check if __all__ is defined and includes your symbol
+   __all__ = ["FileError", "DirectoryError", "UnsafePathError"]
+   ```
+
+3. **Add verbose type annotations** temporarily:
+   ```python
+   def get_metadata(self, file_path: str) -> "the_aichemist_codex.backend.core.models.FileMetadata":
+       ...
+   ```
+
+4. **Use Any as a temporary workaround** during development:
+   ```python
+   from typing import Any
+
+   def get_metadata(self, file_path: str) -> Any:  # Replace with proper type when fixed
+       ...
+   ```

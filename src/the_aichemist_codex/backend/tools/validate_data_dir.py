@@ -3,21 +3,17 @@
 Data Directory Validation Tool.
 
 This script checks the configuration of the data directory and verifies that
-all required subdirectories exist and are accessible.
+all required subdirectories exist and are accessible. It uses the registry
+pattern to avoid circular dependencies.
 """
 
 import logging
 import os
 import sys
+from pathlib import Path
 
-from the_aichemist_codex.backend.config.settings import (
-    CACHE_DIR,
-    DATA_DIR,
-    EXPORT_DIR,
-    LOG_DIR,
-    PROJECT_ROOT,
-    VERSION_DIR,
-)
+from ..bootstrap import bootstrap
+from ..registry import Registry
 
 # Set up logging
 logging.basicConfig(
@@ -27,8 +23,18 @@ logging.basicConfig(
 logger = logging.getLogger("data_dir_validator")
 
 
-def check_directory(directory, name, required=True):
-    """Check if a directory exists and is accessible."""
+def check_directory(directory: Path, name: str, required: bool = True) -> bool:
+    """
+    Check if a directory exists and is accessible.
+
+    Args:
+        directory: The directory to check
+        name: A descriptive name for the directory
+        required: Whether the directory is required (if False, warning instead of error)
+
+    Returns:
+        True if the directory is accessible or not required, False otherwise
+    """
     try:
         if not directory.exists():
             if required:
@@ -54,7 +60,7 @@ def check_directory(directory, name, required=True):
         return False
 
 
-def validate_data_directory():
+def validate_data_directory() -> bool:
     """
     Validate the data directory configuration.
 
@@ -65,6 +71,13 @@ def validate_data_directory():
     Returns:
         bool: True if validation passes, False otherwise
     """
+    # Bootstrap the application
+    bootstrap()
+
+    # Get registry and paths
+    registry = Registry.get_instance()
+    paths = registry.project_paths
+
     # Check environment variables
     if "AICHEMIST_ROOT_DIR" in os.environ:
         logger.info(f"AICHEMIST_ROOT_DIR is set to: {os.environ['AICHEMIST_ROOT_DIR']}")
@@ -73,35 +86,43 @@ def validate_data_directory():
         logger.info(f"AICHEMIST_DATA_DIR is set to: {os.environ['AICHEMIST_DATA_DIR']}")
 
     # Log detected paths
-    logger.info(f"Project root detected as: {PROJECT_ROOT}")
-    logger.info(f"Data directory detected as: {DATA_DIR}")
+    project_root = paths.get_project_root()
+    data_dir = paths.get_data_dir()
+
+    logger.info(f"Project root detected as: {project_root}")
+    logger.info(f"Data directory detected as: {data_dir}")
 
     # Validate required directories
     valid = True
-    valid &= check_directory(DATA_DIR, "Data")
-    valid &= check_directory(CACHE_DIR, "Cache")
-    valid &= check_directory(LOG_DIR, "Log")
-    valid &= check_directory(EXPORT_DIR, "Export")
-    valid &= check_directory(VERSION_DIR, "Version")
+    valid &= check_directory(data_dir, "Data")
+    valid &= check_directory(paths.get_cache_dir(), "Cache")
+    valid &= check_directory(paths.get_logs_dir(), "Log")
+    valid &= check_directory(paths.get_data_dir() / "export", "Export")
+    valid &= check_directory(paths.get_data_dir() / "versions", "Version")
 
     # Check optional directories
-    backup_dir = DATA_DIR / "backup"
+    backup_dir = data_dir / "backup"
     if backup_dir.exists():
         valid &= check_directory(backup_dir, "Backup", required=False)
 
-    trash_dir = DATA_DIR / "trash"
+    trash_dir = data_dir / "trash"
     if trash_dir.exists():
         valid &= check_directory(trash_dir, "Trash", required=False)
 
-    notifications_dir = DATA_DIR / "notifications"
+    notifications_dir = data_dir / "notifications"
     if notifications_dir.exists():
         valid &= check_directory(notifications_dir, "Notifications", required=False)
 
     return valid
 
 
-def main():
-    """Run the data directory validation."""
+def main() -> int:
+    """
+    Run the data directory validation.
+
+    Returns:
+        int: 0 if validation passes, 1 if it fails
+    """
     logger.info("Validating data directory configuration...")
 
     try:

@@ -1,0 +1,135 @@
+---
+description: Guidelines for preventing circular imports and resolving common linting errors
+globs: **/*.py
+alwaysApply: true
+---
+# Circular Imports Prevention and Linter Error Fixes
+
+## 1. Import Structure
+- Follow the project's layered architecture:
+  ```
+  core/ → infrastructure/ → domain/ → services/ → application/
+  ```
+- Each layer should only import from lower layers.
+- Use the Registry pattern for accessing dependencies.
+
+## 2. Import Styles
+- Use absolute imports for core modules:
+  ```python
+  # Good
+  from the_aichemist_codex.backend.core.interfaces import FileReader
+
+  # Avoid
+  from ...core.interfaces import FileReader
+  ```
+- For relative imports, be explicit about the module structure:
+  ```python
+  # Prefer (more explicit)
+  from ..core.interfaces import FileReader
+
+  # Instead of (when deeply nested)
+  from ....core.interfaces import FileReader
+  ```
+
+## 3. Type Annotations Fix
+- Import all required types in the function or class scope if only used for type annotations:
+  ```python
+  from typing import TYPE_CHECKING
+
+  if TYPE_CHECKING:
+      from .some_module import SomeClass
+
+  def func(param: "SomeClass") -> None:
+      ...
+  ```
+- Use forward references (string literals) for types that might cause circular imports:
+  ```python
+  def process(item: "Item") -> "Result":
+      ...
+  ```
+- Re-export types in `__init__.py` files to simplify imports.
+
+## 4. Common Linter Error Fixes
+- For "unknown import symbol" errors:
+  1. Ensure the symbol is actually defined and exported in the source module
+  2. Check that the module path is correct
+  3. Verify the symbol is spelled correctly
+
+- For "not defined" type errors:
+  1. Add the proper import statement
+  2. Use forward references with string literals
+  3. Add `if TYPE_CHECKING` imports for type-only dependencies
+
+## 5. Registry Pattern Usage
+- Always use the Registry for accessing service implementations:
+  ```python
+  # Good
+  registry = Registry.get_instance()
+  file_reader = registry.file_reader
+
+  # Avoid
+  from ...domain.file_reader.file_reader import FileReaderImpl
+  file_reader = FileReaderImpl()
+  ```
+
+## 6. Interface Definitions
+- Keep all interfaces in the core layer
+- Ensure interfaces are imported correctly in implementation classes
+- Type check implementation classes against their interfaces:
+  ```python
+  class FileReaderImpl(FileReaderInterface):
+      # Ensure all interface methods are implemented
+  ```
+
+## 7. Import Order
+- Maintain consistent import order:
+  ```python
+  # Standard library
+  import os
+  import sys
+  from pathlib import Path
+
+  # Third-party libraries
+  import yaml
+
+  # First-party absolute imports
+  from the_aichemist_codex.backend.core.interfaces import FileReader
+
+  # First-party relative imports
+  from ..core.exceptions import FileError
+  ```
+
+## 8. Exception Handling
+- Import exception classes directly from core.exceptions:
+  ```python
+  from ...core.exceptions import FileError, DirectoryError
+  ```
+- Raise specific exceptions with context:
+  ```python
+  raise FileError(f"Could not read file: {file_path}", file_path)
+  ```
+
+## 9. Pre-Commit Checks
+- Before committing, run linters to catch import and type errors:
+  ```bash
+  mypy src/
+  ruff check src/
+  ```
+- Fix "not defined" errors by updating imports at the top of the file.
+- Fix "unknown import symbol" errors by checking the source module.
+
+## 10. Bootstrap Pattern
+- Always use the bootstrap function to initialize the application
+- Don't import implementation modules directly in application code
+- Use the Registry to get dependencies after bootstrapping:
+  ```python
+  from .bootstrap import bootstrap
+  from .registry import Registry
+
+  # Initialize the application
+  bootstrap()
+
+  # Get dependencies
+  registry = Registry.get_instance()
+  file_reader = registry.file_reader
+  ```

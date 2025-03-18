@@ -15,7 +15,9 @@ def main():
         print("\nPossible fixes:")
         print("1. Make sure the package is installed: pip install the-aichemist-codex")
         print("2. Check your Python path")
-        print("3. If you're developing the package, try running: python run.py")
+        print(
+            "3. If you're developing the package, try running: python -m the_aichemist_codex"
+        )
         sys.exit(1)
     except Exception as e:
         print(f"Error starting the Aichemist Codex CLI: {e}")
