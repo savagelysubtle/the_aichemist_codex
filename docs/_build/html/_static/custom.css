@@ -6,6 +6,7 @@
 :root {
     --lime-green: #00FF00;
     --lime-green-dark: #00E676;
+    --lime-green-light: rgba(0, 255, 0, 0.1);
     --background-dark: #121212;
     --background-darker: #0a0a0a;
     --sidebar-background: #1a1a1a;
@@ -13,6 +14,9 @@
     --text-muted: #a0a0a0;
     --border-radius: 8px;
     --transition-speed: 0.3s;
+    --sidebar-item-spacing: 0.5rem;
+    --sidebar-font-size: 0.95rem;
+    --sidebar-item-padding: 0.5rem 1rem;
 }
 
 /* Modern card-based layout for content */
@@ -200,7 +204,54 @@ table.docutils tr:hover {
     border-bottom: 1px solid rgba(0, 255, 0, 0.2);
 }
 
-/* Sidebar customization */
+/* ==================== SIDEBAR CUSTOMIZATION ==================== */
+
+/* Fix sidebar drawer behavior */
+.sidebar-drawer {
+    position: fixed;
+    height: 100vh;
+    transition: transform 0.5s ease, opacity 0.2s ease;
+    overflow-y: auto;
+    z-index: 100;
+    background: var(--sidebar-background);
+}
+
+body[data-sidebar-hidden="true"] .sidebar-drawer {
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+/* Default behavior - sidebar starts visible on desktop */
+@media (min-width: 769px) {
+    body .sidebar-drawer {
+        transform: translateX(0);
+    }
+
+    body .content {
+        margin-left: 17rem;
+    }
+
+    body[data-sidebar-hidden="true"] .content {
+        margin-left: 0;
+    }
+}
+
+/* Default behavior - sidebar starts hidden on mobile */
+@media (max-width: 768px) {
+    body .sidebar-drawer {
+        transform: translateX(-100%);
+        box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+    }
+
+    body .content {
+        margin-left: 0;
+    }
+
+    body[data-sidebar-hidden="false"] .sidebar-drawer {
+        transform: translateX(0);
+    }
+}
+
 .sidebar-brand {
     padding: 1.5rem;
     display: flex;
@@ -216,6 +267,7 @@ table.docutils tr:hover {
 
 .sidebar-search {
     padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .sidebar-search-container {
@@ -223,19 +275,205 @@ table.docutils tr:hover {
     overflow: hidden;
 }
 
-/* Navigation links */
-.toctree-l1 > a,
-.toctree-l2 > a,
-.toctree-l3 > a {
-    border-radius: var(--border-radius);
-    margin: 0.2rem 0;
+/* Fix the sidebar toggle button */
+.sidebar-toggle {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background-color: var(--lime-green-dark);
+    color: var(--background-dark);
+    border: none;
+    border-radius: 50%;
+    padding: 0.7rem;
+    margin: 0;
+    cursor: pointer;
     transition: background-color var(--transition-speed);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    z-index: 200;
 }
 
-.toctree-l1 > a:hover,
-.toctree-l2 > a:hover,
-.toctree-l3 > a:hover {
-    background-color: rgba(0, 255, 0, 0.1);
+.sidebar-toggle:hover {
+    background-color: var(--lime-green);
+}
+
+.sidebar-toggle:before {
+    content: "☰";
+    font-size: 1.5rem;
+}
+
+body[data-sidebar-hidden="false"] .sidebar-toggle:before {
+    content: "×";
+}
+
+/* Main sidebar navigation */
+.sidebar-tree {
+    font-size: var(--sidebar-font-size);
+    padding: 0 0.5rem;
+}
+
+/* Fix for toctree display issues */
+.toctree-wrapper ul {
+    display: block !important;
+    max-height: none !important;
+    opacity: 1 !important;
+}
+
+/* Top level category headers */
+.sidebar-tree .caption {
+    margin: 1rem 0 0.5rem 0;
+    padding: 0.7rem 1rem;
+    color: var(--lime-green) !important;
+    font-weight: bold;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    display: block;
+}
+
+/* All sidebar items */
+.sidebar-tree li {
+    margin: var(--sidebar-item-spacing) 0;
+    transition: all var(--transition-speed);
+    list-style-type: none;
+}
+
+/* First level items */
+.sidebar-tree .toctree-l1 {
+    margin-bottom: 0.8rem;
+}
+
+/* Nested navigation indentation */
+.sidebar-tree .toctree-l1 > .reference {
+    font-weight: 500;
+    padding: var(--sidebar-item-padding);
+    border-radius: var(--border-radius);
+    display: block;
+}
+
+.sidebar-tree .toctree-l2 {
+    margin-left: 0.8rem;
+}
+
+.sidebar-tree .toctree-l2 > .reference {
+    padding: 0.4rem 1rem;
+    display: block;
+    border-left: 2px solid transparent;
+    font-weight: normal;
+}
+
+.sidebar-tree .toctree-l3 {
+    margin-left: 1.2rem;
+}
+
+.sidebar-tree .toctree-l3 > .reference {
+    padding: 0.3rem 1rem;
+    display: block;
+    border-left: 2px solid transparent;
+    font-weight: normal;
+    font-size: 0.9rem;
+}
+
+.sidebar-tree .toctree-l4 {
+    margin-left: 1.6rem;
+}
+
+.sidebar-tree .toctree-l4 > .reference {
+    padding: 0.3rem 1rem;
+    display: block;
+    border-left: 2px solid transparent;
+    font-weight: normal;
+    font-size: 0.85rem;
+}
+
+/* Hover effects for all navigation items */
+.sidebar-tree .reference:hover {
+    background-color: var(--lime-green-light);
+    color: var(--lime-green);
+    text-decoration: none;
+}
+
+/* Active item styling */
+.sidebar-tree .current > .reference {
+    background-color: var(--lime-green-light);
+    color: var(--lime-green);
+    font-weight: 600;
+}
+
+.sidebar-tree .toctree-l2.current > .reference,
+.sidebar-tree .toctree-l3.current > .reference,
+.sidebar-tree .toctree-l4.current > .reference {
+    border-left: 2px solid var(--lime-green);
+}
+
+/* Expanded/current items - ensure they show content */
+.sidebar-tree li.current > ul,
+.sidebar-tree li.expanded > ul {
+    display: block !important;
+    max-height: 1000px !important;
+    opacity: 1 !important;
+    margin-top: 0.3rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Tutorial items styling */
+.sidebar-tree .reference[href*="tutorials/"] {
+    color: #f0f0f0;
+}
+
+/* Specifically targeting the tutorials nested items */
+.sidebar-tree .toctree-l1 > .reference[href*="tutorials/"] {
+    font-weight: 600;
+}
+
+/* Highlighting tutorial subcategories like basics, advanced_search, etc. */
+.sidebar-tree .toctree-l2 > .reference[href*="/basics/"],
+.sidebar-tree .toctree-l2 > .reference[href*="/advanced_search/"],
+.sidebar-tree .toctree-l2 > .reference[href*="/organization/"],
+.sidebar-tree .toctree-l2 > .reference[href*="/development/"],
+.sidebar-tree .toctree-l2 > .reference[href*="/integration/"] {
+    color: #e0e0e0;
+    border-left: 2px solid rgba(0, 255, 0, 0.4);
+    background-color: rgba(0, 255, 0, 0.05);
+}
+
+/* User guides styling */
+.sidebar-tree .reference[href*="user_guides/"] {
+    color: #e0e0e0;
+}
+
+/* Visual indicator for expandable sections */
+.sidebar-tree .reference.has-children:after {
+    content: "+";
+    position: absolute;
+    right: 1rem;
+    color: var(--lime-green);
+    font-weight: bold;
+    transition: transform var(--transition-speed);
+}
+
+.sidebar-tree .reference.has-children.expanded:after {
+    content: "−";
+}
+
+/* Active parent items */
+.sidebar-tree .active-parent > .reference {
+    color: var(--lime-green-dark);
+    font-weight: 600;
+}
+
+/* Fix for tutorials, user guides, and API reference sections */
+.sidebar-tree ul[class*="tutorials"],
+.sidebar-tree ul[class*="user_guides"],
+.sidebar-tree ul[class*="api"] {
+    opacity: 1 !important;
+    max-height: none !important;
+    display: block !important;
 }
 
 /* Theme toggle button */
@@ -251,7 +489,13 @@ table.docutils tr:hover {
 }
 
 .theme-toggle:hover {
-    background: rgba(0, 255, 0, 0.1);
+    background: var(--lime-green-dark);
+    color: var(--background-dark);
+}
+
+/* Improved sidebar focused state */
+.sidebar-search-focused .sidebar-search-container {
+    box-shadow: 0 0 0 2px var(--lime-green-dark);
 }
 
 /* Responsive design */
@@ -262,7 +506,6 @@ table.docutils tr:hover {
     }
 
     .header-nav ul {
-        margin-top: 1rem;
         flex-direction: column;
         width: 100%;
     }
@@ -278,12 +521,57 @@ table.docutils tr:hover {
     .section {
         padding: 1.5rem;
     }
+
+    /* Improve mobile sidebar */
+    .sidebar-drawer {
+        width: 85vw;
+        max-width: 320px;
+    }
+
+    .sidebar-brand {
+        padding: 1rem;
+    }
+
+    .sidebar-search {
+        padding: 0.8rem;
+    }
+
+    /* Adjust padding for better touch targets on mobile */
+    .sidebar-tree .reference {
+        padding: 0.7rem 1rem !important;
+    }
+
+    /* Improve visibility of the current item */
+    .sidebar-tree .current > .reference {
+        box-shadow: 0 0 0 1px var(--lime-green);
+    }
+
+    /* Better back-to-top behavior */
+    .back-to-top {
+        position: fixed;
+        bottom: 5rem;
+        right: 1rem;
+        background-color: var(--lime-green-dark);
+        color: var(--background-dark);
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        opacity: 0.7;
+        transition: opacity var(--transition-speed);
+    }
+
+    .back-to-top:hover {
+        opacity: 1;
+    }
 }
 
-/* Landing page customization */
 .landing-header {
     text-align: center;
-    margin-bottom: 4rem;
+    margin: 3rem 0;
 }
 
 .landing-title {
@@ -295,28 +583,28 @@ table.docutils tr:hover {
 .landing-subtitle {
     font-size: 1.5rem;
     color: var(--text-muted);
-    margin-bottom: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
-    margin: 2rem 0;
+    margin: 4rem 0;
 }
 
 .feature-card {
     background: var(--sidebar-background);
     border-radius: var(--border-radius);
     padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed);
 }
 
 .feature-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
 }
 
 .feature-icon {
@@ -327,25 +615,27 @@ table.docutils tr:hover {
 
 .feature-title {
     font-size: 1.5rem;
-    color: var(--lime-green);
     margin-bottom: 1rem;
+    color: var(--text-color);
 }
 
 .feature-description {
     color: var(--text-muted);
+    line-height: 1.6;
 }
 
-/* Button styles */
 .button {
     display: inline-block;
     background: var(--lime-green-dark);
     color: var(--background-dark);
-    padding: 0.8rem 1.5rem;
-    border-radius: var(--border-radius);
+    padding: 0.8rem 2rem;
+    border-radius: 30px;
     text-decoration: none;
     font-weight: bold;
-    transition: background var(--transition-speed);
-    margin: 0.5rem;
+    margin-top: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-speed);
 }
 
 .button:hover {
@@ -359,40 +649,31 @@ table.docutils tr:hover {
 }
 
 .button.secondary:hover {
-    background: rgba(0, 255, 0, 0.1);
+    background: var(--lime-green-dark);
+    color: var(--background-dark);
 }
 
-/* Syntax highlighting overrides - make class names and function names green instead of red */
 .highlight .nc,   /* Class name */
-.highlight .nf,   /* Function name */
-.highlight .fm,   /* Method name */
-.highlight .nn,   /* Namespace */
-.highlight .nx,   /* Other names */
-.highlight .na,   /* Attribute name */
-.highlight .nt,   /* Tag name */
-.highlight .k,    /* Keyword */
-.highlight .kn,   /* Namespace keyword */
-.highlight .kc,   /* Constant keyword */
-.highlight .o,    /* Operator */
-.highlight .ow,   /* Operator word */
-.highlight .p,    /* Punctuation */
-.highlight .gp    /* Generic.Prompt */
-{
+.highlight .nl,   /* Label name */
+.highlight .nd {  /* Decorator name */
     color: var(--lime-green) !important;
+    font-weight: bold;
 }
 
-/* Markdown Image Centering */
+.highlight .nf,   /* Function name */
+.highlight .fm {  /* Method name */
+    color: var(--lime-green-dark) !important;
+    font-weight: bold;
+}
+
 img.center {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
 }
 
-/* Center alignments for README.md and other markdown files */
 .center {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
+    text-align: center;
 }

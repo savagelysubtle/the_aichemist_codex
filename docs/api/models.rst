@@ -1,7 +1,27 @@
-Data Models
-==========
+Data Models (Legacy)
+=================
 
-The Data Models module defines the core data structures used throughout the application.
+.. note::
+   This is a legacy documentation page. The data models have been migrated to their respective
+   domain modules in the new domain-driven architecture.
+
+The Data Models module defines data structures used throughout the application.
+
+Current Implementation
+--------------------
+
+Data models have been migrated to their respective domain modules in the new architecture. Please see:
+
+* :doc:`domain/metadata` - Metadata models
+* :doc:`domain/search` - Search models
+* :doc:`domain/relationships` - Relationship models
+* :doc:`domain/tagging` - Tagging models
+* :doc:`domain/user_management` - User models
+* :doc:`domain/notification` - Notification models
+
+.. raw:: html
+
+   <meta http-equiv="refresh" content="0; url=domain.html">
 
 .. automodule:: backend.src.models
    :members:

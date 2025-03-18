@@ -1,137 +1,79 @@
-# Documentation for The Aichemist Codex
+# The AIchemist Codex - Documentation
 
-This directory contains the complete documentation for The Aichemist Codex
-project.
+This directory contains the documentation for The AIchemist Codex project.
 
 ## Documentation Structure
 
-- **User Documentation**
+The documentation is organized as follows:
 
-  - `getting_started.rst` - Quick start guide for new users
-  - `installation.rst` - Installation instructions
-  - `usage.rst` - How to use the application
-  - `cli_reference.rst` - Command-line interface reference
-  - `configuration.rst` - Configuration options
-
-- **Developer Documentation**
-
-  - `development.rst` - General development guide
-  - `api/` - API documentation (auto-generated)
-  - `code_style.rst` - Coding style guidelines
-  - `code_maintenance.md` - Code maintenance procedures
-  - `code_review.md` - Code review guidelines
-  - `contributing.rst` - How to contribute to the project
-
-- **Project Information**
-
-  - `roadmap.rst` - Future development plans
-  - `roadmap/` - Detailed roadmap documents
-  - `changelog.rst` - Version history and changes
-  - `project_summary.md` - Project overview and summary
-
-- **Technical Documentation**
-  - `architecture.rst` - System architecture
-  - `data_management.rst` - Data handling and storage
-  - `directory_structure.rst` - Project structure explanation
-  - `environment.rst` - Environment setup and requirements
+- `api/` - API reference documentation
+  - `domain/` - Domain-driven modules documentation (current implementation)
+  - Legacy module documentation (marked with "Legacy" in titles)
+- `tutorials/` - Step-by-step guides for common tasks
+- `usage/` - General usage documentation
+- `development/` - Development guides and contributing information
 
 ## Building the Documentation
 
 To build the documentation:
 
-```bash
-# Navigate to the docs directory
-cd docs
+1. Activate your virtual environment:
 
-# Build HTML documentation
-make html
+   ```
+   .\.venv\Scripts\Activate.ps1  # On Windows with PowerShell
+   source .venv/bin/activate     # On Linux/macOS
+   ```
 
-# The built documentation will be in _build/html/
-```
+2. Install the project with development dependencies:
 
-## Documentation Tooling
+   ```
+   # If using pip
+   pip install -e ".[dev]"
 
-- Documentation is built using [Sphinx](https://www.sphinx-doc.org/)
-- API documentation is auto-generated from code docstrings
-- Both reStructuredText (.rst) and Markdown (.md) formats are supported
+   # If using uv (recommended)
+   uv pip install -e ".[dev]"
+   ```
 
-## Contributing to Documentation
+3. Navigate to the docs directory and build:
 
-When contributing to documentation:
+   ```
+   cd docs
+   make html
+   ```
 
-1. Follow the existing style and formatting
-2. Update the table of contents where necessary
-3. Run spell-check before submitting changes
-4. Test any code examples to ensure they work
-5. Build the documentation locally to preview changes
+4. The built documentation will be available in `_build/html/index.html`
 
-## Docstring Guidelines
+## Documentation Generation
 
-To ensure proper documentation generation, follow these docstring guidelines:
+The API documentation is automatically generated using the
+`generate_api_docs.py` script based on the project's module structure. This
+script:
 
-### Google Style (Preferred)
+1. Scans the project's backend directory
+2. Creates RST files for each module
+3. Updates the API index
 
-```python
-def example_function(param1, param2):
-    """This is a function example.
+## Legacy Documentation
 
-    Args:
-        param1: The first parameter.
-        param2: The second parameter.
+Some documentation pages are marked as "Legacy" and point to the new
+domain-driven structure. This is to help users transitioning from previous
+versions of the codebase.
 
-    Returns:
-        The result of the operation.
+## Customizing the Documentation
 
-    Raises:
-        ValueError: If param1 is invalid.
-    """
-    pass
-```
-
-### Type Annotations
-
-Use Python type annotations for better documentation:
-
-```python
-def example_function(param1: str, param2: int) -> bool:
-    """This is a function example with type annotations."""
-    pass
-```
-
-## Adding New Documentation
+To add custom documentation pages:
 
 1. Create a new `.rst` file in the appropriate directory
-2. Add the file to the appropriate toctree in one of the existing `.rst` files
-3. Run the build_docs.py script to verify your changes
+2. Add your content using reStructuredText format
+3. Include the page in the appropriate toctree in `index.rst` or other index
+   files
 
-## Automatic Documentation Building
+## Theme and Configuration
 
-Documentation is automatically built and deployed on each push to the main
-branch using GitHub Actions. The workflow file is located at
-`.github/workflows/docs.yml`.
+The documentation uses the Furo theme and is configured in `conf.py`. Additional
+extensions used include:
 
-The latest documentation is available at:
-
-- [GitHub Pages](https://your-username.github.io/the_aichemist_codex/) (if
-  GitHub Pages is enabled)
-
-## Dependencies
-
-The documentation system requires the following dependencies:
-
-- Sphinx
-- sphinx-autodoc-typehints
-- sphinx-copybutton
-- furo (Sphinx theme)
-
-These can be installed with:
-
-```bash
-pip install sphinx sphinx-autodoc-typehints sphinx-copybutton furo
-```
-
-Or by installing the development dependencies:
-
-```bash
-pip install -e ".[dev]"
-```
+- `sphinx.ext.autodoc` - For automatic API documentation
+- `sphinx.ext.autosectionlabel` - For automatic section labels
+- `sphinx.ext.napoleon` - For Google-style docstrings
+- `sphinx_copybutton` - For copy buttons on code blocks

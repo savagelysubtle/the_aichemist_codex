@@ -1,7 +1,23 @@
-Output Formatter
-===============
+Output Formatter (Legacy)
+======================
 
-The Output Formatter module provides functionality for formatting and presenting results to users in various formats.
+.. note::
+   This is a legacy documentation page. Please refer to the updated :doc:`domain/output_formatter`
+   documentation for the current implementation.
+
+The Output Formatter module provides functionality for formatting data into different output formats.
+
+Current Implementation
+--------------------
+
+The Output Formatter system has been migrated to the new domain-driven architecture. Please see:
+
+* :doc:`domain/output_formatter` - Current output formatter module documentation
+* :doc:`domain/output_formatter/formatters/index` - Available formatter implementations
+
+.. raw:: html
+
+   <meta http-equiv="refresh" content="0; url=domain/output_formatter.html">
 
 .. automodule:: backend.src.output_formatter
    :members:

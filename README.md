@@ -126,15 +126,15 @@ The Aichemist Codex can also be used as a library in your Python projects:
 
 ```python
 import asyncio
-from the_aichemist_codex.backend.file_reader import FileReader
-from the_aichemist_codex.backend.metadata import MetadataManager
-from the_aichemist_codex.backend.search import SearchEngine
-from the_aichemist_codex.backend.relationships import RelationshipGraph
+from the_aichemist_codex.backend.domain.project_reader import ProjectReader
+from the_aichemist_codex.backend.domain.metadata import MetadataManager
+from the_aichemist_codex.backend.domain.search import SearchEngine
+from the_aichemist_codex.backend.domain.relationships import RelationshipManager
 from pathlib import Path
 
 async def main():
     # Process files
-    reader = FileReader()
+    reader = ProjectReader()
     metadata = await reader.process_file(Path("document.pdf"))
 
     # Search for content
@@ -142,20 +142,20 @@ async def main():
     results = await search.search("machine learning", max_results=10)
 
     # Find relationships
-    graph = RelationshipGraph()
-    related_files = await graph.find_related(Path("project.py"))
+    relationship_manager = RelationshipManager()
+    related_files = await relationship_manager.find_related(Path("project.py"))
 
     # Auto-tag files
-    from the_aichemist_codex.backend.tagging import TagManager, TagSuggester
-    tag_manager = TagManager(Path(".aichemist/tags.db"))
-    await tag_manager.initialize()
-    suggester = TagSuggester(tag_manager)
+    from the_aichemist_codex.backend.domain.tagging import TaggingManager, TagSuggester
+    tagging_manager = TaggingManager(Path(".aichemist/tags.db"))
+    await tagging_manager.initialize()
+    suggester = TagSuggester(tagging_manager)
     suggestions = await suggester.suggest_tags(metadata)
 
     # Apply high-confidence tags
     high_confidence_tags = [(tag, conf) for tag, conf in suggestions if conf > 0.8]
     if high_confidence_tags:
-        await tag_manager.add_file_tags(Path("document.pdf"), high_confidence_tags)
+        await tagging_manager.add_file_tags(Path("document.pdf"), high_confidence_tags)
 
 # Run the async function
 asyncio.run(main())
@@ -163,9 +163,10 @@ asyncio.run(main())
 
 ## Architecture
 
-The Aichemist Codex follows a modular architecture with these core components:
+The Aichemist Codex follows a domain-driven architecture with these core
+components:
 
-- **File Reader**: Handles file reading and MIME type detection
+- **Project Reader**: Handles file reading and project analysis
 - **File Manager**: Manages file operations and organization
 - **Metadata Manager**: Extracts and stores file metadata
 - **Search Engine**: Provides multi-modal search capabilities
@@ -175,18 +176,22 @@ The Aichemist Codex follows a modular architecture with these core components:
 
 ### Package Structure
 
-The project follows a clean, organized package structure:
+The project follows a domain-driven package structure:
 
 ```
 the_aichemist_codex/
 ├── backend/
-│   ├── config/               # Configuration management
-│   ├── file_manager/         # File operations and organization
-│   ├── metadata/             # Metadata extraction and management
-│   ├── search/               # Search functionality
-│   ├── relationships/        # File relationship mapping
-│   ├── tagging/              # Auto-tagging capabilities
-│   └── utils/                # Utility functions
+│   ├── core/                 # Core interfaces and utilities
+│   ├── domain/               # Domain-specific business logic
+│   │   ├── project_reader/   # File reading and project analysis
+│   │   ├── file_manager/     # File operations and organization
+│   │   ├── metadata/         # Metadata extraction and management
+│   │   ├── search/           # Search functionality
+│   │   ├── relationships/    # File relationship mapping
+│   │   ├── tagging/          # Auto-tagging capabilities
+│   │   └── notification/     # Notification system
+│   ├── infrastructure/       # Infrastructure implementations
+│   └── services/             # Application services
 ├── cli/                      # Command-line interface
 └── gui/                      # (Future) Graphical user interface
 ```
@@ -195,23 +200,35 @@ All imports should use the full package path:
 
 ```python
 # Correct import pattern
-from the_aichemist_codex.backend.config import settings
-from the_aichemist_codex.backend.file_manager import FileManager
+from the_aichemist_codex.backend.core.config import settings
+from the_aichemist_codex.backend.domain.file_manager import FileManager
 
 # Avoid relative imports across package boundaries
 ```
 
 ## Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
+Comprehensive documentation is available in the `docs/` directory, including:
 
-- [Project Summary](docs/project_summary.md)
 - [Getting Started Guide](docs/getting_started.rst)
 - [Installation Guide](docs/installation.rst)
 - [Usage Guide](docs/usage.rst)
 - [Configuration Guide](docs/configuration.rst)
 - [API Reference](docs/api/)
+  - [Domain Modules](docs/api/domain/) - Current implementation
+  - [Legacy Modules](docs/api/) - Previous structure (for reference)
 - [Development Roadmap](docs/roadmap.rst)
+
+To build the documentation:
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Build the documentation
+cd docs
+make html
+```
 
 ## Roadmap
 

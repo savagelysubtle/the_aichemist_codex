@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to The Aichemist Codex
-===================================================
+The AIchemist Codex
+==================
 
 .. image:: /images/logo.png
    :width: 200px
@@ -13,9 +13,8 @@ Welcome to The Aichemist Codex
 
 *Intelligent File Management and Knowledge Extraction System*
 
-The Aichemist Codex is an advanced file management and knowledge extraction system
-designed to transform how you interact with your files and documents. It leverages
-AI and machine learning to provide intelligent file organization, content analysis,
+The AIchemist Codex is a powerful AI-enhanced codebase exploration and understanding tool.
+It leverages AI and machine learning to provide intelligent file organization, content analysis,
 and relationship mapping.
 
 Key Features
@@ -29,7 +28,7 @@ Key Features
 - **Python API**: Use the functionality in your own Python applications
 
 .. note::
-   The Aichemist Codex supports both Python 3.10+ and can be run as a standalone application
+   The AIchemist Codex supports both Python 3.10+ and can be run as a standalone application
    or integrated into your own projects. See the :doc:`installation` guide for details.
 
 .. note::
@@ -55,14 +54,6 @@ Contents
    :caption: Tutorials
 
    tutorials/index
-   tutorials/quick_start
-   tutorials/tagging_workflow
-   tutorials/semantic_search
-   tutorials/file_organization
-   tutorials/advanced_api_usage
-   tutorials/custom_plugins
-   tutorials/file_relationships
-   tutorials/search_techniques
 
 .. toctree::
    :maxdepth: 2
@@ -84,13 +75,20 @@ Contents
    directory_structure
    contributing
    code_style
-   code_maintenance
-   code_review
-   implementation_plan
-   development_guide
    roadmap
    changelog
-   project_summary
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User Guides
+
+   user_guides/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architecture
+
+   architecture
 
 Indices and tables
 -----------------

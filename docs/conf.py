@@ -56,13 +56,24 @@ autodoc_mock_imports = MOCK_MODULES
 
 # Specific modules that cause circular imports
 CIRCULAR_MODULES = [
-    "the_aichemist_codex.backend.config",
-    "the_aichemist_codex.backend.config.config_loader",
-    "the_aichemist_codex.backend.config.settings",
-    "the_aichemist_codex.backend.file_manager",
-    "the_aichemist_codex.backend.file_reader",
-    "the_aichemist_codex.backend.metadata",
-    # Add other modules with circular dependencies here
+    # Core modules
+    "the_aichemist_codex.backend.core.interfaces",
+    "the_aichemist_codex.backend.core.models",
+    "the_aichemist_codex.backend.core.constants",
+    "the_aichemist_codex.backend.core.exceptions",
+    "the_aichemist_codex.backend.core.utils",
+    # Domain modules
+    "the_aichemist_codex.backend.domain.file_reader",
+    "the_aichemist_codex.backend.domain.file_writer",
+    "the_aichemist_codex.backend.domain.file_manager",
+    "the_aichemist_codex.backend.domain.search",
+    "the_aichemist_codex.backend.domain.metadata",
+    "the_aichemist_codex.backend.domain.relationships",
+    # Infrastructure modules
+    "the_aichemist_codex.backend.infrastructure.config",
+    "the_aichemist_codex.backend.infrastructure.paths",
+    # Registry
+    "the_aichemist_codex.backend.registry",
 ]
 
 # Apply mocks to specific modules that cause circular imports

@@ -3,67 +3,32 @@ Project Reader
 
 The Project Reader module provides functionality for analyzing and understanding project structures.
 
-.. automodule:: backend.src.project_reader
+.. automodule:: the_aichemist_codex.backend.domain.project_reader
    :members:
    :undoc-members:
    :show-inheritance:
 
-Project Analyzer
---------------
+Project Reader Implementation
+---------------------------
 
-The ProjectAnalyzer is responsible for scanning and understanding project structures and dependencies.
+The ProjectReaderImpl class implements the ProjectReader interface and is responsible for scanning, analyzing, and summarizing project structures.
 
-.. automodule:: backend.src.project_reader.analyzer
+.. automodule:: the_aichemist_codex.backend.domain.project_reader.project_reader
    :members:
    :undoc-members:
    :show-inheritance:
 
-Language Detectors
----------------
+Project Reader Models
+-------------------
 
-Language detectors identify programming languages and frameworks used in projects.
+Models used by the project reader system.
 
-.. automodule:: backend.src.project_reader.language_detector
+.. automodule:: the_aichemist_codex.backend.domain.project_reader.models
    :members:
    :undoc-members:
    :show-inheritance:
 
-Dependency Analyzers
------------------
-
-Dependency analyzers extract and analyze project dependencies.
-
-.. automodule:: backend.src.project_reader.dependency_analyzer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Structure Mappers
---------------
-
-Structure mappers create hierarchical representations of project structures.
-
-.. automodule:: backend.src.project_reader.structure_mapper
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Project Summary
-------------
-
-Functionality for generating summaries of project characteristics.
-
-.. automodule:: backend.src.project_reader.summary
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Framework Detectors
-----------------
-
-Framework detectors identify web and application frameworks used in projects.
-
-.. automodule:: backend.src.project_reader.framework_detector
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. note::
+   The Project Reader implementation currently provides core functionality for project analysis, summarization,
+   and notebook conversion. Future versions will include additional specialized analyzers for languages,
+   dependencies, structure mapping, and framework detection.

@@ -1,12 +1,24 @@
-Notification
-===========
+Notification (Legacy)
+==================
+
+.. note::
+   This is a legacy documentation page. Please refer to the updated :doc:`domain/notification`
+   documentation for the current implementation.
 
 The Notification module provides functionality for creating, sending, and managing notifications to users.
 
-.. automodule:: backend.src.notification
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Current Implementation
+--------------------
+
+The notification system has been migrated to the new domain-driven architecture. Please see:
+
+* :doc:`domain/notification` - Current notification module documentation
+* :doc:`domain/notification/notification_manager` - Current notification manager implementation
+* :doc:`domain/notification/channels/index` - Notification delivery channels
+
+.. raw:: html
+
+   <meta http-equiv="refresh" content="0; url=domain/notification.html">
 
 Notification Manager
 -----------------

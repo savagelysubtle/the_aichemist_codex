@@ -1,7 +1,22 @@
-Tagging
-=======
+Tagging (Legacy)
+==============
 
-The Tagging module provides comprehensive tag management functionality for intelligent file organization.
+.. note::
+   This is a legacy documentation page. Please refer to the updated :doc:`domain/tagging`
+   documentation for the current implementation.
+
+The Tagging module provides functionality for organizing and categorizing files using tags.
+
+Current Implementation
+--------------------
+
+The Tagging system has been migrated to the new domain-driven architecture. Please see:
+
+* :doc:`domain/tagging` - Current tagging module documentation
+
+.. raw:: html
+
+   <meta http-equiv="refresh" content="0; url=domain/tagging.html">
 
 .. automodule:: backend.src.tagging
    :members:

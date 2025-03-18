@@ -1,7 +1,23 @@
-Ingest
-======
+Ingest (Legacy)
+==============
 
-The Ingest module provides functionality for importing and processing files from various sources.
+.. note::
+   This is a legacy documentation page. Please refer to the updated :doc:`domain/ingest`
+   documentation for the current implementation.
+
+The Ingest module provides functionality for importing files and data from various sources.
+
+Current Implementation
+--------------------
+
+The Ingest system has been migrated to the new domain-driven architecture. Please see:
+
+* :doc:`domain/ingest` - Current ingest module documentation
+* :doc:`domain/ingest/processors/index` - Ingest processors for different file types
+
+.. raw:: html
+
+   <meta http-equiv="refresh" content="0; url=domain/ingest.html">
 
 .. automodule:: backend.src.ingest
    :members:

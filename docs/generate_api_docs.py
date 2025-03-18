@@ -19,12 +19,8 @@ def main() -> None:
 
     # Configuration for modules to document
     api_dir = Path(__file__).resolve().parent / "api"
-    src_dir = (
-        Path(__file__).resolve().parent.parent
-        / "src"
-        / "the_aichemist_codex"
-        / "backend"
-    )
+    src_dir = Path(__file__).resolve().parent.parent / "src" / "the_aichemist_codex"
+    backend_dir = src_dir / "backend"
 
     # Ensure the API directory exists
     api_dir.mkdir(exist_ok=True)
@@ -32,22 +28,33 @@ def main() -> None:
     # Define the modules to document
     # Format: module_name -> [submodule1, submodule2, ...]
     modules: dict[str, list[str]] = {
-        "file_reader": [],
-        "file_manager": ["directory_monitor", "directory_organizer", "change_detector"],
-        "metadata": ["extractors", "analyzers"],
-        "search": ["engines", "indexers", "query_parser"],
-        "relationships": ["detector", "graph", "detectors"],
-        "rollback": ["transaction", "snapshot"],
-        "security": ["permissions", "encryption", "authentication"],
-        "ai": ["embeddings", "clustering", "recommendation"],
-        "integration": ["plugins", "api", "exporters"],
-        "ui": ["cli", "components", "dashboards"],
-        "utils": ["validators", "profilers", "helpers"],
-        "config": ["settings", "validation", "secure_config"],
+        "core": ["interfaces", "models", "constants", "exceptions", "utils"],
+        "domain": [
+            "analytics",
+            "content_analyzer",
+            "file_manager",
+            "file_reader",
+            "file_writer",
+            "ingest",
+            "metadata",
+            "notification",
+            "output_formatter",
+            "project_reader",
+            "relationships",
+            "rollback",
+            "search",
+            "tagging",
+            "user_management",
+        ],
+        "infrastructure": ["config", "file", "io", "paths"],
+        "services": ["cache", "file", "metadata"],
+        "api": ["cli", "rest", "external"],
+        "tools": [],
+        "registry": [],
     }
 
     # Generate API documentation for all modules
-    generate_api_docs(modules, api_dir, src_dir)
+    generate_api_docs(modules, api_dir, backend_dir)
 
     # Create an index for the API documentation
     create_api_index(modules, api_dir)
@@ -66,25 +73,36 @@ def get_module_description(module_name: str) -> str:
         str: A description of the module
     """
     descriptions = {
-        "file_reader": "reading and processing different file types",
+        "core": "core abstractions, interfaces, models, and utilities",
+        "domain": "domain-specific business logic implementations",
+        "infrastructure": "infrastructure and external service implementations",
+        "services": "service implementations for the application",
+        "api": "API interfaces for CLI, REST, and external interactions",
+        "tools": "utility tools for the application",
+        "registry": "dependency injection and service registry",
+        # Domain submodules
+        "analytics": "tracking and analyzing usage patterns",
+        "content_analyzer": "analyzing and extracting information from content",
         "file_manager": "managing file operations and organization",
-        "metadata": "extracting and analyzing file metadata",
-        "search": "searching for files and content",
-        "relationships": "mapping relationships between files",
-        "rollback": "providing transaction-based undo capabilities",
-        "security": "ensuring secure file operations",
-        "ai": "providing AI-powered features",
-        "integration": "integrating with external systems",
-        "ui": "providing user interface components",
-        "utils": "providing utility functions",
-        "config": "configuration management",
+        "file_reader": "reading and processing different file types",
+        "file_writer": "writing data to different file formats",
+        "ingest": "ingesting content from various sources",
+        "metadata": "extracting and managing file metadata",
+        "notification": "managing notifications to users",
+        "output_formatter": "formatting output in different formats",
+        "project_reader": "reading and analyzing project structures",
+        "relationships": "managing relationships between entities",
+        "rollback": "providing undo and version control capabilities",
+        "search": "searching and indexing content",
+        "tagging": "managing tags and classifications",
+        "user_management": "managing users, authentication, and authorization",
     }
 
     return descriptions.get(module_name, "providing functionality for the project")
 
 
 def generate_api_docs(
-    modules: dict[str, list[str]], api_dir: Path, src_dir: Path
+    modules: dict[str, list[str]], api_dir: Path, backend_dir: Path
 ) -> None:
     """
     Generate RST files for each module.
@@ -92,130 +110,233 @@ def generate_api_docs(
     Args:
         modules: Dictionary mapping module names to lists of submodules
         api_dir: Directory to store the generated RST files
-        src_dir: Directory containing the source code
+        backend_dir: Directory containing the backend source code
     """
     # Generate documentation for each module
     for module_name, submodules in modules.items():
         title = f"{module_name.replace('_', ' ').title()} Module"
+        underline = "=" * len(title)
+        module_path = f"the_aichemist_codex.backend.{module_name}"
 
-        # Create module documentation
-        module_path = src_dir / module_name
-        # Check if module directory exists
-        module_exists = module_path.exists()
+        if module_name == "domain":
+            # Special handling for domain module with more complex structure
+            domain_dir = api_dir / "domain"
+            domain_dir.mkdir(exist_ok=True)
 
-        if not module_exists:
-            print(f"Warning: Module directory {module_path} does not exist")
+            # Create a domain index file
+            with open(api_dir / f"{module_name}.rst", "w") as f:
+                f.write(f"{title}\n{underline}\n\n")
+                f.write(f"The {title} provides functionality for ")
+                f.write(f"{get_module_description(module_name)}.\n\n")
+                f.write(".. toctree::\n   :maxdepth: 2\n\n")
 
-        # Create the package module path for importing
-        import_path = f"the_aichemist_codex.backend.{module_name}"
+                for submodule in submodules:
+                    f.write(f"   domain/{submodule}\n")
 
-        # Create RST file for module
-        with open(api_dir / f"{module_name}.rst", "w") as f:
-            # Add a special note if module path doesn't exist
-            exists_note = ""
-            if not module_exists:
-                exists_note = (
-                    "\n.. warning::\n"
-                    "   This module documentation might be incomplete because "
-                    f"the module directory '{module_name}' was not found.\n"
-                )
+                f.write("\n")
+                f.write(f".. automodule:: {module_path}\n")
+                f.write("   :members:\n")
+                f.write("   :undoc-members:\n")
+                f.write("   :show-inheritance:\n")
+                f.write("   :imported-members:\n")
 
-            f.write(
-                "\n".join(
-                    [
-                        title,
-                        "=" * len(title),
-                        "",
-                        # Break long line into multiple lines to avoid linting issue
-                        f"The {title} module provides functionality for ",
-                        f"{get_module_description(module_name)}.",
-                        "",
-                        exists_note,
-                        f".. automodule:: {import_path}",
-                        "   :members:",
-                        "   :undoc-members:",
-                        "   :show-inheritance:",
-                        "   :imported-members:",
-                        "",
-                    ]
-                )
-            )
-
-        # Process submodules if they exist
-        if submodules:
-            # Create submodule directory
-            (api_dir / module_name).mkdir(exist_ok=True)
-
-            # Create submodule index
-            with open(api_dir / module_name / "index.rst", "w") as f:
-                f.write(
-                    "\n".join(
-                        [
-                            f"{title} API",
-                            "=" * len(f"{title} API"),
-                            "",
-                            ".. toctree::",
-                            "   :maxdepth: 2",
-                            "",
-                        ]
-                        + [f"   {submodule}" for submodule in submodules]
-                    )
-                )
-
-            # Create documentation for each submodule
+            # Create RST files for each domain submodule
             for submodule in submodules:
-                submodule_path = module_path / f"{submodule}.py"
-                submodule_dir = module_path / submodule
+                submodule_title = f"{submodule.replace('_', ' ').title()} Module"
+                submodule_underline = "=" * len(submodule_title)
+                submodule_path = f"the_aichemist_codex.backend.domain.{submodule}"
 
-                if not submodule_path.exists() and not submodule_dir.exists():
-                    print(
-                        f"Warning: Submodule {submodule_path} or directory {submodule_dir} not found"
-                    )
+                # Check if this domain submodule has its own submodules
+                submodule_dir = backend_dir / "domain" / submodule
+                subsub_dir = domain_dir / submodule
 
-                # Create the import path for the submodule
-                submodule_import = f"{import_path}.{submodule}"
+                if submodule_dir.is_dir() and any(submodule_dir.glob("*/")):
+                    # Create a directory for this submodule's submodules
+                    subsub_dir.mkdir(exist_ok=True)
 
-                with open(api_dir / module_name / f"{submodule}.rst", "w") as f:
-                    sub_title = f"{submodule.replace('_', ' ').title()}"
-                    f.write(
-                        "\n".join(
-                            [
-                                sub_title,
-                                "=" * len(sub_title),
-                                "",
-                                f".. automodule:: {submodule_import}",
-                                "   :members:",
-                                "   :undoc-members:",
-                                "   :show-inheritance:",
-                                "   :imported-members:",
-                                "",
-                            ]
-                        )
-                    )
+                    # Create an index file for this submodule
+                    with open(domain_dir / f"{submodule}.rst", "w") as f:
+                        f.write(f"{submodule_title}\n{submodule_underline}\n\n")
+                        f.write(f"The {submodule_title} provides functionality for ")
+                        f.write(f"{get_module_description(submodule)}.\n\n")
+                        f.write(".. toctree::\n   :maxdepth: 2\n\n")
+
+                        # Find all Python modules in the submodule directory
+                        for py_file in sorted(submodule_dir.glob("*.py")):
+                            if (
+                                py_file.name != "__init__.py"
+                                and not py_file.name.startswith("_")
+                            ):
+                                subsub_name = py_file.stem
+                                f.write(f"   {submodule}/{subsub_name}\n")
+
+                        # Find all subdirectories with __init__.py
+                        for subsub_dir in sorted(submodule_dir.glob("*/")):
+                            if (subsub_dir / "__init__.py").exists():
+                                subsub_name = subsub_dir.name
+                                f.write(f"   {submodule}/{subsub_name}/index\n")
+
+                        f.write("\n")
+                        f.write(f".. automodule:: {submodule_path}\n")
+                        f.write("   :members:\n")
+                        f.write("   :undoc-members:\n")
+                        f.write("   :show-inheritance:\n")
+                        f.write("   :imported-members:\n")
+
+                    # Create RST files for each Python module in the submodule directory
+                    for py_file in sorted(submodule_dir.glob("*.py")):
+                        if (
+                            py_file.name != "__init__.py"
+                            and not py_file.name.startswith("_")
+                        ):
+                            subsub_name = py_file.stem
+                            subsub_title = f"{subsub_name.replace('_', ' ').title()}"
+                            subsub_underline = "=" * len(subsub_title)
+                            subsub_path = f"{submodule_path}.{subsub_name}"
+
+                            with open(subsub_dir / f"{subsub_name}.rst", "w") as f:
+                                f.write(f"{subsub_title}\n{subsub_underline}\n\n")
+                                f.write(f".. automodule:: {subsub_path}\n")
+                                f.write("   :members:\n")
+                                f.write("   :undoc-members:\n")
+                                f.write("   :show-inheritance:\n")
+                                f.write("   :imported-members:\n")
+
+                    # Create index.rst files for subdirectories with __init__.py
+                    for subsub_dir_path in sorted(submodule_dir.glob("*/")):
+                        if (subsub_dir_path / "__init__.py").exists():
+                            subsub_dir_name = subsub_dir_path.name
+                            subsub_dir_out = subsub_dir / subsub_dir_name
+                            subsub_dir_out.mkdir(exist_ok=True)
+
+                            subsub_dir_title = (
+                                f"{subsub_dir_name.replace('_', ' ').title()} Module"
+                            )
+                            subsub_dir_underline = "=" * len(subsub_dir_title)
+                            subsub_dir_path_mod = f"{submodule_path}.{subsub_dir_name}"
+
+                            with open(subsub_dir_out / "index.rst", "w") as f:
+                                f.write(
+                                    f"{subsub_dir_title}\n{subsub_dir_underline}\n\n"
+                                )
+                                f.write(".. toctree::\n   :maxdepth: 2\n\n")
+
+                                # Find all Python modules in the subdirectory
+                                for py_file in sorted(subsub_dir_path.glob("*.py")):
+                                    if (
+                                        py_file.name != "__init__.py"
+                                        and not py_file.name.startswith("_")
+                                    ):
+                                        subsubsub_name = py_file.stem
+                                        f.write(f"   {subsubsub_name}\n")
+
+                                f.write("\n")
+                                f.write(f".. automodule:: {subsub_dir_path_mod}\n")
+                                f.write("   :members:\n")
+                                f.write("   :undoc-members:\n")
+                                f.write("   :show-inheritance:\n")
+                                f.write("   :imported-members:\n")
+
+                            # Create RST files for each Python module in the subdirectory
+                            for py_file in sorted(subsub_dir_path.glob("*.py")):
+                                if (
+                                    py_file.name != "__init__.py"
+                                    and not py_file.name.startswith("_")
+                                ):
+                                    subsubsub_name = py_file.stem
+                                    subsubsub_title = (
+                                        f"{subsubsub_name.replace('_', ' ').title()}"
+                                    )
+                                    subsubsub_underline = "=" * len(subsubsub_title)
+                                    subsubsub_path = (
+                                        f"{subsub_dir_path_mod}.{subsubsub_name}"
+                                    )
+
+                                    with open(
+                                        subsub_dir_out / f"{subsubsub_name}.rst", "w"
+                                    ) as f:
+                                        f.write(
+                                            f"{subsubsub_title}\n{subsubsub_underline}\n\n"
+                                        )
+                                        f.write(f".. automodule:: {subsubsub_path}\n")
+                                        f.write("   :members:\n")
+                                        f.write("   :undoc-members:\n")
+                                        f.write("   :show-inheritance:\n")
+                                        f.write("   :imported-members:\n")
+                else:
+                    # Create a simple RST file for this submodule
+                    with open(domain_dir / f"{submodule}.rst", "w") as f:
+                        f.write(f"{submodule_title}\n{submodule_underline}\n\n")
+                        f.write(f"The {submodule_title} provides functionality for ")
+                        f.write(f"{get_module_description(submodule)}.\n\n")
+                        f.write(f".. automodule:: {submodule_path}\n")
+                        f.write("   :members:\n")
+                        f.write("   :undoc-members:\n")
+                        f.write("   :show-inheritance:\n")
+                        f.write("   :imported-members:\n")
+        else:
+            # Standard module handling
+            module_dir = backend_dir / module_name
+            warning = ""
+
+            if not module_dir.exists() or not module_dir.is_dir():
+                warning = f"\n\n.. warning::\n   This module documentation might be incomplete because the module directory '{module_name}' was not found.\n"
+
+            # Create an RST file for this module
+            with open(api_dir / f"{module_name}.rst", "w") as f:
+                f.write(f"{title}\n{underline}\n\n")
+                f.write(f"The {title} provides functionality for ")
+                f.write(f"{get_module_description(module_name)}.\n")
+                f.write(warning)
+                f.write("\n")
+                f.write(f".. automodule:: {module_path}\n")
+                f.write("   :members:\n")
+                f.write("   :undoc-members:\n")
+                f.write("   :show-inheritance:\n")
+                f.write("   :imported-members:\n")
+
+            # Handle submodules if any
+            if submodules and module_dir.exists() and module_dir.is_dir():
+                submodule_dir = api_dir / module_name
+                submodule_dir.mkdir(exist_ok=True)
+
+                # Create an index file for the submodules
+                with open(submodule_dir / "index.rst", "w") as f:
+                    f.write(f"{title} API\n{underline}\n\n")
+                    f.write(".. toctree::\n   :maxdepth: 2\n\n")
+
+                    for submodule in submodules:
+                        f.write(f"   {submodule}\n")
+
+                # Create RST files for each submodule
+                for submodule in submodules:
+                    submodule_title = f"{submodule.replace('_', ' ').title()}"
+                    submodule_underline = "=" * len(submodule_title)
+                    submodule_path = f"{module_path}.{submodule}"
+
+                    with open(submodule_dir / f"{submodule}.rst", "w") as f:
+                        f.write(f"{submodule_title}\n{submodule_underline}\n\n")
+                        f.write(f".. automodule:: {submodule_path}\n")
+                        f.write("   :members:\n")
+                        f.write("   :undoc-members:\n")
+                        f.write("   :show-inheritance:\n")
+                        f.write("   :imported-members:\n")
 
 
 def create_api_index(modules: dict[str, list[str]], api_dir: Path) -> None:
     """
-    Create an index file for the API documentation.
+    Create an index.rst file for the API documentation.
 
     Args:
         modules: Dictionary mapping module names to lists of submodules
         api_dir: Directory to store the generated RST files
     """
     with open(api_dir / "index.rst", "w") as f:
-        f.write(
-            "\n".join(
-                [
-                    "API Reference",
-                    "============",
-                    "",
-                    ".. toctree::",
-                    "   :maxdepth: 2",
-                    "",
-                ]
-                + [f"   {module}" for module in sorted(modules.keys())]
-            )
-        )
+        f.write("API Reference\n============\n\n")
+        f.write(".. toctree::\n   :maxdepth: 2\n\n")
+
+        for module_name in modules:
+            f.write(f"   {module_name}\n")
 
 
 if __name__ == "__main__":
