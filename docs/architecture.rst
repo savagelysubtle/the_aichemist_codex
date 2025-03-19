@@ -85,6 +85,57 @@ Entry points to the application:
 - ``api/``: HTTP API and web interfaces
 - ``__main__.py``: Direct module execution entry point
 
+Import Strategy
+---------------
+
+The AIchemist Codex follows specific import strategies to maintain clean architecture and prevent circular dependencies:
+
+1. **Core Layer Imports**: Use absolute imports for core components:
+
+   .. code-block:: python
+
+       # Importing core constants
+       from the_aichemist_codex.backend.core.constants.constants import MAX_FILE_SIZE_MB
+
+       # Importing core interfaces
+       from the_aichemist_codex.backend.core.interfaces import FileReader
+
+   This approach ensures core components are always accessible regardless of where the code is executed from.
+
+2. **Related Module Imports**: For closely related modules within the same package, relative imports may be used:
+
+   .. code-block:: python
+
+       # Importing from a sibling module
+       from .file_validation import validate_path
+
+       # Importing from a parent package
+       from ..utils.formatters import format_size
+
+   Relative imports should be used sparingly and only for modules unlikely to be reorganized.
+
+3. **Service Dependencies**: Use the Registry pattern for service dependencies to prevent circular imports:
+
+   .. code-block:: python
+
+       # Get registry instance
+       from the_aichemist_codex.registry import Registry
+       registry = Registry.get_instance()
+
+       # Access services through registry
+       file_reader = registry.file_reader
+       file_writer = registry.file_writer
+
+   The Registry pattern is especially important for domain and service layer components that might have complex dependency relationships.
+
+4. **Development Setup**: During development, install the package in editable mode:
+
+   .. code-block:: bash
+
+       pip install -e .
+
+   This ensures absolute imports work correctly while allowing changes to be immediately reflected.
+
 Registry Pattern
 ---------------
 
@@ -142,3 +193,5 @@ When developing for The AIchemist Codex:
 3. **Use the registry**: Access components through the registry, not direct imports
 4. **Follow domain separation**: Keep components in their appropriate domain directories
 5. **Avoid circular imports**: Structure code to prevent circular dependencies
+6. **Use absolute imports for core components**: Make dependencies explicit and reliable
+7. **Use the Registry pattern for service dependencies**: Prevent circular imports between services

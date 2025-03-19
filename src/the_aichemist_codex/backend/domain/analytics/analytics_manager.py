@@ -7,14 +7,19 @@ storing, and analyzing usage data within the application.
 
 import datetime
 import logging
-import os
+import sys  # Add sys import
 import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-from ....registry import Registry
-from ...core.interfaces import AnalyticsManager as AnalyticsManagerInterface
+# Use absolute imports for core interfaces and Registry
+from the_aichemist_codex.backend.core.interfaces.interfaces import (
+    AnalyticsManager as AnalyticsManagerInterface,
+)
+from the_aichemist_codex.registry import Registry
+
+# Use relative import for local modules in the same package
 from .schema import AnalyticsSchema
 
 logger = logging.getLogger(__name__)
@@ -28,7 +33,7 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
     usage, events, errors, and performance metrics.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the AnalyticsManagerImpl."""
         self._registry = Registry.get_instance()
         self._paths = self._registry.project_paths
@@ -75,8 +80,8 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
             await self.track_event(
                 "app_start",
                 {
-                    "python_version": ".".join(map(str, os.sys.version_info[:3])),
-                    "platform": os.sys.platform,
+                    "python_version": ".".join(map(str, sys.version_info[:3])),
+                    "platform": sys.platform,
                 },
             )
         except Exception as e:
@@ -127,7 +132,7 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
                     (
                         event_id,
                         event_type,
-                        self._schema.serialize_metadata(metadata),
+                        self._schema.serialize_metadata(metadata or {}),
                         self._session_id,
                     ),
                 )
@@ -175,7 +180,7 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
                         error_id,
                         error_type,
                         message,
-                        self._schema.serialize_metadata(metadata),
+                        self._schema.serialize_metadata(metadata or {}),
                         self._session_id,
                     ),
                 )
@@ -251,7 +256,7 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
                         op_data["metric_type"],
                         op_data["operation"],
                         duration_ms,
-                        self._schema.serialize_metadata(metadata),
+                        self._schema.serialize_metadata(metadata or {}),
                         self._session_id,
                     ),
                 )

@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Import directly from constants.py, not a submodule
-from .constants import BINARY_EXTENSIONS
+from the_aichemist_codex.backend.core.constants.constants import BINARY_EXTENSIONS
 
 
 def create_hash(text: str) -> str:
