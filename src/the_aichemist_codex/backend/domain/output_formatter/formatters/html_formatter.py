@@ -38,7 +38,7 @@ class HtmlFormatter(BaseFormatter):
     def format_data(
         self,
         data: Any,
-        options: Optional[Dict[str, Any]] = None
+        options: dict[str, Any] | None = None
     ) -> str:
         """
         Format data as HTML.
@@ -117,8 +117,8 @@ class HtmlFormatter(BaseFormatter):
 
     def format_list(
         self,
-        items: List[Any],
-        options: Optional[Dict[str, Any]] = None
+        items: list[Any],
+        options: dict[str, Any] | None = None
     ) -> str:
         """
         Format a list of items as HTML.
@@ -156,9 +156,9 @@ class HtmlFormatter(BaseFormatter):
 
     def format_table(
         self,
-        data: List[Dict[str, Any]],
-        headers: Optional[List[str]] = None,
-        options: Optional[Dict[str, Any]] = None
+        data: list[dict[str, Any]],
+        headers: list[str] | None = None,
+        options: dict[str, Any] | None = None
     ) -> str:
         """
         Format tabular data as an HTML table.
@@ -273,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function() {
     def format_error(
         self,
         message: str,
-        details: Optional[Dict[str, Any]] = None,
-        options: Optional[Dict[str, Any]] = None
+        details: dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None
     ) -> str:
         """
         Format an error message as HTML.
@@ -308,8 +308,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     def _format_dict(
         self,
-        data: Dict[str, Any],
-        options: Optional[Dict[str, Any]] = None
+        data: dict[str, Any],
+        options: dict[str, Any] | None = None
     ) -> str:
         """
         Format a dictionary as HTML.

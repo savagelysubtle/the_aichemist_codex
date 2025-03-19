@@ -127,9 +127,7 @@ def setup_parser() -> argparse.ArgumentParser:
     )
 
     # Validate command
-    validate_parser = subparsers.add_parser(
-        "validate", help="Validate data directory configuration"
-    )
+    subparsers.add_parser("validate", help="Validate data directory configuration")
 
     return parser
 

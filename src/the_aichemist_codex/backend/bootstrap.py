@@ -262,4 +262,5 @@ def _initialize_metadata_extractors():
     """Initialize metadata extractors and register them with the metadata manager."""
     logger.info("Initializing metadata extractors")
     registry = Registry.get_instance()
-    metadata_manager = registry
+    # Initialize metadata manager
+    registry.metadata_manager

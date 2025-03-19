@@ -22,8 +22,8 @@ class SearchEngineImpl(SearchEngine):
     def __init__(self):
         """Initialize the search engine."""
         self._registry = Registry.get_instance()
-        self._providers: Dict[str, SearchProvider] = {}
-        self._default_providers: Set[str] = set()
+        self._providers: dict[str, SearchProvider] = {}
+        self._default_providers: set[str] = set()
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -124,8 +124,8 @@ class SearchEngineImpl(SearchEngine):
         return True
 
     async def search(
-        self, query: str, search_type: str = "text", options: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+        self, query: str, search_type: str = "text", options: dict[str, Any] = None
+    ) -> list[dict[str, Any]]:
         """
         Search for content using a specific search type.
 
@@ -169,8 +169,8 @@ class SearchEngineImpl(SearchEngine):
             ) from e
 
     async def multi_search(
-        self, query: str, search_types: List[str] = None, options: Dict[str, Any] = None
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        self, query: str, search_types: list[str] = None, options: dict[str, Any] = None
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         Search across multiple providers.
 
@@ -274,7 +274,7 @@ class SearchEngineImpl(SearchEngine):
                 logger.error(f"Error removing file {file_path} from provider {provider_id} index: {e}")
                 # Continue with other providers even if one fails
 
-    async def get_available_search_types(self) -> List[str]:
+    async def get_available_search_types(self) -> list[str]:
         """
         Get a list of available search types (provider IDs).
 
@@ -284,7 +284,7 @@ class SearchEngineImpl(SearchEngine):
         self._ensure_initialized()
         return list(self._providers.keys())
 
-    async def get_search_options(self, search_type: str) -> Dict[str, Any]:
+    async def get_search_options(self, search_type: str) -> dict[str, Any]:
         """
         Get supported options for a search type.
 

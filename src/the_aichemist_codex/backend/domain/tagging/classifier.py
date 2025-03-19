@@ -44,12 +44,12 @@ class TagClassifier:
         self.metadata_path = self.model_dir / "tag_classifier_metadata.json"
 
         # Internal state
-        self.tag_names: List[str] = []
-        self.feature_names: Optional[np.ndarray] = None
-        self.training_metadata: Dict[str, Any] = {}
+        self.tag_names: list[str] = []
+        self.feature_names: np.ndarray | None = None
+        self.training_metadata: dict[str, Any] = {}
 
         # Simple rule-based model (dict of patterns -> tags)
-        self.rules: Dict[str, List[Tuple[str, float]]] = {}
+        self.rules: dict[str, list[tuple[str, float]]] = {}
 
     async def initialize(self) -> None:
         """
@@ -127,7 +127,7 @@ class TagClassifier:
 
             # Load metadata if it exists
             if self.metadata_path.exists():
-                with open(self.metadata_path, "r") as f:
+                with open(self.metadata_path) as f:
                     self.training_metadata = json.load(f)
 
             logger.info(
@@ -178,7 +178,7 @@ class TagClassifier:
             logger.error(f"Error saving model: {e}")
             return False
 
-    async def add_rule(self, pattern: str, tags: List[Tuple[str, float]]) -> bool:
+    async def add_rule(self, pattern: str, tags: list[tuple[str, float]]) -> bool:
         """
         Add a rule to the classifier.
 
@@ -220,8 +220,8 @@ class TagClassifier:
         return False
 
     async def classify_file(
-        self, file_metadata: Dict[str, Any], threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
-    ) -> List[Tuple[str, float]]:
+        self, file_metadata: dict[str, Any], threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
+    ) -> list[tuple[str, float]]:
         """
         Classify a file and return predicted tags.
 
@@ -237,7 +237,7 @@ class TagClassifier:
                 return []
 
             # Initialize tag scores
-            tag_scores: Dict[str, float] = {}
+            tag_scores: dict[str, float] = {}
 
             # Apply file extension rules
             file_path = file_metadata.get("path", "")

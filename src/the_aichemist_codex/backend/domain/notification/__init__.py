@@ -5,14 +5,14 @@ This package provides a system for sending notifications to subscribers
 through various channels.
 """
 
-from .models import Notification, NotificationLevel, NotificationStatus, Subscriber
-from .notification_manager import NotificationManagerImpl
 from .channels import (
     BaseNotificationChannel,
     ConsoleNotificationChannel,
+    EmailNotificationChannel,
     FileNotificationChannel,
-    EmailNotificationChannel
 )
+from .models import Notification, NotificationLevel, NotificationStatus, Subscriber
+from .notification_manager import NotificationManagerImpl
 
 __all__ = [
     "Notification",

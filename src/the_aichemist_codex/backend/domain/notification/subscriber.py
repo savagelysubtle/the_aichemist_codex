@@ -5,11 +5,11 @@ This module provides functionality for managing notification subscribers,
 including creation, storage, and retrieval.
 """
 
-import logging
-from pathlib import Path
-from typing import Any, List, Optional, Dict
 import json
+import logging
 import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from ...registry import Registry
 from .models import Subscriber
@@ -115,10 +115,10 @@ class SubscriberManager:
         self,
         subscriber_id: str,
         name: str = None,
-        channels: List[str] = None,
-        preferences: Dict[str, Any] = None,
+        channels: list[str] = None,
+        preferences: dict[str, Any] = None,
         enabled: bool = None
-    ) -> Optional[Subscriber]:
+    ) -> Subscriber | None:
         """
         Update a subscriber.
 
@@ -191,7 +191,7 @@ class SubscriberManager:
         logger.info(f"Deleted subscriber: {subscriber_id}")
         return True
 
-    async def get_all_subscribers(self) -> List[Subscriber]:
+    async def get_all_subscribers(self) -> list[Subscriber]:
         """
         Get all subscribers.
 
@@ -204,7 +204,7 @@ class SubscriberManager:
         self._ensure_initialized()
         return list(self._subscribers.values())
 
-    async def get_subscribers_by_channel(self, channel_type: str) -> List[Subscriber]:
+    async def get_subscribers_by_channel(self, channel_type: str) -> list[Subscriber]:
         """
         Get subscribers that use a specific channel.
 
@@ -235,7 +235,7 @@ class SubscriberManager:
             return
 
         try:
-            with open(self._subscribers_file, "r", encoding="utf-8") as f:
+            with open(self._subscribers_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             for subscriber_data in data:
@@ -246,7 +246,7 @@ class SubscriberManager:
 
         except Exception as e:
             logger.error(f"Error loading subscribers: {e}")
-            raise IOError(f"Failed to load subscribers: {e}") from e
+            raise OSError(f"Failed to load subscribers: {e}") from e
 
     async def _save_subscribers(self) -> None:
         """
@@ -270,7 +270,7 @@ class SubscriberManager:
 
         except Exception as e:
             logger.error(f"Error saving subscribers: {e}")
-            raise IOError(f"Failed to save subscribers: {e}") from e
+            raise OSError(f"Failed to save subscribers: {e}") from e
 
     def _ensure_initialized(self) -> None:
         """

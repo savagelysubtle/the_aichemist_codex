@@ -32,7 +32,7 @@ class TextSearchProvider(BaseSearchProvider):
         """Initialize the text search provider."""
         super().__init__()
         self._registry = Registry.get_instance()
-        self._file_cache: Dict[str, str] = {}
+        self._file_cache: dict[str, str] = {}
         self._max_results = 100
         self._max_cache_size = 50  # Maximum number of files to cache
 
@@ -49,8 +49,8 @@ class TextSearchProvider(BaseSearchProvider):
         self._file_cache.clear()
 
     async def search(
-        self, query: str, options: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+        self, query: str, options: dict[str, Any] = None
+    ) -> list[dict[str, Any]]:
         """
         Search for text in files.
 
@@ -135,7 +135,7 @@ class TextSearchProvider(BaseSearchProvider):
                 details={"options": options}
             ) from e
 
-    async def get_supported_options(self) -> Dict[str, Any]:
+    async def get_supported_options(self) -> dict[str, Any]:
         """
         Get supported options for this search provider.
 
@@ -221,8 +221,8 @@ class TextSearchProvider(BaseSearchProvider):
             del self._file_cache[file_path]
 
     async def _find_files_to_search(
-        self, paths: List[str], file_extensions: List[str]
-    ) -> List[str]:
+        self, paths: list[str], file_extensions: list[str]
+    ) -> list[str]:
         """
         Find files to search based on paths and extensions.
 
@@ -266,7 +266,7 @@ class TextSearchProvider(BaseSearchProvider):
         # Filter to include only text files
         return [file for file in files_to_search if self._is_text_file(file)]
 
-    def _matches_extensions(self, file_path: str, extensions: List[str]) -> bool:
+    def _matches_extensions(self, file_path: str, extensions: list[str]) -> bool:
         """
         Check if a file matches the specified extensions.
 

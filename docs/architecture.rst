@@ -1,121 +1,144 @@
-Architecture Overview
-===================
+==========================
+The AIchemist Codex Architecture
+==========================
 
-The AIchemist Codex follows a domain-driven design (DDD) architecture to organize the codebase in a maintainable and scalable manner. This document provides an overview of the architecture, design principles, and how different components interact.
+This document describes the architecture of The AIchemist Codex project.
 
-Architecture Layers
-------------------
+Overview
+--------
 
-The architecture is organized into distinct layers:
+The AIchemist Codex follows a **domain-driven design** with a **layered architecture** approach. The application uses the **Registry pattern** to prevent circular dependencies and facilitate dependency injection.
 
-1. **Core Layer**
+.. image:: /images/architecture_diagram.png
+   :width: 800px
+   :alt: The AIchemist Codex Architecture Diagram
+   :align: center
 
-   The foundation of the system, containing common utilities, constants, interfaces, and basic models that are used across the entire application.
-
-2. **Domain Layer**
-
-   The heart of the application, containing domain-specific logic organized into separate modules, each representing a distinct business domain.
-
-3. **Infrastructure Layer**
-
-   Provides implementations for external services, databases, file systems, and other technical concerns.
-
-4. **Services Layer**
-
-   Orchestrates the interactions between different domains and exposes a unified API for application features.
-
-5. **API Layer**
-
-   Exposes the application's capabilities through various interfaces (REST, CLI, etc.).
-
-6. **UI Layer**
-
-   Provides user interfaces for interacting with the application.
-
-Domain Organization
-------------------
-
-Each domain is organized into the following components:
-
-* **Models**: Data structures representing domain concepts
-* **Services**: Business logic specific to the domain
-* **Repositories**: Data access interfaces and implementations
-* **Factories**: Creation of complex domain objects
-* **Events**: Domain events and event handlers
-* **Exceptions**: Domain-specific exceptions
-
-Key Design Principles
+Layered Architecture
 -------------------
 
-1. **Separation of Concerns**
+The codebase is organized into the following layers:
 
-   Each domain is responsible for a specific area of functionality, with clear boundaries between domains.
+1. **Core Layer**: Contains interfaces, models, constants, and exceptions
+2. **Infrastructure Layer**: Provides base implementations and utilities
+3. **Domain Layer**: Contains business logic and implementations
+4. **Service Layer**: Composes domain components into services
+5. **Application Layer**: Entry points for the application (CLI, API)
 
-2. **Dependency Inversion**
+Core Layer
+^^^^^^^^^^
 
-   High-level modules do not depend on low-level modules. Both depend on abstractions.
+The core layer defines the contracts, models, and exceptions used across the application. This layer should not depend on any other layer.
 
-3. **Single Responsibility**
+Key components:
 
-   Each class and module has a single, well-defined responsibility.
+- ``interfaces.py``: Contains interfaces for all primary services
+- ``models.py``: Contains data models and value objects
+- ``constants.py``: Contains application constants
+- ``exceptions.py``: Contains application-specific exceptions
 
-4. **Interface Segregation**
+Infrastructure Layer
+^^^^^^^^^^^^^^^^^^^^
 
-   Clients should not be forced to depend on interfaces they do not use.
+The infrastructure layer provides foundational implementations and utilities:
 
-5. **Registry Pattern**
+- ``io/``: I/O operations and file system access
+- ``paths/``: Path resolution and validation
+- ``config/``: Configuration management
+- ``persistence/``: Data storage mechanisms
+- ``security/``: Security utilities
+- ``file/``: Low-level file operations
 
-   A central registry is used to manage dependencies and prevent circular imports.
+Domain Layer
+^^^^^^^^^^^
 
-Communication Between Domains
----------------------------
+The domain layer contains the business logic implementations organized by domain:
 
-Domains communicate through:
+- ``file_reader/``: Reading files of various formats
+- ``file_writer/``: Writing files of various formats
+- ``file_manager/``: High-level file operations
+- ``search/``: Search functionality
+- ``tagging/``: Auto-tagging and tag management
+- ``metadata/``: Metadata extraction
+- ``relationships/``: File relationship mapping
+- ``notification/``: Notification system
+- ``project_reader/``: Project directory reading
+- ``ingest/``: Data ingestion
+- ``output_formatter/``: Output formatting
+- ``rollback/``: Rollback functionality
 
-1. **Service Dependencies**: Domains can declare dependencies on services from other domains through interfaces.
-2. **Domain Events**: Domains can publish events that other domains can subscribe to.
-3. **Shared Models**: Common models defined in the core layer can be used across domains.
+Service Layer
+^^^^^^^^^^^
 
-Dependency Management
--------------------
+Services compose domain components to provide higher-level functionality:
 
-Dependencies are managed through:
+- ``processing_service``: Coordinates file processing
+- ``analysis_service``: Coordinates analysis operations
+- ``organization_service``: Coordinates organization operations
 
-1. **Explicit Imports**: Dependencies are explicitly imported and declared.
-2. **Registry Pattern**: A central registry is used to resolve dependencies at runtime.
-3. **Interface-based Design**: Dependencies are defined in terms of interfaces, not implementations.
+Application Layer
+^^^^^^^^^^^^^^
 
-Architectural Diagram
--------------------
+Entry points to the application:
 
-.. code-block::
+- ``cli/``: Command-line interface
+- ``api/``: HTTP API and web interfaces
+- ``__main__.py``: Direct module execution entry point
 
-   +---------------------+
-   |        UI           |
-   +---------------------+
-             |
-   +---------------------+
-   |        API          |
-   +---------------------+
-             |
-   +---------------------+
-   |      Services       |
-   +---------------------+
-             |
-   +--------------------------------------------------+
-   |                  Domain Layer                     |
-   | +----------+ +----------+ +----------+ +-------+ |
-   | | Project  | | Search   | | Tagging  | | ...   | |
-   | | Reader   | |          | |          | |       | |
-   | +----------+ +----------+ +----------+ +-------+ |
-   +--------------------------------------------------+
-             |
-   +---------------------+
-   |   Infrastructure    |
-   +---------------------+
-             |
-   +---------------------+
-   |        Core         |
-   +---------------------+
+Registry Pattern
+---------------
 
-For more detailed information about specific components, refer to the API documentation of each domain module.
+The AIchemist Codex uses the Registry pattern to manage dependencies and prevent circular imports:
+
+.. code-block:: python
+
+    # Get the registry instance
+    registry = Registry.get_instance()
+
+    # Get a service from the registry
+    file_reader = registry.file_reader
+
+    # Use the service
+    content = file_reader.read_text("path/to/file.txt")
+
+This pattern allows:
+
+1. **Lazy loading**: Components are only created when needed
+2. **Dependency injection**: Dependencies are provided rather than created
+3. **Circular dependency avoidance**: Components interact through the registry
+4. **Testability**: Components can be easily mocked for testing
+
+Bootstrap Process
+----------------
+
+The application is initialized via the bootstrap process:
+
+1. Registry is initialized
+2. Base services are registered
+3. Configuration is loaded
+4. Core components are initialized
+5. Application is ready to process commands
+
+Example Flow
+-----------
+
+A typical workflow through the architecture looks like this:
+
+1. User invokes a command through CLI or API
+2. Application layer receives the command
+3. Service layer coordinates the required operations
+4. Domain layer implements the business logic
+5. Infrastructure layer handles low-level operations
+6. Results flow back up through the layers
+7. Output is formatted and returned to the user
+
+Development Guidelines
+---------------------
+
+When developing for The AIchemist Codex:
+
+1. **Respect layer boundaries**: Higher layers can use lower layers, but not vice versa
+2. **Implement against interfaces**: All implementations should fulfill a core interface
+3. **Use the registry**: Access components through the registry, not direct imports
+4. **Follow domain separation**: Keep components in their appropriate domain directories
+5. **Avoid circular imports**: Structure code to prevent circular dependencies

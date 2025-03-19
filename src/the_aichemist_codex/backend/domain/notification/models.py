@@ -58,9 +58,9 @@ class NotificationDelivery:
 
     subscriber_id: str
     status: NotificationStatus = NotificationStatus.PENDING
-    delivered_at: Optional[datetime] = None
-    read_at: Optional[datetime] = None
-    error_message: Optional[str] = None
+    delivered_at: datetime | None = None
+    read_at: datetime | None = None
+    error_message: str | None = None
 
     def mark_delivered(self) -> None:
         """Mark the notification as delivered."""
@@ -93,11 +93,11 @@ class Notification:
     message: str = ""
     level: NotificationLevel = NotificationLevel.INFO
     created_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    sender_id: Optional[str] = None
-    deliveries: Dict[str, NotificationDelivery] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    sender_id: str | None = None
+    deliveries: dict[str, NotificationDelivery] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the notification to a dictionary.
 
@@ -123,7 +123,7 @@ class Notification:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Notification":
+    def from_dict(cls, data: dict[str, Any]) -> "Notification":
         """
         Create a notification from a dictionary.
 
@@ -180,12 +180,12 @@ class Subscriber:
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
-    channels: List[str] = field(default_factory=list)
+    channels: list[str] = field(default_factory=list)
     enabled: bool = True
-    notification_preferences: Dict[str, Any] = field(default_factory=dict)
+    notification_preferences: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the subscriber to a dictionary.
 
@@ -202,7 +202,7 @@ class Subscriber:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Subscriber":
+    def from_dict(cls, data: dict[str, Any]) -> "Subscriber":
         """
         Create a subscriber from a dictionary.
 

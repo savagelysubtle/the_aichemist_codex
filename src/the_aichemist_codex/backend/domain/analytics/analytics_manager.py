@@ -13,8 +13,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-from ....core.interfaces import AnalyticsManager as AnalyticsManagerInterface
 from ....registry import Registry
+from ...core.interfaces import AnalyticsManager as AnalyticsManagerInterface
 from .schema import AnalyticsSchema
 
 logger = logging.getLogger(__name__)

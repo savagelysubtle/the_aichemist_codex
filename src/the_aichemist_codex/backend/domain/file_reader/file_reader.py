@@ -6,11 +6,11 @@ using the registry pattern to avoid circular dependencies.
 """
 
 import json
+import logging
 import mimetypes
+import os
 from pathlib import Path
 from typing import Any, Dict
-import os
-import logging
 
 import yaml
 
@@ -240,7 +240,7 @@ class FileReaderImpl(FileReaderInterface):
         """
         # Implementation details...
 
-    def extract_metadata(self, file_path: str) -> Dict[str, Any]:
+    def extract_metadata(self, file_path: str) -> dict[str, Any]:
         """Extract metadata from a file using the metadata manager.
 
         Args:
@@ -309,7 +309,7 @@ class FileReaderImpl(FileReaderInterface):
                 if ext in {".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".xml", ".html"}:
                     # Text files: read directly
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, encoding='utf-8') as f:
                             content = f.read(max_size + 1)
                             if len(content) > max_size:
                                 return content[:max_size] + "..."

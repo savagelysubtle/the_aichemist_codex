@@ -5,17 +5,15 @@ This module provides a centralized manager for accessing and using various forma
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type, Union
 
-from ...core.exceptions import ConfigError
 from ...core.interfaces import OutputFormatter as OutputFormatterInterface
 from ...registry import Registry
 from .formatters import (
     BaseFormatter,
-    TextFormatter,
     HtmlFormatter,
+    JsonFormatter,
     MarkdownFormatter,
-    JsonFormatter
+    TextFormatter,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +30,7 @@ class FormatterManager(OutputFormatterInterface):
     def __init__(self):
         """Initialize the formatter manager."""
         self._registry = Registry.get_instance()
-        self._formatters: Dict[str, BaseFormatter] = {}
+        self._formatters: dict[str, BaseFormatter] = {}
         self._default_format = "text"
         self._is_initialized = False
 
@@ -51,7 +49,9 @@ class FormatterManager(OutputFormatterInterface):
 
         # Get default format from config
         config = self._registry.config_provider
-        self._default_format = config.get_config("output_formatter.default_format", "text")
+        self._default_format = config.get_config(
+            "output_formatter.default_format", "text"
+        )
 
         self._is_initialized = True
         logger.info("FormatterManager initialized successfully")
@@ -72,4 +72,5 @@ class FormatterManager(OutputFormatterInterface):
             formatter: The formatter to register
 
         Raises:
-            ValueError
+            ValueError: If the formatter is already registered or invalid
+        """

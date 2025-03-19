@@ -267,6 +267,9 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "ANN401", "F821", "F823"]
 
+# Add per-file-ignores to ignore F401 for core/__init__.py
+"*/__init__.py" = ["F401"]  # Ignore unused imports in init files
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
