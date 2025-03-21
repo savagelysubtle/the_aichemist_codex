@@ -11,8 +11,14 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any
 
-from the_aichemist_codex.backend.core.exceptions import AnalysisError, FileError
-from the_aichemist_codex.backend.core.interfaces import ContentAnalyzer, FileReader
+from the_aichemist_codex.backend.core.exceptions.exceptions import (
+    AnalysisError,
+    FileError,
+)
+from the_aichemist_codex.backend.core.interfaces.interfaces import (
+    ContentAnalyzer,
+    FileReader,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +31,7 @@ class BaseContentAnalyzer(ContentAnalyzer):
     including file type detection and basic content loading.
     """
 
-    def __init__(self, file_reader: FileReader):
+    def __init__(self, file_reader: FileReader) -> None:
         """
         Initialize the base content analyzer.
 
@@ -223,7 +229,7 @@ class BaseContentAnalyzer(ContentAnalyzer):
         raise NotImplementedError("analyze_text must be implemented by subclass")
 
     async def summarize(
-        self, content: str | Path, max_length: int = 500, format: str = "text"
+        self, content: str | Path, max_length: int = 500, output_format: str = "text"
     ) -> str:
         """
         Generate a summary of file content.
@@ -234,7 +240,7 @@ class BaseContentAnalyzer(ContentAnalyzer):
         Args:
             content: Either a string of content or a path to a file
             max_length: Maximum length of the summary in characters
-            format: Output format (e.g., "text", "html", "markdown")
+            output_format: Output format (e.g., "text", "html", "markdown")
 
         Returns:
             Generated summary as a string

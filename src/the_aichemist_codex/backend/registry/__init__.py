@@ -6,7 +6,7 @@ preventing circular dependencies through the use of lazy initialization
 and dependency injection.
 """
 
-from typing import Optional, Type
+from typing import Optional
 
 from ..core.interfaces import (
     AsyncIO,

@@ -10,8 +10,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from the_aichemist_codex.backend.core.exceptions import AnalysisError
-from the_aichemist_codex.backend.core.interfaces import FileReader
+from the_aichemist_codex.backend.core.exceptions.exceptions import AnalysisError
+from the_aichemist_codex.backend.core.interfaces.interfaces import FileReader
 
 from .base_analyzer import BaseContentAnalyzer
 
@@ -26,7 +26,7 @@ class TextContentAnalyzer(BaseContentAnalyzer):
     other text-based file formats.
     """
 
-    def __init__(self, file_reader: FileReader):
+    def __init__(self, file_reader: FileReader) -> None:
         """
         Initialize the text content analyzer.
 
@@ -259,7 +259,7 @@ class TextContentAnalyzer(BaseContentAnalyzer):
         }
 
     async def summarize(
-        self, content: str | Path, max_length: int = 500, format: str = "text"
+        self, content: str | Path, max_length: int = 500, output_format: str = "text"
     ) -> str:
         """
         Generate a summary of text content.
@@ -270,7 +270,7 @@ class TextContentAnalyzer(BaseContentAnalyzer):
         Args:
             content: Either a string of content or a path to a file
             max_length: Maximum length of the summary in characters
-            format: Output format (e.g., "text", "html", "markdown")
+            output_format: Output format (e.g., "text", "html", "markdown")
 
         Returns:
             Generated summary as a string

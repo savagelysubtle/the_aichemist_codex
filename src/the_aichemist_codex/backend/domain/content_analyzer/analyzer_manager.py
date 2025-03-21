@@ -10,8 +10,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from the_aichemist_codex.backend.core.exceptions import AnalysisError
-from the_aichemist_codex.backend.core.interfaces import ContentAnalyzer, FileReader
+from the_aichemist_codex.backend.core.exceptions.exceptions import AnalysisError
+from the_aichemist_codex.backend.core.interfaces.interfaces import (
+    ContentAnalyzer,
+    FileReader,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,7 @@ class ContentAnalyzerManager(ContentAnalyzer):
 
     def __init__(
         self, file_reader: FileReader, analyzers: list[ContentAnalyzer] | None = None
-    ):
+    ) -> None:
         """
         Initialize the ContentAnalyzerManager.
 
@@ -281,7 +284,7 @@ class ContentAnalyzerManager(ContentAnalyzer):
         return await analyzer.analyze_text(text, content_type, file_path, options)
 
     async def summarize(
-        self, content: str | Path, max_length: int = 500, format: str = "text"
+        self, content: str | Path, max_length: int = 500, output_format: str = "text"
     ) -> str:
         """
         Generate a summary of file content.
@@ -292,7 +295,7 @@ class ContentAnalyzerManager(ContentAnalyzer):
         Args:
             content: Either a string of content or a path to a file
             max_length: Maximum length of the summary in characters
-            format: Output format (e.g., "text", "html", "markdown")
+            output_format: Output format (e.g., "text", "html", "markdown")
 
         Returns:
             Generated summary as a string
@@ -309,7 +312,7 @@ class ContentAnalyzerManager(ContentAnalyzer):
         else:
             analyzer = self._find_analyzer_for_content()
 
-        return await analyzer.summarize(content, max_length, format)
+        return await analyzer.summarize(content, max_length, output_format)
 
     async def extract_entities(
         self,

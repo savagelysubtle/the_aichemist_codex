@@ -348,3 +348,4 @@ index-url = "https://pypi.org/simple/"
 no-build-isolation-package = ["ruff"]
 # Explicitly set default groups to include dev
 default-groups = ["dev"]
+excluded-dependencies = ["inflate64"]

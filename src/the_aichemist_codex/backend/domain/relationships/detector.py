@@ -10,9 +10,10 @@ import os
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, cast
 
-from ....core.models import RelationshipType
-from ....registry import Registry
+from ....backend.core.models.models import RelationshipType
+from ....backend.registry import Registry
 from .relationship import Relationship
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,9 @@ class DetectionStrategy(ABC):
 
     def __init__(self):
         """Initialize the detection strategy."""
+        # Get the registry instance
         self._registry = Registry.get_instance()
-        self._file_reader = self._registry.file_reader
+        self._file_reader = self._registry.async_io
         self._validator = self._registry.file_validator
 
     @abstractmethod
@@ -49,210 +51,297 @@ class DetectionStrategy(ABC):
         pass
 
 
-class ImportDetectionStrategy(DetectionStrategy):
+class VectorSimilarityStrategy(DetectionStrategy):
     """
-    Strategy for detecting import relationships.
+    Strategy for detecting semantic similarity relationships using vector embeddings.
 
-    This strategy analyzes code files to identify imports and includes.
+    This strategy compares file content using vector embeddings to identify
+    semantic similarities between files.
     """
 
-    # Common import patterns for different languages
-    IMPORT_PATTERNS = {
-        ".py": r"import\s+([^\s;]+)|from\s+([^\s;]+)\s+import",
-        ".js": r"(import|require)\s*\(?[\'\"]([^\'\"]+)[\'\"]",
-        ".java": r"import\s+([^;]+);",
-        ".cpp": r"#include\s*[<\"]([^>\"]+)[>\"]",
-        ".c": r"#include\s*[<\"]([^>\"]+)[>\"]",
-        ".h": r"#include\s*[<\"]([^>\"]+)[>\"]",
-        ".rb": r"require[\s\(]+[\'\":]([^\'\"]+)[\'\":]",
-    }
+    def __init__(self, similarity_threshold: float = 0.75):
+        """
+        Initialize the vector similarity strategy.
+
+        Args:
+            similarity_threshold: Minimum similarity score (0.0-1.0) to consider as a relationship
+        """
+        super().__init__()
+        self._similarity_threshold = similarity_threshold
+        # Use type casting to bypass linter error
+        self._vector_store = cast(Any, self._registry).vector_store
 
     async def detect_relationships(self, file_path: Path) -> list[Relationship]:
         """
-        Detect import relationships for a file.
+        Detect semantic similarity relationships for a file.
 
         Args:
             file_path: Path to the file
 
         Returns:
-            List of detected import relationships
+            List of detected similarity relationships
         """
         relationships = []
-        file_ext = file_path.suffix.lower()
-
-        # Check if we have a pattern for this file type
-        if file_ext not in self.IMPORT_PATTERNS:
-            return relationships
 
         try:
-            # Read the file content
-            file_content = await self._file_reader.read_text(str(file_path))
-
-            # Get the pattern for this file type
-            pattern = self.IMPORT_PATTERNS[file_ext]
-
-            # Find all imports
-            imports = re.findall(pattern, file_content)
-
-            # Process the imports
-            for import_match in imports:
-                if isinstance(import_match, tuple):
-                    # Some regex patterns return tuples
-                    import_name = next((m for m in import_match if m), "")
-                else:
-                    import_name = import_match
-
-                if not import_name:
-                    continue
-
-                # Convert the import to a potential file path
-                import_path = self._resolve_import_to_file_path(
-                    file_path, import_name, file_ext
+            # Validate the file exists
+            if not file_path.exists():
+                logger.warning(
+                    f"File not found for relationship detection: {file_path}"
                 )
-                if import_path and import_path.exists():
-                    # Create a relationship
+                return relationships
+
+            # Get file content
+            content = await self._file_reader.read_file(str(file_path))
+
+            # Get similar files from vector store
+            similar_files = await self._vector_store.find_similar(
+                content,
+                collection="files",
+                exclude_paths=[str(file_path)],
+                limit=10,
+                min_score=self._similarity_threshold,
+            )
+
+            # Convert results to relationships
+            for result in similar_files:
+                similar_path = result.get("path")
+                similarity_score = result.get("score", 0.0)
+
+                if similar_path and similarity_score >= self._similarity_threshold:
                     rel = Relationship(
                         source_path=file_path,
-                        target_path=import_path,
-                        rel_type=RelationshipType.IMPORTS,
-                        strength=1.0,
-                        metadata={"import_name": import_name},
+                        target_path=Path(similar_path),
+                        rel_type=RelationshipType.SEMANTIC_SIMILARITY,
+                        strength=similarity_score,
+                        metadata={
+                            "similarity_score": similarity_score,
+                            "detection_method": "vector_embeddings",
+                        },
                     )
                     relationships.append(rel)
+                    logger.debug(
+                        f"Detected similarity relationship: {file_path} -> {similar_path} (score: {similarity_score:.2f})"
+                    )
 
+            return relationships
         except Exception as e:
-            logger.warning(f"Error detecting import relationships for {file_path}: {e}")
+            logger.error(f"Error detecting semantic similarities: {str(e)}")
+            return relationships
 
-        return relationships
 
-    def _resolve_import_to_file_path(
-        self, source_file: Path, import_name: str, file_ext: str
-    ) -> Path | None:
+class ReferenceDetectionStrategy(DetectionStrategy):
+    """
+    Strategy for detecting reference relationships using pattern matching.
+
+    This strategy analyzes file content using regex patterns to identify
+    references to other files.
+    """
+
+    def __init__(self):
+        """Initialize the reference detection strategy."""
+        super().__init__()
+        # Patterns to detect file references for different file types
+        self._patterns = {
+            ".py": [
+                r"(?:from|import)\s+([\w.]+)",  # Python imports
+                r"(?:open|with open)\(['\"]([^'\"]+)['\"]",  # File open statements
+            ],
+            ".md": [
+                r"(?:!\[.*?\]|\[.*?\])\(([^)]+)\)",  # Markdown links and images
+                r"(?:include|require)\(['\"]([^'\"]+)['\"]",  # Include statements
+            ],
+            ".txt": [
+                r"(?:include|require|reference):\s*([^\s,]+)",  # Text file references
+            ],
+            # Generic patterns that apply to all file types
+            "*": [
+                r"['\"]([^'\"]+\.(py|md|txt|json|yaml|yml))['\"]",  # Quoted file paths
+            ],
+        }
+
+    def _get_patterns_for_type(self, file_suffix: str) -> list[str]:
         """
-        Resolve an import name to a file path.
+        Get patterns for a specific file type.
 
         Args:
-            source_file: Path to the source file
-            import_name: The import name
-            file_ext: File extension of the source file
+            file_suffix: The file extension (e.g., ".py")
 
         Returns:
-            Resolved file path or None if it can't be resolved
+            List of regex patterns for that file type
         """
-        # This is a simplified implementation. In a real system, you would need
-        # more sophisticated logic to handle different import styles and language-specific rules.
+        # Get patterns specific to this file type and generic patterns
+        specific_patterns = self._patterns.get(file_suffix, [])
+        generic_patterns = self._patterns.get("*", [])
+        return specific_patterns + generic_patterns
 
-        # Try to resolve relative to the source file directory
-        source_dir = source_file.parent
+    async def detect_relationships(self, file_path: Path) -> list[Relationship]:
+        """
+        Detect reference relationships for a file.
 
-        # For Python
-        if file_ext == ".py":
-            # Try with .py extension
-            potential_path = source_dir / f"{import_name.replace('.', '/')}.py"
-            if potential_path.exists():
-                return potential_path
+        Args:
+            file_path: Path to the file
 
-            # Try as a directory with __init__.py
-            init_path = source_dir / import_name.replace(".", "/") / "__init__.py"
-            if init_path.exists():
-                return init_path
+        Returns:
+            List of detected reference relationships
+        """
+        relationships = []
 
-        # For JavaScript
-        elif file_ext in {".js", ".jsx", ".ts", ".tsx"}:
-            # Try exact path
-            potential_path = source_dir / import_name
-            if potential_path.exists():
-                return potential_path
+        try:
+            if not file_path.exists():
+                logger.warning(f"File not found: {file_path}")
+                return relationships
 
-            # Try with .js extension
-            js_path = source_dir / f"{import_name}.js"
-            if js_path.exists():
-                return js_path
+            # Get file extension
+            suffix = file_path.suffix.lower()
 
-            # Try with other common extensions
-            for ext in [".jsx", ".ts", ".tsx"]:
-                ext_path = source_dir / f"{import_name}{ext}"
-                if ext_path.exists():
-                    return ext_path
+            # Get patterns for the file type
+            patterns = self._get_patterns_for_type(suffix)
+            if not patterns:
+                return relationships  # No patterns for this file type
 
-            # Try as index.js in directory
-            index_path = source_dir / import_name / "index.js"
-            if index_path.exists():
-                return index_path
+            # Read file content - using read_file method from AsyncIO interface
+            content = await self._file_reader.read_file(str(file_path))
 
-        # For C/C++
-        elif file_ext in {".c", ".cpp", ".h"}:
-            # Try relative to source
-            potential_path = source_dir / import_name
-            if potential_path.exists():
-                return potential_path
+            # Extract references
+            references = set()
+            for pattern in patterns:
+                matches = re.findall(pattern, content)
+                references.update(matches)
 
-        # If we couldn't resolve it, return None
-        return None
+            # Convert references to relationships
+            for ref in references:
+                try:
+                    # Handle relative imports in Python
+                    if (
+                        suffix == ".py"
+                        and "." in ref
+                        and "/" not in ref
+                        and "\\" not in ref
+                    ):
+                        # Convert dotted imports to paths
+                        ref_path = file_path.parent / Path(
+                            ref.replace(".", "/") + ".py"
+                        )
+                    else:
+                        # Handle relative paths
+                        ref_path = (file_path.parent / ref).resolve()
+
+                    # Only add if the referenced file exists
+                    if ref_path.exists():
+                        rel = Relationship(
+                            source_path=file_path,
+                            target_path=ref_path,
+                            rel_type=RelationshipType.REFERENCES,
+                            strength=1.0,
+                            metadata={
+                                "reference_type": "explicit",
+                                "detection_method": "pattern_matching",
+                            },
+                        )
+                        relationships.append(rel)
+                except Exception as e:
+                    logger.debug(f"Error processing reference {ref}: {str(e)}")
+
+            return relationships
+        except Exception as e:
+            logger.error(f"Error detecting references for {file_path}: {str(e)}")
+            return relationships
 
 
 class RelationshipDetector:
     """
-    Orchestrates detection of file relationships.
+    Main detector class that orchestrates relationship detection.
 
-    This class uses multiple detection strategies to identify
-    relationships between files.
+    This class uses multiple detection strategies to identify various
+    types of relationships between files.
     """
 
     def __init__(self):
         """Initialize the relationship detector with default strategies."""
         self._registry = Registry.get_instance()
-        self._validator = self._registry.file_validator
-        self._strategies = {
-            "import": ImportDetectionStrategy(),
-            # Add more strategies here as they are implemented
-        }
+        self._strategies = [
+            VectorSimilarityStrategy(),
+            ReferenceDetectionStrategy(),
+            # Add more strategies as they become available
+        ]
 
-    async def detect_relationships(
-        self, file_path: Path, strategies: list[str] = None
-    ) -> list[Relationship]:
+    async def detect_relationships(self, file_path: Path) -> list[Relationship]:
         """
-        Detect relationships for a file using specified strategies.
+        Detect all types of relationships for a file.
 
         Args:
             file_path: Path to the file
-            strategies: List of strategy names to use (uses all if None)
 
         Returns:
-            List of detected relationships
-
-        Raises:
-            FileError: If the file cannot be accessed
+            List of all detected relationships
         """
-        # Validate the file path
-        file_path_str = str(file_path)
-        self._validator.ensure_path_safe(file_path_str)
+        relationships = []
 
-        if not os.path.exists(file_path):
-            logger.error(f"File does not exist: {file_path}")
-            raise FileNotFoundError(f"File does not exist: {file_path}")
-
-        # Determine which strategies to use
-        if strategies is None:
-            active_strategies = list(self._strategies.values())
-        else:
-            active_strategies = [
-                self._strategies[s] for s in strategies if s in self._strategies
-            ]
-
-        if not active_strategies:
-            logger.warning(f"No valid detection strategies specified: {strategies}")
-            return []
-
-        # Run each detection strategy
-        all_relationships = []
-        for strategy in active_strategies:
+        for strategy in self._strategies:
             try:
-                relationships = await strategy.detect_relationships(file_path)
-                all_relationships.extend(relationships)
+                strategy_results = await strategy.detect_relationships(file_path)
+                relationships.extend(strategy_results)
             except Exception as e:
-                logger.warning(
-                    f"Error in detection strategy {strategy.__class__.__name__} for {file_path}: {e}"
-                )
+                logger.error(f"Error in {strategy.__class__.__name__}: {e}")
 
-        return all_relationships
+        return relationships
+
+    async def add_strategy(self, strategy: DetectionStrategy) -> None:
+        """
+        Add a new detection strategy.
+
+        Args:
+            strategy: The strategy to add
+        """
+        self._strategies.append(strategy)
+
+    async def detect_relationships_in_directory(
+        self,
+        directory: Path,
+        recursive: bool = True,
+        file_types: set[str] | None = None,
+    ) -> dict[str, list[Relationship]]:
+        """
+        Detect relationships for all files in a directory.
+
+        Args:
+            directory: The directory to scan
+            recursive: Whether to scan subdirectories
+            file_types: Set of file extensions to process (e.g., {'.py', '.md'})
+
+        Returns:
+            Dictionary mapping file paths to their relationships
+        """
+        results = {}
+
+        # Validate directory
+        if not directory.exists() or not directory.is_dir():
+            logger.error(f"Invalid directory: {directory}")
+            return results
+
+        # Get file list
+        file_list = []
+        if recursive:
+            for root, _, files in os.walk(directory):
+                for file in files:
+                    file_path = Path(root) / file
+                    if file_types is None or file_path.suffix.lower() in file_types:
+                        file_list.append(file_path)
+        else:
+            for item in directory.iterdir():
+                if item.is_file() and (
+                    file_types is None or item.suffix.lower() in file_types
+                ):
+                    file_list.append(item)
+
+        # Process each file
+        for file_path in file_list:
+            try:
+                relationships = await self.detect_relationships(file_path)
+                if relationships:
+                    results[str(file_path)] = relationships
+            except Exception as e:
+                logger.error(f"Error detecting relationships for {file_path}: {e}")
+
+        return results

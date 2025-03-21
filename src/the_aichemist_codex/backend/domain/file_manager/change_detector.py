@@ -47,7 +47,12 @@ class ChangeDetector:
 
         # Process the diff output
         changes = []
-        stats = {"additions": 0, "deletions": 0, "modifications": 0}
+        # Explicitly type the stats dictionary to accept both int and float values
+        stats: dict[str, int | float | bool] = {
+            "additions": 0,
+            "deletions": 0,
+            "modifications": 0,
+        }
         line_mapping = {}
 
         for line in diff:
@@ -103,10 +108,11 @@ class ChangeDetector:
         # Calculate percentage of change
         total_lines = len(current_lines)
         if total_lines > 0:
-            percent_changed = (
-                (stats["additions"] + stats["deletions"] + stats["modifications"])
+            percent_changed = round(
+                float(stats["additions"] + stats["deletions"] + stats["modifications"])
                 / total_lines
-                * 100
+                * 100,
+                2,
             )
         else:
             percent_changed = 0
@@ -118,7 +124,7 @@ class ChangeDetector:
         return {"has_changes": len(changes) > 0, "changes": changes, "stats": stats}
 
     def _identify_modifications(
-        self, changes: list[dict[str, Any]], stats: dict[str, int]
+        self, changes: list[dict[str, Any]], stats: dict[str, int | float | bool]
     ) -> None:
         """
         Identify modifications in the changes list.

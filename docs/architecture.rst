@@ -120,6 +120,7 @@ The AIchemist Codex follows specific import strategies to maintain clean archite
 
        # Get registry instance
        from the_aichemist_codex.registry import Registry
+
        registry = Registry.get_instance()
 
        # Access services through registry
@@ -169,6 +170,225 @@ The application is initialized via the bootstrap process:
 3. Configuration is loaded
 4. Core components are initialized
 5. Application is ready to process commands
+
+Runtime View
+-----------
+
+This section illustrates the dynamic behavior of key system processes.
+
+File Processing Flow
+^^^^^^^^^^^^^^^^^^^
+
+The typical flow for processing a file:
+
+.. code-block:: text
+
+    User Command → CLI → FileManager → FileReader → ContentProcessor → ResultFormatter → Output
+
+    1. User issues command through CLI or API
+    2. FileManager validates the file path and access
+    3. FileReader reads the appropriate file format
+    4. ContentProcessor analyzes the file content
+    5. ResultFormatter prepares the results
+    6. Output is returned to the user
+
+Search Operation
+^^^^^^^^^^^^^^^
+
+The typical flow for a search operation:
+
+.. code-block:: text
+
+    User Query → CLI → SearchEngine → IndexManager → MetadataManager → ResultFormatter → Output
+
+    1. User submits a search query
+    2. SearchEngine processes and optimizes the query
+    3. IndexManager searches the index
+    4. MetadataManager enriches results with metadata
+    5. ResultFormatter prepares the results
+    6. Output is returned to the user
+
+Deployment View
+-------------
+
+The AIchemist Codex can be deployed in various configurations.
+
+Local Development
+^^^^^^^^^^^^^^
+
+.. code-block:: text
+
+    ┌─────────────────────┐
+    │ Developer Workstation│
+    │                     │
+    │  ┌───────────────┐  │
+    │  │ Python (3.10+) │  │
+    │  └───────────────┘  │
+    │  ┌───────────────┐  │
+    │  │ Local Storage  │  │
+    │  └───────────────┘  │
+    └─────────────────────┘
+
+Production Deployment
+^^^^^^^^^^^^^^^^^
+
+.. code-block:: text
+
+    ┌─────────────────┐    ┌─────────────────┐
+    │ Application Host│    │ Storage Server  │
+    │                 │    │                 │
+    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+    │ │ AIchemist   │ │    │ │ File Store  │ │
+    │ │ Codex App   │ │    │ │             │ │
+    │ └─────────────┘ │    │ └─────────────┘ │
+    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+    │ │ Web Server  │ │    │ │ Index DB    │ │
+    │ └─────────────┘ │    │ │             │ │
+    └─────────────────┘    │ └─────────────┘ │
+                          └─────────────────┘
+
+Quality Requirements
+-----------------
+
+The AIchemist Codex prioritizes these quality attributes:
+
+1. **Maintainability**
+   - Achieved through layered architecture and clear separation of concerns
+   - Measured by code quality metrics and ease of adding new features
+
+2. **Performance**
+   - File processing optimized for large documents
+   - Search operations respond within 100ms for typical queries
+   - Batch operations utilize parallel processing where appropriate
+
+3. **Reliability**
+   - All file operations include validation and error recovery
+   - Transactional operations with rollback capabilities
+   - Comprehensive error handling and logging
+
+4. **Security**
+   - Path traversal protection
+   - Input validation
+   - Configuration encryption for sensitive settings
+
+5. **Extensibility**
+   - Plugin architecture for file parsers
+   - Interface-based design for component replacement
+   - Registry pattern for dependency management
+
+Cross-Cutting Concepts
+--------------------
+
+These concepts apply across multiple system components:
+
+1. **Error Handling Strategy**
+   - All errors are logged with appropriate context
+   - User-facing errors are sanitized
+   - Internal errors provide detailed debugging information
+   - Operations that modify data support rollback
+
+2. **Configuration Management**
+   - Configuration loaded from multiple sources (files, env vars)
+   - Secure storage for sensitive configuration
+   - Validation of configuration values
+   - Hot-reload support for selected settings
+
+3. **Persistence Strategy**
+   - File-based storage for document content
+   - SQLite for indexes and metadata
+   - Caching for frequently accessed data
+   - Asynchronous I/O for performance
+
+4. **Logging and Monitoring**
+   - Structured logging with context
+   - Configurable log levels
+   - Performance metrics collection
+   - Operation auditing
+
+Architectural Decisions
+-------------------
+
+This section records significant architectural decisions made in the project.
+
+ADR-001: Adoption of Registry Pattern
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Context**: The application has complex dependencies between components that were causing circular import issues.
+
+**Decision**: Adopt the Registry pattern as a central dependency management mechanism.
+
+**Status**: Accepted
+
+**Consequences**:
+- Positive: Eliminates circular imports, provides a consistent way to access services
+- Negative: Introduces a global singleton, can obscure dependencies
+
+ADR-002: Layered Architecture
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Context**: Need for a clear organizational structure that enforces separation of concerns.
+
+**Decision**: Adopt a five-layer architecture (Core, Infrastructure, Domain, Service, Application).
+
+**Status**: Accepted
+
+**Consequences**:
+- Positive: Clear responsibilities, prevents dependency cycles
+- Negative: May require more boilerplate code
+
+Risks and Technical Debt
+----------------------
+
+1. **Analytics Performance**: The current analytics implementation may have performance limitations with very large datasets.
+
+2. **Search Scalability**: The search index is currently file-based and may need to be migrated to a dedicated search engine for larger document collections.
+
+3. **Configuration Management**: The secure configuration system needs better key rotation mechanisms.
+
+4. **Testing Coverage**: Some utility modules have insufficient test coverage.
+
+Testing Strategy
+--------------
+
+The AIchemist Codex follows a comprehensive testing strategy:
+
+1. **Unit Testing**
+   - Each component is tested in isolation
+   - Mock objects are used for dependencies
+   - Coverage target is 80% for core and domain layers
+
+2. **Integration Testing**
+   - Tests interactions between components
+   - Uses the Registry for dependency injection
+   - Verifies correct behavior of component groups
+
+3. **Architecture Compliance Tests**
+   - Verify adherence to architectural constraints
+   - Check import patterns follow architectural guidelines
+   - Ensure interfaces are properly implemented
+
+4. **Load and Performance Testing**
+   - Test performance with large datasets
+   - Measure response times for critical operations
+   - Identify bottlenecks for optimization
+
+Architecture Evolution
+-------------------
+
+1. **Change Process**
+   - Architectural changes require design review
+   - Documentation must be updated with implementation
+   - Major changes require backward compatibility considerations
+
+2. **Version Control**
+   - Architecture documentation is versioned with code
+   - Major architectural changes are tagged in version control
+   - Architectural decision records track rationale for changes
+
+3. **Refactoring Guidelines**
+   - Follow the backward compatibility guidelines
+   - Use the Adapter pattern for transitional periods
+   - Add deprecation warnings before removing functionality
 
 Example Flow
 -----------

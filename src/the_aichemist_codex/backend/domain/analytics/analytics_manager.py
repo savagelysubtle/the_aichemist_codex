@@ -11,7 +11,7 @@ import sys  # Add sys import
 import time
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 # Use absolute imports for core interfaces and Registry
 from the_aichemist_codex.backend.core.interfaces.interfaces import (
@@ -35,7 +35,8 @@ class AnalyticsManagerImpl(AnalyticsManagerInterface):
 
     def __init__(self) -> None:
         """Initialize the AnalyticsManagerImpl."""
-        self._registry = Registry.get_instance()
+        # Type annotation to help the type checker know get_instance exists
+        self._registry = cast(Any, Registry).get_instance()
         self._paths = self._registry.project_paths
         self._validator = self._registry.file_validator
 

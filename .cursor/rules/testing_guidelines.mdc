@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: Guidelines for writing tests and following test-driven development
 globs: **/*.py
 alwaysApply: true
@@ -193,3 +198,81 @@ def test_handle_file_error():
 2. **Verify interactions**: Use `assert_called_with()` to verify that dependencies are called correctly
 3. **Return realistic data**: Mocks should return data that resembles what the real dependency would return
 4. **Test edge cases**: Use mocks to simulate error conditions and edge cases
+
+## 12. Architecture Compliance Testing
+
+Verify that code follows architectural constraints:
+
+```python
+def test_domain_doesnt_import_service():
+    """Test that domain layer doesn't import from service layer."""
+    domain_dir = Path("src/the_aichemist_codex/backend/domain")
+    for py_file in domain_dir.glob("**/*.py"):
+        with open(py_file) as f:
+            content = f.read()
+            # Check for imports from service layer
+            assert "from the_aichemist_codex.backend.service" not in content
+            assert "from ...service" not in content
+
+def test_registry_usage():
+    """Test that implementations use the Registry."""
+    domain_dir = Path("src/the_aichemist_codex/backend/domain")
+    for py_file in domain_dir.glob("**/*.py"):
+        if py_file.name.endswith("impl.py"):
+            with open(py_file) as f:
+                content = f.read()
+                # Check for Registry usage
+                assert "Registry.get_instance()" in content
+
+def test_interface_compliance():
+    """Test that implementations match their interfaces."""
+    # For each implementation class, verify it implements all interface methods
+    # This could use introspection or static analysis tools
+```
+```
+
+## 3. Update to circular_imports.mdc
+
+Add a section on handling the Registry in linting:
+
+```markdown
+## 11. Handling Registry Linting Errors
+
+Some linters might flag Registry.get_instance() as an unknown attribute. Here's how to handle this:
+
+1. **Add type hints for Registry**:
+   ```python
+   from typing import TYPE_CHECKING
+
+   if TYPE_CHECKING:
+       from the_aichemist_codex.registry import Registry as RegistryType
+
+   # Then use
+   def __init__(self):
+       from the_aichemist_codex.registry import Registry
+       self._registry: "RegistryType" = Registry.get_instance()
+   ```
+
+2. **Add mypy stub file** for Registry in `stubs/the_aichemist_codex/registry.pyi`:
+   ```python
+   class Registry:
+       @classmethod
+       def get_instance(cls) -> "Registry": ...
+       
+       @property
+       def file_reader(self) -> "FileReader": ...
+       
+       # Add other properties...
+   ```
+
+3. **Configure linter to recognize Registry pattern**:
+   ```python
+   # In your linter configuration
+   [tool.mypy]
+   plugins = ["mypy_plugin.py"]
+   
+   # Create a custom plugin that understands Registry.get_instance()
+   ```
+```
+
+These updates enhance the architectural documentation and provide more detailed guidance on implementing and testing with the Registry pattern while addressing the linting issue you encountered.

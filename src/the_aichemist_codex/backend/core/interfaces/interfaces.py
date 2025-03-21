@@ -2732,3 +2732,459 @@ class FileManager(ABC):
             FileError: If sorting files fails.
         """
         pass
+
+
+class SettingsManager(ABC):
+    """
+    Interface for managing application settings.
+
+    This interface defines methods for getting and setting application settings
+    and managing user preferences.
+    """
+
+    @abstractmethod
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        """
+        Get a setting value.
+
+        Args:
+            key: The setting key
+            default: Default value if the setting doesn't exist
+
+        Returns:
+            The setting value or default if not found
+        """
+        pass
+
+    @abstractmethod
+    def set_setting(self, key: str, value: Any) -> None:
+        """
+        Set a setting value.
+
+        Args:
+            key: The setting key
+            value: The value to set
+        """
+        pass
+
+    @abstractmethod
+    def get_user_preference(self, user_id: str, key: str, default: Any = None) -> Any:
+        """
+        Get a user preference value.
+
+        Args:
+            user_id: ID of the user
+            key: The preference key
+            default: Default value if the preference doesn't exist
+
+        Returns:
+            The preference value or default if not found
+        """
+        pass
+
+    @abstractmethod
+    def set_user_preference(self, user_id: str, key: str, value: Any) -> None:
+        """
+        Set a user preference value.
+
+        Args:
+            user_id: ID of the user
+            key: The preference key
+            value: The value to set
+        """
+        pass
+
+
+class MetadataExtractor(ABC):
+    """
+    Interface for extracting metadata from files.
+
+    This interface defines methods for extracting and analyzing metadata
+    from different types of files.
+    """
+
+    @abstractmethod
+    async def extract_metadata(self, file_path: str) -> Any:
+        """
+        Extract metadata from a file.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Extracted metadata
+
+        Raises:
+            FileError: If there is an error accessing the file
+            MetadataError: If there is an error extracting metadata
+        """
+        pass
+
+    @abstractmethod
+    async def get_content_type(self, file_path: str) -> str:
+        """
+        Get the content type of a file.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Content type (MIME type) of the file
+
+        Raises:
+            FileError: If there is an error accessing the file
+        """
+        pass
+
+    @abstractmethod
+    async def extract_text(self, file_path: str) -> str:
+        """
+        Extract text content from a file.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Extracted text content
+
+        Raises:
+            FileError: If there is an error accessing the file
+            MetadataError: If there is an error extracting text
+        """
+        pass
+
+    @abstractmethod
+    async def extract_keywords(
+        self, file_path: str, max_keywords: int = 10
+    ) -> list[str]:
+        """
+        Extract keywords from a file.
+
+        Args:
+            file_path: Path to the file
+            max_keywords: Maximum number of keywords to extract
+
+        Returns:
+            List of extracted keywords
+
+        Raises:
+            FileError: If there is an error accessing the file
+            MetadataError: If there is an error extracting keywords
+        """
+        pass
+
+
+class StorageProvider(ABC):
+    """
+    Interface for storage operations.
+
+    This interface defines methods for interacting with different storage
+    backends (local, cloud, etc.).
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the storage provider."""
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close any resources used by the storage provider."""
+        pass
+
+    @abstractmethod
+    async def read_file(self, path: str) -> bytes:
+        """
+        Read a file from storage.
+
+        Args:
+            path: Path to the file
+
+        Returns:
+            File content as bytes
+
+        Raises:
+            FileError: If there is an error reading the file
+        """
+        pass
+
+    @abstractmethod
+    async def write_file(self, path: str, content: bytes) -> None:
+        """
+        Write a file to storage.
+
+        Args:
+            path: Path to the file
+            content: File content as bytes
+
+        Raises:
+            FileError: If there is an error writing the file
+        """
+        pass
+
+    @abstractmethod
+    async def delete_file(self, path: str) -> None:
+        """
+        Delete a file from storage.
+
+        Args:
+            path: Path to the file
+
+        Raises:
+            FileError: If there is an error deleting the file
+        """
+        pass
+
+    @abstractmethod
+    async def file_exists(self, path: str) -> bool:
+        """
+        Check if a file exists in storage.
+
+        Args:
+            path: Path to the file
+
+        Returns:
+            True if the file exists, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    async def create_directory(self, path: str) -> None:
+        """
+        Create a directory in storage.
+
+        Args:
+            path: Path to the directory
+
+        Raises:
+            DirectoryError: If there is an error creating the directory
+        """
+        pass
+
+    @abstractmethod
+    async def list_files(self, directory_path: str) -> list[str]:
+        """
+        List files in a directory.
+
+        Args:
+            directory_path: Path to the directory
+
+        Returns:
+            List of file paths in the directory
+
+        Raises:
+            DirectoryError: If there is an error listing files
+        """
+        pass
+
+
+class VectorStore(ABC):
+    """
+    Interface for vector database operations.
+
+    This interface defines methods for storing and retrieving vector embeddings
+    for semantic search and similarity matching.
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the vector store."""
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close any resources used by the vector store."""
+        pass
+
+    @abstractmethod
+    async def add_vector(
+        self, id: str, vector: list[float], metadata: dict[str, Any] | None = None
+    ) -> None:
+        """
+        Add a vector to the store.
+
+        Args:
+            id: Unique identifier for the vector
+            vector: The vector embedding
+            metadata: Additional metadata associated with the vector
+
+        Raises:
+            Exception: If there is an error adding the vector
+        """
+        pass
+
+    @abstractmethod
+    async def get_vector(self, id: str) -> tuple[list[float], dict[str, Any] | None]:
+        """
+        Get a vector from the store.
+
+        Args:
+            id: Unique identifier for the vector
+
+        Returns:
+            A tuple of (vector, metadata)
+
+        Raises:
+            Exception: If there is an error retrieving the vector
+        """
+        pass
+
+    @abstractmethod
+    async def delete_vector(self, id: str) -> None:
+        """
+        Delete a vector from the store.
+
+        Args:
+            id: Unique identifier for the vector
+
+        Raises:
+            Exception: If there is an error deleting the vector
+        """
+        pass
+
+    @abstractmethod
+    async def find_similar(
+        self,
+        vector: list[float] | None = None,
+        content: str | None = None,
+        exclude_ids: list[str] | None = None,
+        limit: int = 10,
+        min_score: float = 0.0,
+    ) -> list[dict[str, Any]]:
+        """
+        Find vectors similar to the given vector or content.
+
+        Either vector or content must be provided.
+
+        Args:
+            vector: Vector to compare against
+            content: Content to generate vector from and compare
+            exclude_ids: IDs to exclude from results
+            limit: Maximum number of results to return
+            min_score: Minimum similarity score (0.0 to 1.0)
+
+        Returns:
+            List of dictionaries containing similar vectors and their metadata
+
+        Raises:
+            Exception: If there is an error finding similar vectors
+        """
+        pass
+
+    @abstractmethod
+    async def count_vectors(self) -> int:
+        """
+        Count the number of vectors in the store.
+
+        Returns:
+            Number of vectors
+        """
+        pass
+
+
+class OutputFormatter(ABC):
+    """
+    Interface for formatting output.
+
+    This interface defines methods for formatting various types of output
+    for display to users.
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the output formatter."""
+        pass
+
+    @abstractmethod
+    async def format_output(self, content: Any, format_type: str) -> str:
+        """
+        Format output content for display.
+
+        Args:
+            content: The content to format
+            format_type: The desired output format (e.g., "json", "text", "markdown")
+
+        Returns:
+            Formatted output as a string
+        """
+        pass
+
+    @abstractmethod
+    async def format_error(self, error: Exception) -> str:
+        """
+        Format an error for display.
+
+        Args:
+            error: The error to format
+
+        Returns:
+            Formatted error message as a string
+        """
+        pass
+
+
+class RollbackManager(ABC):
+    """
+    Interface for managing rollbacks of operations.
+
+    This interface defines methods for creating snapshots and rolling back
+    changes when operations fail.
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the rollback manager."""
+        pass
+
+    @abstractmethod
+    async def create_snapshot(self, operation_id: str, file_path: str) -> str:
+        """
+        Create a snapshot of a file before modification.
+
+        Args:
+            operation_id: Unique ID for the operation
+            file_path: Path to the file to snapshot
+
+        Returns:
+            Snapshot ID
+
+        Raises:
+            FileError: If there is an error creating the snapshot
+        """
+        pass
+
+    @abstractmethod
+    async def rollback(self, operation_id: str) -> None:
+        """
+        Rollback all changes associated with an operation.
+
+        Args:
+            operation_id: ID of the operation to rollback
+
+        Raises:
+            FileError: If there is an error during rollback
+        """
+        pass
+
+    @abstractmethod
+    async def commit(self, operation_id: str) -> None:
+        """
+        Commit an operation, removing any temporary snapshots.
+
+        Args:
+            operation_id: ID of the operation to commit
+
+        Raises:
+            FileError: If there is an error during commit
+        """
+        pass
+
+    @abstractmethod
+    async def list_snapshots(self) -> list[dict[str, Any]]:
+        """
+        List all available snapshots.
+
+        Returns:
+            List of snapshot metadata
+        """
+        pass

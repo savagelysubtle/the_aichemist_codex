@@ -1,10 +1,12 @@
 """
-Interfaces for the AIchemist Codex core.
+Interfaces for the AIChemist Codex application.
 
-This package contains the interface definitions for the application.
+This module exports all interfaces used in the application.
 """
 
-# Export interfaces
+# Import interfaces
+# Import additional interfaces
+from .async_file_processor import AsyncFileProcessor
 from .interfaces import (
     AnalyticsManager,
     AsyncIO,
@@ -18,39 +20,47 @@ from .interfaces import (
     FileValidator,
     FileWriter,
     IndexManager,
-    IngestManager,
+    MetadataExtractor,
     MetadataManager,
     NotificationManager,
+    OutputFormatter,
     ProjectPaths,
-    ProjectReader,
     RelationshipManager,
+    RollbackManager,
     SearchEngine,
-    SearchProvider,
+    SettingsManager,
+    StorageProvider,
     TaggingManager,
     UserManager,
+    VectorStore,
 )
 
+# Export all interfaces
 __all__ = [
-    "AnalyticsManager",
     "AsyncIO",
     "CacheProvider",
     "ConfigProvider",
     "ContentAnalyzer",
     "DirectoryManager",
-    "FileManager",
     "FileReader",
     "FileTree",
     "FileValidator",
     "FileWriter",
     "IndexManager",
-    "IngestManager",
     "MetadataManager",
+    "MetadataExtractor",
     "NotificationManager",
     "ProjectPaths",
-    "ProjectReader",
     "RelationshipManager",
     "SearchEngine",
-    "SearchProvider",
+    "SettingsManager",
+    "StorageProvider",
     "TaggingManager",
     "UserManager",
+    "RollbackManager",
+    "OutputFormatter",
+    "AsyncFileProcessor",
+    "AnalyticsManager",
+    "FileManager",
+    "VectorStore",
 ]
