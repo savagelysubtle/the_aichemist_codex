@@ -41,8 +41,6 @@ def get_import_mode() -> str:
 
     # Check for editable install
     try:
-        import importlib.metadata
-        import sys
         from importlib.util import find_spec
 
         # More reliable way to detect editable installs
@@ -83,7 +81,20 @@ def get_package_dir() -> Path:
     if is_development_mode():
         return Path(__file__).resolve().parents[2]
 
-    # If installed, return the site-packages directory for the package
-    import the_aichemist_codex
+    # If installed, use importlib to find the package location
+    import importlib.util
 
-    return Path(the_aichemist_codex.__file__).resolve().parent
+    spec = importlib.util.find_spec("the_aichemist_codex")
+    if spec and spec.origin:
+        return Path(spec.origin).resolve().parent
+
+    # Fallback in case the above methods don't work
+    import sys
+
+    for path in sys.path:
+        package_path = Path(path) / "the_aichemist_codex"
+        if package_path.exists() and package_path.is_dir():
+            return package_path
+
+    # Last resort fallback
+    return Path(__file__).resolve().parents[2]
