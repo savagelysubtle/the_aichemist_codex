@@ -18,9 +18,9 @@ from the_aichemist_codex.backend.models.embeddings import (
     VectorIndex,
     compute_similarity_matrix,
 )
-from the_aichemist_codex.backend.utils.io.async_io import AsyncFileTools
-from the_aichemist_codex.backend.utils.Concurrency.batch_processor import BatchProcessor
-from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.async_io import AsyncFileTools
+from the_aichemist_codex.backend.utils.batch_processor import BatchProcessor
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 

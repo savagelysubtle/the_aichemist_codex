@@ -23,9 +23,9 @@ from the_aichemist_codex.backend.search.providers.similarity_provider import (
     SimilarityProvider,
 )
 from the_aichemist_codex.backend.utils import AsyncFileIO
-from the_aichemist_codex.backend.utils.Concurrency.batch_processor import BatchProcessor
-from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
-from the_aichemist_codex.backend.utils.io.sqlasync_io import AsyncSQL
+from the_aichemist_codex.backend.utils.batch_processor import BatchProcessor
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.sqlasync_io import AsyncSQL
 
 # Import FAISS and SentenceTransformer for semantic search.
 try:

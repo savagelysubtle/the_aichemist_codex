@@ -30,7 +30,7 @@ from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 
-from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
