@@ -165,11 +165,6 @@ the_aichemist_codex_summary.md
 # All log files
 *.log
 *.logs
-log/
-logs/
-*/logs/
-logging/
-*/logging/
 *.log.*
 **/log/*.txt
 

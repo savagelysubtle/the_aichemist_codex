@@ -3,7 +3,7 @@
 import fnmatch
 import os
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 
 
 class PatternMatcher:

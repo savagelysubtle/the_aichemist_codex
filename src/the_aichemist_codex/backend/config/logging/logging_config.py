@@ -3,7 +3,7 @@
 import logging
 import sys
 
-from .settings import LOG_DIR
+from ..settings import LOG_DIR
 
 # Ensure log directory exists
 LOG_DIR.mkdir(parents=True, exist_ok=True)

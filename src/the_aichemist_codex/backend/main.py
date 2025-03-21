@@ -11,7 +11,7 @@ from tkinter import filedialog, messagebox
 sys.path.append(str(Path(__file__).resolve().parent))
 
 # Import all required modules before any executable code
-from the_aichemist_codex.backend.config.logging_config import setup_logging
+from the_aichemist_codex.backend.config.logging.logging_config import setup_logging
 from the_aichemist_codex.backend.file_manager.file_tree import generate_file_tree
 from the_aichemist_codex.backend.ingest.reader import generate_digest
 from the_aichemist_codex.backend.project_reader.code_summary import summarize_project

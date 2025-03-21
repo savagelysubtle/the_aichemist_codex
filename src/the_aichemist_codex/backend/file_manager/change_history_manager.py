@@ -14,7 +14,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 from the_aichemist_codex.backend.file_manager.change_detector import (
     ChangeInfo,
     ChangeSeverity,

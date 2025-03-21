@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 
-from .config_loader import config
+from ..loader.config_loader import config
 
 logger = logging.getLogger(__name__)
 

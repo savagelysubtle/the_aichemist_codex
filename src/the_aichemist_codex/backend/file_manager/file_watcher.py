@@ -9,7 +9,7 @@ from typing import NoReturn
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 from the_aichemist_codex.backend.file_manager.change_detector import ChangeDetector
 from the_aichemist_codex.backend.file_manager.change_history_manager import (
     change_history_manager,

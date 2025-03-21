@@ -15,7 +15,7 @@ from pathlib import Path
 
 from watchdog.observers import Observer
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 
 # Import from common module instead of file_watcher
 from the_aichemist_codex.backend.file_manager.common import DirectoryPriority

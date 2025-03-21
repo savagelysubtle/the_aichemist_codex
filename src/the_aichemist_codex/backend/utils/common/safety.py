@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 
 logger = logging.getLogger(__name__)
 

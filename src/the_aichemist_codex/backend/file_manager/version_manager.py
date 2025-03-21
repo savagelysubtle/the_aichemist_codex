@@ -16,7 +16,7 @@ import time
 from enum import Enum
 from pathlib import Path
 
-from the_aichemist_codex.backend.config.config_loader import config
+from the_aichemist_codex.backend.config.loader.config_loader import config
 from the_aichemist_codex.backend.file_manager.change_detector import ChangeDetector
 from the_aichemist_codex.backend.rollback.rollback_manager import RollbackManager
 from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
