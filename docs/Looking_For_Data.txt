@@ -1,0 +1,2 @@
+# Data Directory Investigation\n\n## Findings so far:\n\n1. In settings.py, the data directory is defined as ROOT_DIR / \
+data\, where ROOT_DIR = Path(__file__).parent.parent.parent\n   - From backend/src/config, this calculates to the root data/ directory\n\n2. In notification_manager.py, it imports DATA_DIR from settings and creates:\n   - NOTIFICATION_DB_PATH = DATA_DIR / \notifications.json\\n   - Also creates a subdirectory: (DATA_DIR / \notifications\).mkdir(exist_ok=True, parents=True)\n
