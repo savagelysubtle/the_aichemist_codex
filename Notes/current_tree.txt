@@ -1,121 +1,308 @@
 Directory structure:
 └── savagelysubtle-the_aichemist_codex/
-    └── src/
-        └── the_aichemist_codex/
-            ├── __init__.py
-            ├── __main__.py
-            └── backend/
-                ├── __init__.py
-                ├── cli.py
-                ├── main.py
-                ├── pytest.ini
-                ├── .env.template
-                ├── config/
-                │   ├── __init__.py
-                │   ├── config_loader.py
-                │   ├── logging_config.py
-                │   ├── rules_engine.py
-                │   ├── schemas.py
-                │   ├── secure_config.py
-                │   ├── settings.py
-                │   ├── sorting_rules.yaml
-                │   └── .codexconfig
-                ├── file_manager/
-                │   ├── __init__.py
-                │   ├── batch_file_operations.py
-                │   ├── change_detector.py
-                │   ├── change_history_manager.py
-                │   ├── common.py
-                │   ├── directory_manager.py
-                │   ├── directory_monitor.py
-                │   ├── duplicate_detector.py
-                │   ├── file_mover.py
-                │   ├── file_tree.py
-                │   ├── file_watcher.py
-                │   ├── fix_circular_imports.py
-                │   ├── sorter.py
-                │   └── version_manager.py
-                ├── file_reader/
-                │   ├── __init__.py
-                │   ├── file_metadata.py
-                │   ├── file_reader.py
-                │   ├── ocr_parser.py
-                │   └── parsers.py
-                ├── ingest/
-                │   ├── __init__.py
-                │   ├── aggregator.py
-                │   ├── reader.py
-                │   └── scanner.py
-                ├── metadata/
-                │   ├── __init__.py
-                │   ├── audio_extractor.py
-                │   ├── code_extractor.py
-                │   ├── database_extractor.py
-                │   ├── document_extractor.py
-                │   ├── extractor.py
-                │   ├── image_extractor.py
-                │   ├── manager.py
-                │   ├── pdf_extractor.py
-                │   ├── text_extractor.py
-                │   └── video_extractor.py
-                ├── notification/
-                │   ├── __init__.py
-                │   ├── email_subscriber.py
-                │   ├── notification_manager.py
-                │   ├── rule_engine.py
-                │   └── webhook_subscriber.py
-                ├── output_formatter/
-                │   ├── __init__.py
-                │   ├── csv_writer.py
-                │   ├── html_writer.py
-                │   ├── json_writer.py
-                │   └── markdown_writer.py
-                ├── project_reader/
-                │   ├── __init__.py
-                │   ├── code_summary.py
-                │   ├── notebooks.py
-                │   ├── tags.py
-                │   ├── token_counter.py
-                │   └── version.py
-                ├── relationships/
-                │   ├── __init__.py
-                │   ├── detector.py
-                │   ├── graph.py
-                │   ├── relationship.py
-                │   ├── store.py
-                │   └── detectors/
-                │       ├── __init__.py
-                │       └── directory_structure.py
-                ├── rollback/
-                │   ├── __init__.py
-                │   └── rollback_manager.py
-                ├── search/
-                │   ├── __init__.py
-                │   ├── search_engine.py
-                │   └── providers/
-                │       ├── __init__.py
-                │       ├── regex_provider.py
-                │       └── similarity_provider.py
-                ├── tagging/
-                │   ├── __init__.py
-                │   ├── classifier.py
-                │   ├── hierarchy.py
-                │   ├── manager.py
-                │   ├── schema.py
-                │   └── suggester.py
-                └── utils/
-                    ├── __init__.py
-                    ├── async_io.py
-                    ├── batch_processor.py
-                    ├── cache_manager.py
-                    ├── concurrency.py
-                    ├── environment.py
-                    ├── errors.py
-                    ├── mime_type_detector.py
-                    ├── patterns.py
-                    ├── safety.py
-                    ├── sqlasync_io.py
-                    ├── utils.py
-                    ├── validate_data_dir.py
-                    └── validator.py
-
+    ├── Makefile
+    ├── cspell.config.yaml
+    ├── pyproject.toml
+    ├── uv.lock
+    ├── .markdownlint.json
+    ├── .pre-commit-config.yaml
+    ├── Notes/
+    │   ├── Project_reader.txt
+    │   ├── Relationship.txt
+    │   ├── cli.txt
+    │   ├── config.txt
+    │   ├── current_tree.txt
+    │   ├── file_manager.txt
+    │   ├── file_reader.txt
+    │   ├── ingest.txt
+    │   ├── metadata.txt
+    │   ├── notification.txt
+    │   ├── output_formatter.txt
+    │   ├── rollback.txt
+    │   ├── search.txt
+    │   ├── search_providers.txt
+    │   ├── tagging.txt
+    │   └── utils.txt
+    ├── bin/
+    │   ├── codex
+    │   └── codex.bat
+    ├── docs/
+    │   ├── README.md
+    │   ├── Data_Directory_Investigation.md
+    │   ├── Looking_For_Data.txt
+    │   ├── Makefile
+    │   ├── build_docs.py
+    │   ├── changelog.rst
+    │   ├── cli_reference.rst
+    │   ├── code_maintenance.md
+    │   ├── code_review.md
+    │   ├── code_style.rst
+    │   ├── conf.py
+    │   ├── configuration.rst
+    │   ├── contributing.rst
+    │   ├── data_directory_config.md
+    │   ├── data_management.rst
+    │   ├── development.md
+    │   ├── development.rst
+    │   ├── development_guide.md
+    │   ├── directory_structure.rst
+    │   ├── environment.rst
+    │   ├── generate_api_docs.py
+    │   ├── getting_started.rst
+    │   ├── implementation_plan.md
+    │   ├── improvement_tracker.md
+    │   ├── index.rst
+    │   ├── installation.rst
+    │   ├── make.bat
+    │   ├── project_summary.md
+    │   ├── roadmap.rst
+    │   ├── root_docs_readme.md
+    │   ├── usage.rst
+    │   ├── api/
+    │   │   ├── ai.rst
+    │   │   ├── config.rst
+    │   │   ├── file_manager.rst
+    │   │   ├── file_reader.rst
+    │   │   ├── index.rst
+    │   │   ├── ingest.rst
+    │   │   ├── integration.rst
+    │   │   ├── metadata.rst
+    │   │   ├── models.rst
+    │   │   ├── notification.rst
+    │   │   ├── output_formatter.rst
+    │   │   ├── project_reader.rst
+    │   │   ├── relationships.rst
+    │   │   ├── rollback.rst
+    │   │   ├── search.rst
+    │   │   ├── security.rst
+    │   │   ├── tagging.rst
+    │   │   ├── ui.rst
+    │   │   ├── utils.rst
+    │   │   ├── config/
+    │   │   │   ├── index.rst
+    │   │   │   ├── secure_config.rst
+    │   │   │   ├── settings.rst
+    │   │   │   └── validation.rst
+    │   │   ├── file_manager/
+    │   │   │   ├── change_detector.rst
+    │   │   │   ├── directory_monitor.rst
+    │   │   │   ├── directory_organizer.rst
+    │   │   │   └── index.rst
+    │   │   ├── integration/
+    │   │   │   ├── api.rst
+    │   │   │   ├── exporters.rst
+    │   │   │   ├── index.rst
+    │   │   │   └── plugins.rst
+    │   │   ├── metadata/
+    │   │   │   ├── analyzers.rst
+    │   │   │   ├── extractors.rst
+    │   │   │   └── index.rst
+    │   │   ├── relationships/
+    │   │   │   ├── detector.rst
+    │   │   │   ├── detectors.rst
+    │   │   │   ├── graph.rst
+    │   │   │   └── index.rst
+    │   │   ├── rollback/
+    │   │   │   ├── index.rst
+    │   │   │   ├── snapshot.rst
+    │   │   │   └── transaction.rst
+    │   │   ├── search/
+    │   │   │   ├── engines.rst
+    │   │   │   ├── index.rst
+    │   │   │   ├── indexers.rst
+    │   │   │   └── query_parser.rst
+    │   │   ├── security/
+    │   │   │   ├── authentication.rst
+    │   │   │   ├── encryption.rst
+    │   │   │   ├── index.rst
+    │   │   │   └── permissions.rst
+    │   │   ├── ui/
+    │   │   │   ├── cli.rst
+    │   │   │   ├── components.rst
+    │   │   │   ├── dashboards.rst
+    │   │   │   └── index.rst
+    │   │   └── utils/
+    │   │       ├── helpers.rst
+    │   │       ├── index.rst
+    │   │       ├── profilers.rst
+    │   │       └── validators.rst
+    │   ├── images/
+    │   ├── organized_markdown/
+    │   │   ├── README.md
+    │   │   ├── data_dir_fix_summary.md
+    │   │   ├── docs_audio_metadata.md
+    │   │   ├── docs_auto_tagging.md
+    │   │   ├── docs_config.md
+    │   │   ├── docs_database_metadata.md
+    │   │   ├── docs_file_manager.md
+    │   │   ├── docs_file_reader.md
+    │   │   ├── docs_file_relationship_map.md
+    │   │   ├── docs_file_similarity.md
+    │   │   ├── docs_image_metadata.md
+    │   │   ├── docs_ingest.md
+    │   │   ├── docs_metadata.md
+    │   │   ├── docs_notification.md
+    │   │   ├── docs_output_formatter.md
+    │   │   ├── docs_pdf_metadata.md
+    │   │   ├── docs_project_reader.md
+    │   │   ├── docs_rollback.md
+    │   │   ├── docs_search.md
+    │   │   ├── docs_utils.md
+    │   │   ├── docs_version_manager.md
+    │   │   └── docs_video_metadata.md
+    │   ├── pngrefrences/
+    │   ├── roadmap/
+    │   │   └── checklist
+    │   └── tutorials/
+    │       ├── advanced_api_usage.rst
+    │       ├── custom_plugins.rst
+    │       ├── file_organization.rst
+    │       ├── file_relationships.rst
+    │       ├── index.rst
+    │       ├── quick_start.rst
+    │       ├── search_techniques.rst
+    │       ├── semantic_search.rst
+    │       └── tagging_workflow.rst
+    ├── src/
+    │   └── the_aichemist_codex/
+    │       └── backend/
+    │           ├── __init__.py
+    │           ├── cli.py
+    │           ├── main.py
+    │           ├── pytest.ini
+    │           ├── .env.template
+    │           ├── core/
+    │           │   ├── __init__.py
+    │           │   ├── file_manager/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── batch_file_operations.py
+    │           │   │   ├── change_detector.py
+    │           │   │   ├── change_history_manager.py
+    │           │   │   ├── common.py
+    │           │   │   ├── directory_manager.py
+    │           │   │   ├── directory_monitor.py
+    │           │   │   ├── duplicate_detector.py
+    │           │   │   ├── file_mover.py
+    │           │   │   ├── file_tree.py
+    │           │   │   ├── file_watcher.py
+    │           │   │   ├── fix_circular_imports.py
+    │           │   │   ├── sorter.py
+    │           │   │   └── version_manager.py
+    │           │   ├── file_reader/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── file_metadata.py
+    │           │   │   ├── file_reader.py
+    │           │   │   ├── ocr_parser.py
+    │           │   │   └── parsers.py
+    │           │   ├── ingest/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── aggregator.py
+    │           │   │   ├── reader.py
+    │           │   │   └── scanner.py
+    │           │   ├── metadata/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── audio_extractor.py
+    │           │   │   ├── code_extractor.py
+    │           │   │   ├── database_extractor.py
+    │           │   │   ├── document_extractor.py
+    │           │   │   ├── extractor.py
+    │           │   │   ├── image_extractor.py
+    │           │   │   ├── manager.py
+    │           │   │   ├── pdf_extractor.py
+    │           │   │   ├── text_extractor.py
+    │           │   │   └── video_extractor.py
+    │           │   ├── output_formatter/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── csv_writer.py
+    │           │   │   ├── html_writer.py
+    │           │   │   ├── json_writer.py
+    │           │   │   └── markdown_writer.py
+    │           │   ├── project_reader/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── code_summary.py
+    │           │   │   ├── notebooks.py
+    │           │   │   ├── tags.py
+    │           │   │   ├── token_counter.py
+    │           │   │   └── version.py
+    │           │   ├── relationships/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── detector.py
+    │           │   │   ├── graph.py
+    │           │   │   ├── relationship.py
+    │           │   │   ├── store.py
+    │           │   │   └── detectors/
+    │           │   │       ├── __init__.py
+    │           │   │       └── directory_structure.py
+    │           │   ├── rollback/
+    │           │   │   ├── __init__.py
+    │           │   │   └── rollback_manager.py
+    │           │   ├── search/
+    │           │   │   ├── __init__.py
+    │           │   │   ├── search_engine.py
+    │           │   │   └── providers/
+    │           │   │       ├── __init__.py
+    │           │   │       ├── regex_provider.py
+    │           │   │       └── similarity_provider.py
+    │           │   └── tagging/
+    │           │       ├── __init__.py
+    │           │       ├── classifier.py
+    │           │       ├── hierarchy.py
+    │           │       ├── manager.py
+    │           │       ├── schema.py
+    │           │       └── suggester.py
+    │           └── infrastructure/
+    │               ├── __init__.py
+    │               ├── config/
+    │               │   ├── __init__.py
+    │               │   ├── schemas.py
+    │               │   ├── settings.py
+    │               │   ├── sorting_rules.yaml
+    │               │   ├── .codexconfig
+    │               │   ├── loader/
+    │               │   │   ├── __init__.py
+    │               │   │   └── config_loader.py
+    │               │   ├── logging/
+    │               │   │   ├── __init__.py
+    │               │   │   └── logging_config.py
+    │               │   ├── rules/
+    │               │   │   ├── __init__.py
+    │               │   │   └── rules_engine.py
+    │               │   └── security/
+    │               │       ├── __init__.py
+    │               │       └── secure_config.py
+    │               ├── notification/
+    │               │   ├── __init__.py
+    │               │   ├── email_subscriber.py
+    │               │   ├── notification_manager.py
+    │               │   ├── rule_engine.py
+    │               │   └── webhook_subscriber.py
+    │               └── utils/
+    │                   ├── __init__.py
+    │                   ├── Concurrency/
+    │                   │   ├── __init__.py
+    │                   │   ├── batch_processor.py
+    │                   │   └── concurrency.py
+    │                   ├── cache/
+    │                   │   ├── __init__.py
+    │                   │   └── cache_manager.py
+    │                   ├── common/
+    │                   │   ├── __init__.py
+    │                   │   ├── patterns.py
+    │                   │   └── safety.py
+    │                   ├── environment/
+    │                   │   ├── __init__.py
+    │                   │   ├── environment.py
+    │                   │   ├── validate_data_dir.py
+    │                   │   └── validator.py
+    │                   ├── errors/
+    │                   │   ├── __init__.py
+    │                   │   └── errors.py
+    │                   └── io/
+    │                       ├── __init__.py
+    │                       ├── async_io.py
+    │                       ├── mime_type_detector.py
+    │                       └── sqlasync_io.py
+    └── .cursor/
+        ├── .cursorignore
+        └── rules/
+            └── 000-xml-cursor-rules.mdc
