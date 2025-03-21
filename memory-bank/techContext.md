@@ -11,7 +11,6 @@
 
 ### Dependency Management
 
-- **Poetry**: Advanced dependency management and packaging
 - **UV**: Fast Python package resolver and installer
 - **pyproject.toml**: Modern project configuration
 
