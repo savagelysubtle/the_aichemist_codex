@@ -1,3 +1,28 @@
+Directory structure:
+└── savagelysubtle-the_aichemist_codex/
+    └── src/
+        └── the_aichemist_codex/
+            └── backend/
+                ├── __init__.py
+                ├── config/
+                │   ├── __init__.py
+                │   ├── schemas.py
+                │   ├── settings.py
+                │   ├── sorting_rules.yaml
+                │   ├── .codexconfig
+                │   ├── loader/
+                │   │   ├── __init__.py
+                │   │   └── config_loader.py
+                │   ├── logging/
+                │   │   ├── __init__.py
+                │   │   └── logging_config.py
+                │   ├── rules/
+                │   │   ├── __init__.py
+                │   │   └── rules_engine.py
+                │   └── security/
+                │       ├── __init__.py
+                │       └── secure_config.py
+
 
 ================================================
 File: src/the_aichemist_codex/backend/config/__init__.py
