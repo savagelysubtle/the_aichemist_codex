@@ -242,12 +242,6 @@ temp/
 __tmp__/
 __temp__/
 .trash/
-*cache/
-*Cache/
-cache/
-.cache/
-**/.cache/
-**/*cache/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

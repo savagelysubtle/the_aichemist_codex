@@ -7,8 +7,8 @@ from pathlib import Path
 
 from the_aichemist_codex.backend.config.rules_engine import rules_engine
 from the_aichemist_codex.backend.rollback.rollback_manager import RollbackManager
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
-from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.common.safety import SafeFileHandler
 
 from .directory_manager import DirectoryManager
 

@@ -1,0 +1,1661 @@
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/__init__.py
+================================================
+"""
+Relationship Mapping Module.
+
+This module provides functionality for detecting, storing, and querying
+relationships between files. It enables visualization of file connections
+and intelligent navigation between related content.
+"""
+
+from .detector import DetectionStrategy, RelationshipDetector
+from .graph import RelationshipGraph
+from .relationship import Relationship, RelationshipType
+from .store import RelationshipStore
+
+__all__ = [
+    "Relationship",
+    "RelationshipType",
+    "RelationshipDetector",
+    "DetectionStrategy",
+    "RelationshipStore",
+    "RelationshipGraph",
+]
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/detector.py
+================================================
+"""
+Relationship detection functionality.
+
+This module provides classes and utilities for detecting relationships
+between files based on various strategies and algorithms.
+"""
+
+import abc
+import logging
+from collections.abc import Callable, Iterable
+from enum import Enum, auto
+from pathlib import Path
+from typing import Any
+
+from .relationship import Relationship
+
+logger = logging.getLogger(__name__)
+
+
+class DetectionStrategy(Enum):
+    """Enumeration of strategies for detecting file relationships."""
+
+    # Reference detection strategies
+    IMPORT_ANALYSIS = auto()  # Detect import/include statements
+    TEXT_REFERENCE = auto()  # Detect textual references to other files
+    LINK_ANALYSIS = auto()  # Detect hyperlinks or file links
+
+    # Content-based strategies
+    CONTENT_SIMILARITY = auto()  # Compare file contents for similarity
+    KEYWORD_ANALYSIS = auto()  # Analyze shared keywords
+
+    # Structure-based strategies
+    DIRECTORY_STRUCTURE = auto()  # Analyze directory relationships
+
+    # Temporal strategies
+    MODIFICATION_HISTORY = auto()  # Analyze modification patterns
+    CREATION_PATTERNS = auto()  # Analyze creation timestamps
+
+    # Derived file strategies
+    COMPILATION_ANALYSIS = auto()  # Detect compiled/generated files
+
+    # All strategies
+    ALL = auto()  # Run all available strategies
+
+
+class RelationshipDetectorBase(abc.ABC):
+    """
+    Abstract base class for relationship detectors.
+
+    This class defines the interface that all relationship detectors must implement.
+    """
+
+    @abc.abstractmethod
+    def detect_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect relationships for the given file.
+
+        Args:
+            path: Path to the file to analyze
+
+        Returns:
+            List of detected relationships
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def strategy(self) -> DetectionStrategy:
+        """Get the detection strategy used by this detector."""
+        pass
+
+
+class RelationshipDetector:
+    """
+    Main class for detecting relationships between files.
+
+    This class orchestrates the detection process using various strategies
+    and detectors to identify different types of relationships.
+    """
+
+    def __init__(self):
+        """Initialize the relationship detector with default settings."""
+        self._detectors: dict[DetectionStrategy, RelationshipDetectorBase] = {}
+        self._registered_detectors: list[RelationshipDetectorBase] = []
+
+    def register_detector(self, detector: RelationshipDetectorBase) -> None:
+        """
+        Register a detector for use in relationship detection.
+
+        Args:
+            detector: The detector to register
+        """
+        self._detectors[detector.strategy] = detector
+        self._registered_detectors.append(detector)
+        logger.debug(f"Registered detector for strategy: {detector.strategy.name}")
+
+    def detect_relationships(
+        self,
+        paths: Iterable[Path],
+        strategies: list[DetectionStrategy] | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> list[Relationship]:
+        """
+        Detect relationships for the given files using specified strategies.
+
+        Args:
+            paths: Paths to analyze for relationships
+            strategies: List of detection strategies to use (None for all)
+            progress_callback: Optional callback for reporting progress
+
+        Returns:
+            List of detected relationships
+        """
+        if not self._registered_detectors:
+            logger.warning("No detectors registered. Cannot detect relationships.")
+            return []
+
+        # Convert paths to a list for progress tracking
+        path_list = list(paths)
+        total_paths = len(path_list)
+
+        # Determine which strategies to use
+        active_detectors = self._registered_detectors
+        if strategies:
+            if DetectionStrategy.ALL in strategies:
+                # Use all registered detectors
+                pass
+            else:
+                # Filter detectors by requested strategies
+                active_detectors = [
+                    detector
+                    for detector in self._registered_detectors
+                    if detector.strategy in strategies
+                ]
+
+        # Track unique relationships to avoid duplicates
+        relationships: set[Relationship] = set()
+
+        # Process each file
+        for i, path in enumerate(path_list):
+            if not path.exists():
+                logger.warning(f"Path does not exist: {path}")
+                continue
+
+            # Report progress if callback provided
+            if progress_callback:
+                progress_callback(i, total_paths)
+
+            # Apply each detector
+            for detector in active_detectors:
+                try:
+                    detected = detector.detect_relationships(path)
+                    relationships.update(detected)
+                except Exception as e:
+                    logger.error(
+                        f"Error detecting relationships with {detector.strategy.name} "
+                        f"for {path}: {str(e)}"
+                    )
+
+        # Final progress update
+        if progress_callback:
+            progress_callback(total_paths, total_paths)
+
+        return list(relationships)
+
+    def get_available_strategies(self) -> list[DetectionStrategy]:
+        """
+        Get a list of all available detection strategies.
+
+        Returns:
+            List of available detection strategies
+        """
+        return list(self._detectors.keys())
+
+
+# Example detector implementation
+class ImportAnalysisDetector(RelationshipDetectorBase):
+    """
+    Detector that analyzes import statements in code files.
+
+    This detector identifies relationships based on import/include statements
+    in programming language files.
+    """
+
+    def __init__(self, workspace_root: Path):
+        """
+        Initialize the import analysis detector.
+
+        Args:
+            workspace_root: Root directory of the workspace
+        """
+        self.workspace_root = workspace_root
+
+        # Map of file extensions to import patterns
+        self._extension_patterns: dict[str, dict[str, Any]] = {
+            # Python imports
+            ".py": {
+                "patterns": [
+                    r"^\s*import\s+([a-zA-Z0-9_.]+)",
+                    r"^\s*from\s+([a-zA-Z0-9_.]+)\s+import",
+                ],
+                "resolver": self._resolve_python_import,
+            },
+            # JavaScript/TypeScript imports
+            ".js": {
+                "patterns": [
+                    r'^\s*import\s+.*\s+from\s+[\'"]([^\'"]*)[\'"]\s*;?',
+                    r'^\s*require\s*\(\s*[\'"]([^\'"]*)[\'"]\s*\)\s*;?',
+                ],
+                "resolver": self._resolve_js_import,
+            },
+            ".ts": {
+                "patterns": [
+                    r'^\s*import\s+.*\s+from\s+[\'"]([^\'"]*)[\'"]\s*;?',
+                    r'^\s*require\s*\(\s*[\'"]([^\'"]*)[\'"]\s*\)\s*;?',
+                ],
+                "resolver": self._resolve_js_import,
+            },
+            # Add more languages as needed
+        }
+
+    @property
+    def strategy(self) -> DetectionStrategy:
+        """Get the detection strategy used by this detector."""
+        return DetectionStrategy.IMPORT_ANALYSIS
+
+    def detect_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect import relationships for the given file.
+
+        Args:
+            path: Path to the file to analyze
+
+        Returns:
+            List of detected relationships
+        """
+        # Placeholder implementation - would need to be expanded
+        # with actual import detection logic for different languages
+        relationships = []
+
+        # Check if we support this file type
+        if path.suffix not in self._extension_patterns:
+            return []
+
+        # This would be where the actual import detection logic goes
+        # For now, just return an empty list
+
+        return relationships
+
+    def _resolve_python_import(
+        self, import_name: str, source_file: Path
+    ) -> Path | None:
+        """
+        Resolve a Python import to an actual file path.
+
+        Args:
+            import_name: The import name to resolve
+            source_file: The file containing the import
+
+        Returns:
+            Resolved file path or None if not resolvable
+        """
+        # Placeholder - would need actual Python import resolution logic
+        return None
+
+    def _resolve_js_import(self, import_name: str, source_file: Path) -> Path | None:
+        """
+        Resolve a JavaScript/TypeScript import to an actual file path.
+
+        Args:
+            import_name: The import name to resolve
+            source_file: The file containing the import
+
+        Returns:
+            Resolved file path or None if not resolvable
+        """
+        # Placeholder - would need actual JS/TS import resolution logic
+        return None
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/graph.py
+================================================
+"""
+Relationship graph functionality.
+
+This module provides classes and utilities for representing and analyzing
+file relationships as a graph structure.
+"""
+
+import logging
+from collections import defaultdict
+from pathlib import Path
+
+import networkx as nx
+
+from .relationship import RelationshipType
+from .store import RelationshipStore
+
+logger = logging.getLogger(__name__)
+
+
+class RelationshipGraph:
+    """
+    Represents file relationships as a graph structure.
+
+    This class provides graph-based operations on file relationships,
+    such as finding paths between files, identifying clusters, and
+    calculating centrality metrics.
+    """
+
+    def __init__(self, relationship_store: RelationshipStore):
+        """
+        Initialize the relationship graph with a relationship store.
+
+        Args:
+            relationship_store: The store containing relationships
+        """
+        self.store = relationship_store
+        self._graph = None
+        self._last_update = None
+
+    def build_graph(
+        self,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+    ) -> nx.DiGraph:
+        """
+        Build a directed graph from the relationships in the store.
+
+        Args:
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+
+        Returns:
+            NetworkX directed graph
+        """
+        # Create a new directed graph
+        graph = nx.DiGraph()
+
+        # Get all relationships from the store
+        relationships = self.store.get_all_relationships(
+            rel_types=rel_types, min_strength=min_strength
+        )
+
+        # Add nodes and edges to the graph
+        for rel in relationships:
+            source = str(rel.source_path)
+            target = str(rel.target_path)
+
+            # Add nodes if they don't exist
+            if not graph.has_node(source):
+                graph.add_node(source, path=rel.source_path)
+
+            if not graph.has_node(target):
+                graph.add_node(target, path=rel.target_path)
+
+            # Add edge with relationship data
+            graph.add_edge(
+                source,
+                target,
+                type=rel.rel_type,
+                strength=rel.strength,
+                metadata=rel.metadata,
+                id=rel.id,
+            )
+
+        # Cache the graph
+        self._graph = graph
+
+        return graph
+
+    def get_graph(
+        self,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+        force_rebuild: bool = False,
+    ) -> nx.DiGraph:
+        """
+        Get the relationship graph, building it if necessary.
+
+        Args:
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+            force_rebuild: Whether to force rebuilding the graph
+
+        Returns:
+            NetworkX directed graph
+        """
+        if self._graph is None or force_rebuild:
+            return self.build_graph(rel_types, min_strength)
+        return self._graph
+
+    def find_paths(
+        self,
+        source_path: Path,
+        target_path: Path,
+        max_length: int = 5,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+    ) -> list[list[tuple[Path, RelationshipType]]]:
+        """
+        Find all paths between two files up to a maximum length.
+
+        Args:
+            source_path: Starting file path
+            target_path: Ending file path
+            max_length: Maximum path length
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+
+        Returns:
+            List of paths, where each path is a list of (file_path, relationship_type) tuples
+        """
+        graph = self.get_graph(rel_types, min_strength)
+
+        source = str(source_path)
+        target = str(target_path)
+
+        # Check if both nodes exist in the graph
+        if not graph.has_node(source) or not graph.has_node(target):
+            return []
+
+        # Find all simple paths up to max_length
+        try:
+            paths = list(nx.all_simple_paths(graph, source, target, cutoff=max_length))
+        except nx.NetworkXNoPath:
+            return []
+
+        # Convert paths to the desired format
+        result = []
+        for path in paths:
+            path_with_types = []
+            for i in range(len(path) - 1):
+                edge_data = graph.get_edge_data(path[i], path[i + 1])
+                path_with_types.append((Path(path[i + 1]), edge_data["type"]))
+            result.append(path_with_types)
+
+        return result
+
+    def find_related_clusters(
+        self,
+        file_path: Path,
+        max_distance: int = 2,
+        min_strength: float = 0.0,
+        rel_types: list[RelationshipType] | None = None,
+    ) -> dict[str, list[Path]]:
+        """
+        Find clusters of related files around the given file.
+
+        Args:
+            file_path: The central file to find clusters around
+            max_distance: Maximum distance from the central file
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+            rel_types: Optional filter for relationship types
+
+        Returns:
+            Dictionary mapping cluster names to lists of file paths
+        """
+        graph = self.get_graph(rel_types, min_strength)
+        source = str(file_path)
+
+        # Check if the node exists in the graph
+        if not graph.has_node(source):
+            return {}
+
+        # Get all nodes within max_distance
+        nodes_within_distance = set()
+        for distance in range(1, max_distance + 1):
+            # Get nodes at exactly distance away
+            nodes_at_distance = set()
+
+            # Forward direction (outgoing edges)
+            for path in nx.single_source_shortest_path_length(
+                graph, source, cutoff=distance
+            ):
+                if graph.out_degree(path) > 0:  # Only include if it has outgoing edges
+                    nodes_at_distance.add(path)
+
+            # Backward direction (incoming edges)
+            reverse_graph = graph.reverse(copy=True)
+            for path in nx.single_source_shortest_path_length(
+                reverse_graph, source, cutoff=distance
+            ):
+                if graph.in_degree(path) > 0:  # Only include if it has incoming edges
+                    nodes_at_distance.add(path)
+
+            nodes_within_distance.update(nodes_at_distance)
+
+        # Group nodes by relationship type
+        clusters: dict[str, list[Path]] = defaultdict(list)
+
+        for node in nodes_within_distance:
+            if node == source:
+                continue
+
+            # Check outgoing edges
+            if graph.has_edge(source, node):
+                edge_data = graph.get_edge_data(source, node)
+                rel_type = edge_data["type"].name
+                clusters[rel_type].append(Path(node))
+
+            # Check incoming edges
+            elif graph.has_edge(node, source):
+                edge_data = graph.get_edge_data(node, source)
+                rel_type = f"INCOMING_{edge_data['type'].name}"
+                clusters[rel_type].append(Path(node))
+
+            # Indirect relationships
+            else:
+                clusters["INDIRECT"].append(Path(node))
+
+        return dict(clusters)
+
+    def calculate_centrality(
+        self,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+        top_n: int = 10,
+    ) -> list[tuple[Path, float]]:
+        """
+        Calculate centrality metrics to identify the most important files.
+
+        Args:
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+            top_n: Number of top results to return
+
+        Returns:
+            List of (file_path, centrality_score) tuples, sorted by score
+        """
+        graph = self.get_graph(rel_types, min_strength)
+
+        # Calculate PageRank centrality
+        centrality = nx.pagerank(graph)
+
+        # Convert to list of (path, score) tuples and sort
+        result = [(Path(node), score) for node, score in centrality.items()]
+
+        # Sort by score in descending order and take top_n
+        result.sort(key=lambda x: x[1], reverse=True)
+        return result[:top_n]
+
+    def export_graphviz(
+        self,
+        output_path: Path,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+        max_nodes: int = 100,
+    ) -> None:
+        """
+        Export the relationship graph to a GraphViz DOT file.
+
+        Args:
+            output_path: Path to save the DOT file
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+            max_nodes: Maximum number of nodes to include
+
+        Raises:
+            IOError: If there's an error writing the file
+        """
+        graph = self.get_graph(rel_types, min_strength)
+
+        # Limit the number of nodes if necessary
+        if len(graph.nodes) > max_nodes:
+            # Use centrality to determine the most important nodes
+            centrality = nx.pagerank(graph)
+            important_nodes = sorted(
+                centrality.items(), key=lambda x: x[1], reverse=True
+            )[:max_nodes]
+
+            # Create a subgraph with only the important nodes
+            nodes_to_keep = [node for node, _ in important_nodes]
+            graph = graph.subgraph(nodes_to_keep)
+
+        # Export to DOT format
+        try:
+            nx.drawing.nx_pydot.write_dot(graph, str(output_path))
+            logger.info(f"Exported relationship graph to {output_path}")
+        except Exception as e:
+            logger.error(f"Error exporting graph to {output_path}: {str(e)}")
+            raise
+
+    def export_json(
+        self,
+        output_path: Path,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+        max_nodes: int = 100,
+    ) -> None:
+        """
+        Export the relationship graph to a JSON file for visualization.
+
+        Args:
+            output_path: Path to save the JSON file
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+            max_nodes: Maximum number of nodes to include
+
+        Raises:
+            IOError: If there's an error writing the file
+        """
+        import json
+
+        graph = self.get_graph(rel_types, min_strength)
+
+        # Limit the number of nodes if necessary
+        if len(graph.nodes) > max_nodes:
+            # Use centrality to determine the most important nodes
+            centrality = nx.pagerank(graph)
+            important_nodes = sorted(
+                centrality.items(), key=lambda x: x[1], reverse=True
+            )[:max_nodes]
+
+            # Create a subgraph with only the important nodes
+            nodes_to_keep = [node for node, _ in important_nodes]
+            graph = graph.subgraph(nodes_to_keep)
+
+        # Convert to a format suitable for visualization libraries
+        nodes = []
+        for node in graph.nodes:
+            nodes.append({"id": node, "label": Path(node).name, "path": node})
+
+        edges = []
+        for source, target, data in graph.edges(data=True):
+            edges.append(
+                {
+                    "source": source,
+                    "target": target,
+                    "type": data["type"].name,
+                    "strength": data["strength"],
+                }
+            )
+
+        result = {"nodes": nodes, "edges": edges}
+
+        # Export to JSON
+        try:
+            with open(output_path, "w") as f:
+                json.dump(result, f, indent=2)
+            logger.info(f"Exported relationship graph to {output_path}")
+        except Exception as e:
+            logger.error(f"Error exporting graph to {output_path}: {str(e)}")
+            raise
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/relationship.py
+================================================
+"""
+Core relationship classes and types.
+
+This module defines the fundamental relationship structures and types
+that form the basis of the file relationship mapping system.
+"""
+
+import uuid
+from datetime import datetime
+from enum import Enum, auto
+from pathlib import Path
+from typing import Any
+
+
+class RelationshipType(Enum):
+    """Enumeration of possible relationship types between files."""
+
+    # Reference relationships
+    IMPORTS = auto()  # File imports or includes another file
+    REFERENCES = auto()  # File references another file (e.g., in comments, docs)
+    LINKS_TO = auto()  # File contains a link to another file
+
+    # Content relationships
+    SIMILAR_CONTENT = auto()  # Files have similar textual content
+    SHARED_KEYWORDS = auto()  # Files share significant keywords
+
+    # Structural relationships
+    PARENT_CHILD = auto()  # Directory contains file relationship
+    SIBLING = auto()  # Files in same directory
+
+    # Temporal relationships
+    MODIFIED_TOGETHER = auto()  # Files frequently modified in same commit/session
+    CREATED_TOGETHER = auto()  # Files created at similar times
+
+    # Derived relationships
+    COMPILED_FROM = auto()  # File is compiled/generated from another file
+    EXTRACTED_FROM = auto()  # File was extracted from another file
+
+    # Custom relationship
+    CUSTOM = auto()  # User-defined relationship
+
+
+class Relationship:
+    """
+    Represents a relationship between two files.
+
+    Attributes:
+        source_path (Path): Path to the source file
+        target_path (Path): Path to the target file
+        rel_type (RelationshipType): Type of relationship
+        strength (float): Strength of relationship (0.0 to 1.0)
+        metadata (Dict[str, Any]): Additional data about the relationship
+        created_at (datetime): When the relationship was first detected
+        updated_at (datetime): When the relationship was last updated
+        id (str): Unique identifier for the relationship
+    """
+
+    def __init__(
+        self,
+        source_path: Path,
+        target_path: Path,
+        rel_type: RelationshipType,
+        strength: float = 1.0,
+        metadata: dict[str, Any] | None = None,
+        created_at: datetime | None = None,
+        id: str | None = None,
+    ):
+        """
+        Initialize a new relationship between two files.
+
+        Args:
+            source_path: Path to the source file
+            target_path: Path to the target file
+            rel_type: Type of relationship
+            strength: Strength of relationship (0.0 to 1.0)
+            metadata: Additional data about the relationship
+            created_at: When the relationship was first detected
+            id: Unique identifier for the relationship
+
+        Raises:
+            ValueError: If strength is not between 0.0 and 1.0
+        """
+        if not 0.0 <= strength <= 1.0:
+            raise ValueError("Relationship strength must be between 0.0 and 1.0")
+
+        self.source_path = source_path
+        self.target_path = target_path
+        self.rel_type = rel_type
+        self.strength = strength
+        self.metadata = metadata or {}
+        self.created_at = created_at or datetime.now()
+        self.updated_at = self.created_at
+        self.id = id or str(uuid.uuid4())
+
+    def update(
+        self,
+        strength: float | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Update the relationship with new information.
+
+        Args:
+            strength: New strength value (if None, keeps current value)
+            metadata: New metadata to merge with existing (if None, keeps current)
+
+        Raises:
+            ValueError: If strength is not between 0.0 and 1.0
+        """
+        if strength is not None:
+            if not 0.0 <= strength <= 1.0:
+                raise ValueError("Relationship strength must be between 0.0 and 1.0")
+            self.strength = strength
+
+        if metadata:
+            self.metadata.update(metadata)
+
+        self.updated_at = datetime.now()
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert the relationship to a dictionary representation.
+
+        Returns:
+            Dictionary containing all relationship data
+        """
+        return {
+            "id": self.id,
+            "source_path": str(self.source_path),
+            "target_path": str(self.target_path),
+            "rel_type": self.rel_type.name,
+            "strength": self.strength,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Relationship":
+        """
+        Create a relationship from a dictionary representation.
+
+        Args:
+            data: Dictionary containing relationship data
+
+        Returns:
+            New Relationship instance
+        """
+        return cls(
+            source_path=Path(data["source_path"]),
+            target_path=Path(data["target_path"]),
+            rel_type=RelationshipType[data["rel_type"]],
+            strength=data["strength"],
+            metadata=data["metadata"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            id=data["id"],
+        )
+
+    def __eq__(self, other: object) -> bool:
+        """Check if two relationships are equal."""
+        if not isinstance(other, Relationship):
+            return False
+        return (
+            self.source_path == other.source_path
+            and self.target_path == other.target_path
+            and self.rel_type == other.rel_type
+        )
+
+    def __hash__(self) -> int:
+        """Generate a hash for the relationship."""
+        return hash((str(self.source_path), str(self.target_path), self.rel_type))
+
+    def __repr__(self) -> str:
+        """String representation of the relationship."""
+        return (
+            f"Relationship({self.source_path} → {self.target_path}, "
+            f"type={self.rel_type.name}, strength={self.strength:.2f})"
+        )
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/store.py
+================================================
+"""
+Relationship storage functionality.
+
+This module provides classes and utilities for storing and retrieving
+file relationships in a persistent database.
+"""
+
+import json
+import logging
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+
+from .relationship import Relationship, RelationshipType
+
+logger = logging.getLogger(__name__)
+
+
+class RelationshipStore:
+    """
+    Stores and retrieves file relationships in a SQLite database.
+
+    This class handles the persistence of relationship data, providing
+    methods to add, update, query, and delete relationships.
+    """
+
+    def __init__(self, db_path: Path):
+        """
+        Initialize the relationship store with the given database path.
+
+        Args:
+            db_path: Path to the SQLite database file
+        """
+        self.db_path = db_path
+        self._initialize_db()
+
+    def _initialize_db(self) -> None:
+        """
+        Initialize the database schema if it doesn't exist.
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Create relationships table
+                cursor.execute(
+                    """
+                CREATE TABLE IF NOT EXISTS relationships (
+                    id TEXT PRIMARY KEY,
+                    source_path TEXT NOT NULL,
+                    target_path TEXT NOT NULL,
+                    rel_type TEXT NOT NULL,
+                    strength REAL NOT NULL,
+                    metadata TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+                )
+
+                # Create indexes for faster querying
+                cursor.execute(
+                    """
+                CREATE INDEX IF NOT EXISTS idx_source_path ON relationships (source_path)
+                """
+                )
+
+                cursor.execute(
+                    """
+                CREATE INDEX IF NOT EXISTS idx_target_path ON relationships (target_path)
+                """
+                )
+
+                cursor.execute(
+                    """
+                CREATE INDEX IF NOT EXISTS idx_rel_type ON relationships (rel_type)
+                """
+                )
+
+                conn.commit()
+                logger.debug("Relationship database initialized")
+        except sqlite3.Error as e:
+            logger.error(f"Error initializing relationship database: {str(e)}")
+            raise
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """
+        Get a connection to the SQLite database.
+
+        Returns:
+            SQLite connection object
+        """
+        # Ensure parent directory exists
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def add_relationship(self, relationship: Relationship) -> None:
+        """
+        Add a new relationship to the store.
+
+        Args:
+            relationship: The relationship to add
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Convert metadata to JSON string
+                metadata_json = json.dumps(relationship.metadata)
+
+                cursor.execute(
+                    """
+                INSERT OR REPLACE INTO relationships
+                (id, source_path, target_path, rel_type, strength, metadata, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                    (
+                        relationship.id,
+                        str(relationship.source_path),
+                        str(relationship.target_path),
+                        relationship.rel_type.name,
+                        relationship.strength,
+                        metadata_json,
+                        relationship.created_at.isoformat(),
+                        relationship.updated_at.isoformat(),
+                    ),
+                )
+
+                conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Error adding relationship: {str(e)}")
+            raise
+
+    def add_relationships(self, relationships: list[Relationship]) -> None:
+        """
+        Add multiple relationships to the store in a single transaction.
+
+        Args:
+            relationships: List of relationships to add
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        if not relationships:
+            return
+
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                for relationship in relationships:
+                    # Convert metadata to JSON string
+                    metadata_json = json.dumps(relationship.metadata)
+
+                    cursor.execute(
+                        """
+                    INSERT OR REPLACE INTO relationships
+                    (id, source_path, target_path, rel_type, strength, metadata, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                        (
+                            relationship.id,
+                            str(relationship.source_path),
+                            str(relationship.target_path),
+                            relationship.rel_type.name,
+                            relationship.strength,
+                            metadata_json,
+                            relationship.created_at.isoformat(),
+                            relationship.updated_at.isoformat(),
+                        ),
+                    )
+
+                conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Error adding relationships: {str(e)}")
+            raise
+
+    def get_relationship(self, relationship_id: str) -> Relationship | None:
+        """
+        Get a relationship by its ID.
+
+        Args:
+            relationship_id: ID of the relationship to retrieve
+
+        Returns:
+            The relationship if found, None otherwise
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                cursor.execute(
+                    """
+                SELECT * FROM relationships WHERE id = ?
+                """,
+                    (relationship_id,),
+                )
+
+                row = cursor.fetchone()
+                if row:
+                    return self._row_to_relationship(row)
+                return None
+        except sqlite3.Error as e:
+            logger.error(f"Error getting relationship: {str(e)}")
+            raise
+
+    def get_relationships_for_file(
+        self,
+        file_path: Path,
+        as_source: bool = True,
+        as_target: bool = True,
+        rel_types: list[RelationshipType] | None = None,
+    ) -> list[Relationship]:
+        """
+        Get all relationships for a specific file.
+
+        Args:
+            file_path: Path to the file
+            as_source: Include relationships where file is the source
+            as_target: Include relationships where file is the target
+            rel_types: Optional filter for relationship types
+
+        Returns:
+            List of relationships involving the file
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        if not as_source and not as_target:
+            return []
+
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                query_parts = []
+                params: list[str | float] = []
+
+                if as_source:
+                    query_parts.append("source_path = ?")
+                    params.append(str(file_path))
+
+                if as_target:
+                    query_parts.append("target_path = ?")
+                    params.append(str(file_path))
+
+                query = f"SELECT * FROM relationships WHERE {' OR '.join(query_parts)}"
+
+                # Add relationship type filter if specified
+                if rel_types:
+                    type_placeholders = ", ".join("?" for _ in rel_types)
+                    query += f" AND rel_type IN ({type_placeholders})"
+                    params.extend(rel_type.name for rel_type in rel_types)
+
+                cursor.execute(query, params)
+
+                return [self._row_to_relationship(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Error getting relationships for file: {str(e)}")
+            raise
+
+    def get_related_files(
+        self,
+        file_path: Path,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+    ) -> list[tuple[Path, RelationshipType, float]]:
+        """
+        Get all files related to the given file.
+
+        Args:
+            file_path: Path to the file
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+
+        Returns:
+            List of tuples containing (related_file_path, relationship_type, strength)
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build query for outgoing relationships (file as source)
+                query_outgoing = """
+                SELECT target_path, rel_type, strength
+                FROM relationships
+                WHERE source_path = ? AND strength >= ?
+                """
+
+                # Build query for incoming relationships (file as target)
+                query_incoming = """
+                SELECT source_path, rel_type, strength
+                FROM relationships
+                WHERE target_path = ? AND strength >= ?
+                """
+
+                params: list[str | float] = [str(file_path), min_strength]
+
+                # Add relationship type filter if specified
+                if rel_types:
+                    type_placeholders = ", ".join("?" for _ in rel_types)
+                    query_outgoing += f" AND rel_type IN ({type_placeholders})"
+                    query_incoming += f" AND rel_type IN ({type_placeholders})"
+                    params.extend(rel_type.name for rel_type in rel_types)
+
+                # Execute queries
+                cursor.execute(query_outgoing, params)
+                outgoing_results = [
+                    (
+                        Path(row["target_path"]),
+                        RelationshipType[row["rel_type"]],
+                        row["strength"],
+                    )
+                    for row in cursor.fetchall()
+                ]
+
+                cursor.execute(query_incoming, params)
+                incoming_results = [
+                    (
+                        Path(row["source_path"]),
+                        RelationshipType[row["rel_type"]],
+                        row["strength"],
+                    )
+                    for row in cursor.fetchall()
+                ]
+
+                # Combine results
+                return outgoing_results + incoming_results
+        except sqlite3.Error as e:
+            logger.error(f"Error getting related files: {str(e)}")
+            raise
+
+    def delete_relationship(self, relationship_id: str) -> bool:
+        """
+        Delete a relationship by its ID.
+
+        Args:
+            relationship_id: ID of the relationship to delete
+
+        Returns:
+            True if the relationship was deleted, False if not found
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                cursor.execute(
+                    """
+                DELETE FROM relationships WHERE id = ?
+                """,
+                    (relationship_id,),
+                )
+
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            logger.error(f"Error deleting relationship: {str(e)}")
+            raise
+
+    def delete_relationships_for_file(self, file_path: Path) -> int:
+        """
+        Delete all relationships involving a specific file.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Number of relationships deleted
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                cursor.execute(
+                    """
+                DELETE FROM relationships
+                WHERE source_path = ? OR target_path = ?
+                """,
+                    (str(file_path), str(file_path)),
+                )
+
+                conn.commit()
+                return cursor.rowcount
+        except sqlite3.Error as e:
+            logger.error(f"Error deleting relationships for file: {str(e)}")
+            raise
+
+    def clear_all_relationships(self) -> int:
+        """
+        Delete all relationships from the store.
+
+        Returns:
+            Number of relationships deleted
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                cursor.execute("DELETE FROM relationships")
+
+                conn.commit()
+                return cursor.rowcount
+        except sqlite3.Error as e:
+            logger.error(f"Error clearing relationships: {str(e)}")
+            raise
+
+    def get_all_relationships(
+        self,
+        rel_types: list[RelationshipType] | None = None,
+        min_strength: float = 0.0,
+    ) -> list[Relationship]:
+        """
+        Get all relationships in the store.
+
+        Args:
+            rel_types: Optional filter for relationship types
+            min_strength: Minimum relationship strength (0.0 to 1.0)
+
+        Returns:
+            List of all relationships
+
+        Raises:
+            sqlite3.Error: If there's a database error
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                query = "SELECT * FROM relationships WHERE strength >= ?"
+                params: list[float | str] = [min_strength]
+
+                # Add relationship type filter if specified
+                if rel_types:
+                    type_placeholders = ", ".join("?" for _ in rel_types)
+                    query += f" AND rel_type IN ({type_placeholders})"
+                    params.extend(rel_type.name for rel_type in rel_types)
+
+                cursor.execute(query, params)
+
+                return [self._row_to_relationship(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Error getting all relationships: {str(e)}")
+            raise
+
+    def _row_to_relationship(self, row: sqlite3.Row) -> Relationship:
+        """
+        Convert a database row to a Relationship object.
+
+        Args:
+            row: SQLite row containing relationship data
+
+        Returns:
+            Relationship object
+        """
+        return Relationship(
+            source_path=Path(row["source_path"]),
+            target_path=Path(row["target_path"]),
+            rel_type=RelationshipType[row["rel_type"]],
+            strength=row["strength"],
+            metadata=json.loads(row["metadata"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            id=row["id"],
+        )
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/detectors/__init__.py
+================================================
+"""
+Relationship detectors package.
+
+This package contains various detector implementations for identifying
+different types of relationships between files.
+"""
+
+from .directory_structure import DirectoryStructureDetector
+
+__all__ = [
+    "DirectoryStructureDetector",
+]
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/relationships/detectors/directory_structure.py
+================================================
+"""
+Directory structure relationship detector.
+
+This module provides the DirectoryStructureDetector class for identifying
+relationships based on file system hierarchy and naming patterns.
+"""
+
+import logging
+import os
+import re
+from pathlib import Path
+from re import Pattern
+
+from ..detector import DetectionStrategy, RelationshipDetectorBase
+from ..relationship import Relationship, RelationshipType
+
+logger = logging.getLogger(__name__)
+
+
+class DirectoryStructureDetector(RelationshipDetectorBase):
+    """
+    Detects relationships based on directory structure and naming patterns.
+
+    This detector identifies parent-child relationships between directories and files,
+    sibling relationships between files in the same directory, and relationships
+    based on naming patterns.
+    """
+
+    # Regular expression patterns for identifying related files by name
+    NAME_PATTERNS = [
+        # Test files: file.py -> file_test.py, test_file.py
+        (r"^(.+)\.(.+)$", r"\1_test.\2", 0.9),  # file.py -> file_test.py
+        (r"^(.+)\.(.+)$", r"test_\1.\2", 0.9),  # file.py -> test_file.py
+        # Implementation & interface pairs
+        (r"^(.+)\.py$", r"\1_impl.py", 0.8),  # interface.py -> interface_impl.py
+        (r"^(.+)_impl\.py$", r"\1.py", 0.8),  # interface_impl.py -> interface.py
+        (r"^(.+)\.ts$", r"\1.d.ts", 0.8),  # file.ts -> file.d.ts
+        # Component pairs (common in web development)
+        (r"^(.+)\.jsx$", r"\1.css", 0.7),  # Component.jsx -> Component.css
+        (r"^(.+)\.tsx$", r"\1.css", 0.7),  # Component.tsx -> Component.css
+        (r"^(.+)\.vue$", r"\1.scss", 0.7),  # Component.vue -> Component.scss
+        # Module & spec/test files
+        (r"^(.+)\.js$", r"\1.spec.js", 0.9),  # file.js -> file.spec.js
+        (r"^(.+)\.ts$", r"\1.spec.ts", 0.9),  # file.ts -> file.spec.ts
+    ]
+
+    def __init__(self, workspace_root: Path, max_depth: int = 1):
+        """
+        Initialize the directory structure detector.
+
+        Args:
+            workspace_root: Root directory of the workspace
+            max_depth: Maximum depth for parent-child relationships (default: 1)
+        """
+        self.workspace_root = workspace_root
+        self.max_depth = max_depth
+        self._compiled_patterns: list[tuple[Pattern, str, float]] = []
+
+        # Compile regex patterns for better performance
+        for pattern, replacement, strength in self.NAME_PATTERNS:
+            self._compiled_patterns.append((re.compile(pattern), replacement, strength))
+
+    @property
+    def strategy(self) -> DetectionStrategy:
+        """Get the detection strategy used by this detector."""
+        return DetectionStrategy.DIRECTORY_STRUCTURE
+
+    def detect_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect directory structure relationships for the given file.
+
+        Args:
+            path: Path to the file to analyze
+
+        Returns:
+            List of detected relationships
+        """
+        if not path.exists():
+            logger.warning(f"Path does not exist: {path}")
+            return []
+
+        relationships = []
+
+        # Detect parent-child relationships
+        parent_child_rels = self._detect_parent_child_relationships(path)
+        relationships.extend(parent_child_rels)
+
+        # Detect sibling relationships
+        sibling_rels = self._detect_sibling_relationships(path)
+        relationships.extend(sibling_rels)
+
+        # Detect relationships based on naming patterns
+        naming_rels = self._detect_naming_pattern_relationships(path)
+        relationships.extend(naming_rels)
+
+        return relationships
+
+    def _detect_parent_child_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect parent-child relationships for the given path.
+
+        Args:
+            path: Path to analyze
+
+        Returns:
+            List of parent-child relationships
+        """
+        relationships = []
+
+        # Skip directories
+        if path.is_dir():
+            return relationships
+
+        # Create relationship between file and its parent directory
+        parent_dir = path.parent
+        if parent_dir != self.workspace_root:
+            # File is contained in a directory
+            relationships.append(
+                Relationship(
+                    source_path=parent_dir,
+                    target_path=path,
+                    rel_type=RelationshipType.PARENT_CHILD,
+                    strength=1.0,
+                    metadata={"level": 1},
+                )
+            )
+
+            # Check parent directories up to max_depth
+            current_dir = parent_dir
+            level = 2
+
+            while level <= self.max_depth:
+                parent_of_parent = current_dir.parent
+
+                # Stop if we reached the workspace root or filesystem root
+                if (
+                    parent_of_parent == self.workspace_root
+                    or parent_of_parent == current_dir
+                ):
+                    break
+
+                # Create relationship with higher level parent
+                relationships.append(
+                    Relationship(
+                        source_path=parent_of_parent,
+                        target_path=path,
+                        rel_type=RelationshipType.PARENT_CHILD,
+                        strength=1.0
+                        / level,  # Weaker relationship for more distant parents
+                        metadata={"level": level},
+                    )
+                )
+
+                current_dir = parent_of_parent
+                level += 1
+
+        return relationships
+
+    def _detect_sibling_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect sibling relationships (files in the same directory).
+
+        Args:
+            path: Path to analyze
+
+        Returns:
+            List of sibling relationships
+        """
+        relationships = []
+
+        # Skip directories
+        if path.is_dir():
+            return relationships
+
+        # Get all files in the same directory
+        parent_dir = path.parent
+
+        try:
+            siblings = [
+                parent_dir / f
+                for f in os.listdir(parent_dir)
+                if (parent_dir / f).is_file() and (parent_dir / f) != path
+            ]
+        except (PermissionError, FileNotFoundError) as e:
+            logger.warning(f"Cannot list directory {parent_dir}: {e}")
+            return relationships
+
+        # Create sibling relationships
+        for sibling in siblings:
+            # Files in the same directory with the same extension have stronger relationship
+            strength = 0.7
+            if sibling.suffix == path.suffix:
+                strength = 0.9
+
+            relationships.append(
+                Relationship(
+                    source_path=path,
+                    target_path=sibling,
+                    rel_type=RelationshipType.SIBLING,
+                    strength=strength,
+                    metadata={"directory": str(parent_dir)},
+                )
+            )
+
+        return relationships
+
+    def _detect_naming_pattern_relationships(self, path: Path) -> list[Relationship]:
+        """
+        Detect relationships based on common naming patterns.
+
+        Args:
+            path: Path to analyze
+
+        Returns:
+            List of detected relationships
+        """
+        relationships = []
+
+        # Skip directories
+        if path.is_dir():
+            return relationships
+
+        filename = path.name
+        parent_dir = path.parent
+
+        # Check all patterns
+        for pattern, replacement, strength in self._compiled_patterns:
+            match = pattern.match(filename)
+            if not match:
+                continue
+
+            # Generate the target filename using the pattern
+            try:
+                if isinstance(replacement, str):
+                    target_filename = pattern.sub(replacement, filename)
+                else:
+                    # For more complex replacements that might use groups
+                    target_filename = replacement(match)
+            except Exception as e:
+                logger.warning(f"Error applying pattern {pattern} to {filename}: {e}")
+                continue
+
+            # Check if the target file exists
+            target_path = parent_dir / target_filename
+            if target_path.exists() and target_path.is_file():
+                # Create a relationship
+                rel_type = RelationshipType.REFERENCES
+
+                # Determine relationship type based on naming pattern
+                if (
+                    "_test" in target_filename
+                    or "test_" in target_filename
+                    or ".spec." in target_filename
+                ):
+                    rel_type = RelationshipType.EXTRACTED_FROM
+                    metadata = {"relationship": "test-code"}
+                elif target_filename.endswith(".d.ts") and filename.endswith(".ts"):
+                    rel_type = RelationshipType.EXTRACTED_FROM
+                    metadata = {"relationship": "typescript-definition"}
+                elif (
+                    target_filename.endswith(".css")
+                    or target_filename.endswith(".scss")
+                ) and (
+                    filename.endswith(".jsx")
+                    or filename.endswith(".tsx")
+                    or filename.endswith(".vue")
+                ):
+                    rel_type = RelationshipType.REFERENCES
+                    metadata = {"relationship": "component-style"}
+                else:
+                    metadata = {"relationship": "naming-pattern"}
+
+                relationships.append(
+                    Relationship(
+                        source_path=path,
+                        target_path=target_path,
+                        rel_type=rel_type,
+                        strength=strength,
+                        metadata=metadata,
+                    )
+                )
+
+        return relationships
+
+

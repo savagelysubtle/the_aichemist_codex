@@ -11,8 +11,8 @@ from the_aichemist_codex.backend.output_formatter.json_writer import save_as_jso
 from the_aichemist_codex.backend.output_formatter.markdown_writer import (
     save_as_markdown,
 )
-from the_aichemist_codex.backend.utils.async_io import AsyncFileReader
-from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileReader
+from the_aichemist_codex.backend.utils.common.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

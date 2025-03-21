@@ -11,9 +11,9 @@ from the_aichemist_codex.backend.config.settings import (
     REGEX_MAX_COMPLEXITY,
     REGEX_TIMEOUT_MS,
 )
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
-from the_aichemist_codex.backend.utils.batch_processor import BatchProcessor
-from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.Concurrency.batch_processor import BatchProcessor
+from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 

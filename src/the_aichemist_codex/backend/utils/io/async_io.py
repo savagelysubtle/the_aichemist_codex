@@ -10,7 +10,7 @@ from typing import Any, cast
 import aiofiles  # type: ignore
 import aiofiles.os  # type: ignore
 
-from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+from the_aichemist_codex.backend.utils.common.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

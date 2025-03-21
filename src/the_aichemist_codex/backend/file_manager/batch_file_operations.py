@@ -5,9 +5,9 @@ import os
 from pathlib import Path
 
 from the_aichemist_codex.backend.rollback.rollback_manager import rollback_manager
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
-from the_aichemist_codex.backend.utils.batch_processor import BatchProcessor
-from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.Concurrency.batch_processor import BatchProcessor
+from the_aichemist_codex.backend.utils.common.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

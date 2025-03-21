@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any, cast
 
 from the_aichemist_codex.backend.file_reader.file_metadata import FileMetadata
-from the_aichemist_codex.backend.utils.cache_manager import CacheManager
-from the_aichemist_codex.backend.utils.mime_type_detector import MimeTypeDetector
+from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.io.mime_type_detector import MimeTypeDetector
 
 from .extractor import BaseMetadataExtractor, MetadataExtractorRegistry
 

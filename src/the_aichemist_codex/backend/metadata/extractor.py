@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from the_aichemist_codex.backend.file_reader.file_metadata import FileMetadata
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
-from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 

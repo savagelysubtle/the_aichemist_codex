@@ -8,7 +8,7 @@ and file-tag associations.
 import logging
 from pathlib import Path
 
-from the_aichemist_codex.backend.utils.sqlasync_io import AsyncSQL
+from the_aichemist_codex.backend.utils.io.sqlasync_io import AsyncSQL
 
 logger = logging.getLogger(__name__)
 

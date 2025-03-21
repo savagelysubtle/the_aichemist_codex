@@ -30,7 +30,7 @@ from enum import Enum, auto
 from typing import Any
 
 from the_aichemist_codex.backend.config.settings import DATA_DIR, NOTIFICATION_SETTINGS
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 

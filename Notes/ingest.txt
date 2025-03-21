@@ -1,0 +1,353 @@
+
+================================================
+File: src/the_aichemist_codex/backend/ingest/__init__.py
+================================================
+# File: aichemist_codex/ingest/__init__.py
+"""
+Module: aichemist_codex/ingest/__init__.py
+
+Description:
+    This package acts as the orchestrator for the ingestion process in The Aichemist Codex.
+    It coordinates standalone modules responsible for scanning directories, reading file content,
+    and aggregating outputs into a comprehensive digest. The digest is designed to be fully ingestible
+    by large language models for further processing.
+
+Exports:
+    - generate_digest(source_dir: Path, options: Optional[Dict[str, Any]] = None) -> str
+      Generates a complete digest document for the given source directory.
+      (Imported from .reader module)
+
+Type Hints:
+    - source_dir: Path — The root directory of the project to ingest.
+    - options: Optional[Dict[str, Any]] — Configuration options (e.g., include/exclude patterns, file size limits).
+    - Return: str — The aggregated digest output.
+"""
+
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from .aggregator import aggregate_digest
+from .reader import convert_notebook, generate_digest, read_full_file
+from .scanner import scan_directory
+
+# Re-export the generate_digest function from reader module
+__all__ = ["generate_digest"]
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/ingest/aggregator.py
+================================================
+from pathlib import Path
+
+import tiktoken
+
+
+def human_readable_size(size: int) -> str:
+    """Convert a file size in bytes to a human-readable string."""
+    if size == 0:
+        return "0 B"
+    units = ["B", "KB", "MB", "GB", "TB"]
+    n = 0
+    size_value = float(size)  # Convert to float for division
+    while size_value >= 1024 and n < len(units) - 1:
+        size_value /= 1024
+        n += 1
+    return f"{size_value:.2f} {units[n]}"
+
+
+def count_tokens(context_string: str) -> int:
+    """
+    Return the number of tokens in a text string as an integer.
+
+    This function uses the `tiktoken` library to encode the text and returns the total
+    number of tokens.
+
+    Parameters
+    ----------
+    context_string : str
+        The text string for which the token count is to be estimated.
+
+    Returns
+    -------
+    int
+        The total number of tokens, or 0 if an error occurs.
+    """
+    try:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        total_tokens = len(encoding.encode(context_string, disallowed_special=()))
+        return total_tokens
+    except Exception as e:
+        print(e)
+        return 0
+
+
+def format_token_count(total_tokens: int) -> str:
+    """
+    Format the token count into a human-readable string.
+
+    For example, 1200 becomes '1.2k' and 1,500,000 becomes '1.5M'.
+    """
+    if total_tokens > 1_000_000:
+        return f"{total_tokens / 1_000_000:.1f}M"
+    elif total_tokens > 1_000:
+        return f"{total_tokens / 1_000:.1f}k"
+    else:
+        return str(total_tokens)
+
+
+def aggregate_digest(file_paths: list[Path], content_map: dict[Path, str]) -> str:
+    """
+    Combines the list of file paths and their corresponding full content into a comprehensive digest string.
+
+    The header includes:
+      - Total Files
+      - Total Tokens (summed over all file contents, formatted)
+      - Total Size (formatted in human-readable units)
+
+    Parameters
+    ----------
+    file_paths : List[Path]
+        A list of file paths identified for ingestion.
+    content_map : Dict[Path, str]
+        A mapping of each file path to its complete text content.
+
+    Returns
+    -------
+    str
+        A formatted digest containing file headers, full content, and summary statistics.
+    """
+    lines = []
+    total_files = len(file_paths)
+    total_size_bytes = sum(fp.stat().st_size for fp in file_paths if fp.exists())
+    total_size_hr = human_readable_size(total_size_bytes)
+
+    # Sum the raw token counts from each file's content.
+    raw_token_count = sum(count_tokens(content) for content in content_map.values())
+    formatted_tokens = format_token_count(raw_token_count)
+
+    lines.append("Project Digest Summary")
+    lines.append(f"Total Files: {total_files}")
+    lines.append(f"Total Tokens: {formatted_tokens}")
+    lines.append(f"Total Size: {total_size_hr}")
+    lines.append("")  # blank line
+
+    for fp in file_paths:
+        try:
+            relative_path = fp.relative_to(fp.parents[1])
+        except Exception:
+            relative_path = fp
+        lines.append(f"--- File: {relative_path} ---")
+        lines.append(content_map.get(fp, ""))
+        lines.append("")  # blank line between files
+
+    return "\n".join(lines)
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/ingest/reader.py
+================================================
+# File: aichemist_codex/ingest/reader.py
+"""
+Module: aichemist_codex/ingest/reader.py
+
+Description:
+    Extends the functionality of the existing file_reader module to provide full-content extraction.
+    This module defines functions for reading complete file content and for converting Jupyter notebooks
+    into a consolidated text format. It supports multiple encodings and can optionally include cell outputs for notebooks.
+
+Functions:
+    - read_full_file(file_path: Path) -> str
+      Reads and returns the entire content of a text file, handling multiple encodings as needed.
+
+    - convert_notebook(notebook_path: Path, include_output: bool = True) -> str
+      Converts a Jupyter notebook (.ipynb) into a continuous text format, with an option to include cell outputs.
+
+Type Hints:
+    - file_path / notebook_path: Path — The file to be processed.
+    - include_output: bool — Flag to include cell outputs when processing notebooks (default True).
+    - Return: str — The full text content of the file or the converted notebook.
+"""
+
+from pathlib import Path
+from typing import Any
+
+from .aggregator import aggregate_digest
+from .scanner import scan_directory
+
+
+def read_full_file(file_path: Path) -> str:
+    """
+    Reads and returns the entire content of a text file, handling multiple encodings as needed.
+
+    Parameters:
+        file_path (Path): The file to be processed.
+
+    Returns:
+        str: The full text content of the file.
+    """
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            return f.read()
+    except UnicodeDecodeError:
+        with open(file_path, encoding="latin-1") as f:
+            return f.read()
+
+
+def convert_notebook(notebook_path: Path, include_output: bool = True) -> str:
+    """
+    Converts a Jupyter notebook (.ipynb) into a continuous text format, with an option to include cell outputs.
+
+    Parameters:
+        notebook_path (Path): The notebook file to be processed.
+        include_output (bool): Flag to include cell outputs (default True).
+
+    Returns:
+        str: The converted text content of the notebook.
+    """
+    import json
+
+    try:
+        with open(notebook_path, encoding="utf-8") as f:
+            nb = json.load(f)
+    except Exception as e:
+        return f"Error reading notebook: {e}"
+
+    text = ""
+    # Process each cell in the notebook.
+    for cell in nb.get("cells", []):
+        cell_type = cell.get("cell_type", "")
+        source = "".join(cell.get("source", []))
+        if cell_type == "code":
+            text += "\n# Code:\n" + source
+            if include_output:
+                outputs = cell.get("outputs", [])
+                if outputs:
+                    text += "\n# Output:\n"
+                    for output in outputs:
+                        if "text" in output:
+                            text += "".join(output["text"]) + "\n"
+        elif cell_type in ["markdown", "raw"]:
+            text += f"\n# {cell_type.capitalize()}:\n" + source + "\n"
+    return text
+
+
+def generate_digest(source_dir: Path, options: dict[str, Any] | None = None) -> str:
+    """
+    Generates a complete digest document for the given source directory by coordinating scanning,
+    file reading, and output aggregation.
+
+    Parameters:
+        source_dir (Path): The root directory of the project to ingest.
+        options (Optional[Dict[str, Any]]): Configuration options such as include/exclude patterns and file size limits.
+
+    Returns:
+        str: The aggregated digest output.
+    """
+    # Get inclusion and exclusion patterns from options if provided.
+    include_patterns = (
+        options.get("include_patterns")
+        if options and "include_patterns" in options
+        else None
+    )
+    ignore_patterns = (
+        options.get("ignore_patterns")
+        if options and "ignore_patterns" in options
+        else None
+    )
+
+    # Use the scanner to get a flat list of file paths.
+    file_paths = scan_directory(source_dir, include_patterns, ignore_patterns)
+
+    # Create a mapping from file paths to their full content.
+    content_map = {}
+    for file_path in file_paths:
+        if file_path.suffix == ".ipynb":
+            # For notebooks, convert the notebook using our dedicated function.
+            include_output = (
+                options.get("include_notebook_output", True) if options else True
+            )
+            content_map[file_path] = convert_notebook(
+                file_path, include_output=include_output
+            )
+        else:
+            # For other file types, read the full file content.
+            content_map[file_path] = read_full_file(file_path)
+
+    # Aggregate the results into a single digest string.
+    digest = aggregate_digest(file_paths, content_map)
+    return digest
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/ingest/scanner.py
+================================================
+# File: aichemist_codex/ingest/scanner.py
+"""
+Module: aichemist_codex/ingest/scanner.py
+
+Description:
+    Provides functionality for recursively scanning a directory to identify files that should be included
+    in the ingestion process. This module applies user-defined inclusion and exclusion patterns, along with
+    configurable limits, to produce a list of file paths.
+
+    It now leverages the default ignore patterns from SafeFileHandler as used in async_io.py.
+
+Functions:
+    - scan_directory(directory: Path,
+                     include_patterns: Optional[Set[str]] = None,
+                     ignore_patterns: Optional[Set[str]] = None) -> List[Path]
+      Recursively scans the specified directory and returns a list of Path objects for files that meet the criteria.
+
+Type Hints:
+    - directory: Path — The directory to scan.
+    - include_patterns: Optional[Set[str]] — Patterns for files to include.
+    - ignore_patterns: Optional[Set[str]] — Patterns for files to exclude.
+    - Return: List[Path] — A list of file paths that qualify for ingestion.
+"""
+
+from pathlib import Path
+
+from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+
+
+def scan_directory(
+    directory: Path,
+    include_patterns: set[str] | None = None,
+    ignore_patterns: set[str] | None = None,
+) -> list[Path]:
+    """
+    Recursively scans the specified directory and returns a list of Path objects for files that meet the criteria.
+
+    Parameters:
+        directory (Path): The directory to scan.
+        include_patterns (Optional[Set[str]]): Patterns for files to include.
+        ignore_patterns (Optional[Set[str]]): Patterns for files to exclude.
+
+    Returns:
+        List[Path]: A list of file paths that qualify for ingestion.
+    """
+    files: list[Path] = []
+    for item in directory.iterdir():
+        # Use the default ignore patterns via SafeFileHandler
+        if SafeFileHandler.should_ignore(item):
+            continue
+
+        if item.is_dir():
+            files.extend(scan_directory(item, include_patterns, ignore_patterns))
+        elif item.is_file():
+            # Additional ignore check using provided patterns
+            if ignore_patterns and any(
+                item.match(pattern) for pattern in ignore_patterns
+            ):
+                continue
+            # Only include file if it matches one of the include patterns, if provided.
+            if include_patterns and not any(
+                item.match(pattern) for pattern in include_patterns
+            ):
+                continue
+            files.append(item)
+    return files
+

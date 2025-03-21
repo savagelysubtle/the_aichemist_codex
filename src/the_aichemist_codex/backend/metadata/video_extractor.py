@@ -16,8 +16,8 @@ from the_aichemist_codex.backend.metadata.extractor import (
     BaseMetadataExtractor,
     MetadataExtractorRegistry,
 )
-from the_aichemist_codex.backend.utils.cache_manager import CacheManager
-from the_aichemist_codex.backend.utils.mime_type_detector import MimeTypeDetector
+from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.io.mime_type_detector import MimeTypeDetector
 
 # Initialize logger with proper name
 logger = logging.getLogger(__name__)

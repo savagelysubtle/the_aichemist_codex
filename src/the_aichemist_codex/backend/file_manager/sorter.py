@@ -9,7 +9,7 @@ import yaml
 
 from the_aichemist_codex.backend.file_manager.directory_manager import DirectoryManager
 from the_aichemist_codex.backend.file_manager.file_mover import FileMover
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 

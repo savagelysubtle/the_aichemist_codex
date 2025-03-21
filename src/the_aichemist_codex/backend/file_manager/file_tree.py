@@ -4,8 +4,8 @@ import logging
 import os
 from pathlib import Path
 
-from the_aichemist_codex.backend.utils.cache_manager import cache_manager
-from the_aichemist_codex.backend.utils.safety import SafeFileHandler
+from the_aichemist_codex.backend.utils.cache.cache_manager import cache_manager
+from the_aichemist_codex.backend.utils.common.safety import SafeFileHandler
 
 logger = logging.getLogger(__name__)
 

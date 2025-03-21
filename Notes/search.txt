@@ -1,3 +1,30 @@
+
+
+================================================
+File: src/the_aichemist_codex/backend/search/__init__.py
+================================================
+"""
+Search Engine Module
+
+This module provides search capabilities for The Aichemist Codex, including:
+- Filename search (exact and partial matching)
+- Full-text search using Whoosh indexing
+- Fuzzy search using RapidFuzz
+- Metadata-based filtering
+
+Imports:
+    - `SearchEngine`: Main search handler for indexing and querying files.
+"""
+
+from .search_engine import SearchEngine
+
+__all__ = ["SearchEngine"]
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/search/search_engine.py
+================================================
 import asyncio
 import logging
 from pathlib import Path
@@ -23,9 +50,9 @@ from the_aichemist_codex.backend.search.providers.similarity_provider import (
     SimilarityProvider,
 )
 from the_aichemist_codex.backend.utils import AsyncFileIO
-from the_aichemist_codex.backend.utils.Concurrency.batch_processor import BatchProcessor
-from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
-from the_aichemist_codex.backend.utils.io.sqlasync_io import AsyncSQL
+from the_aichemist_codex.backend.utils.batch_processor import BatchProcessor
+from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.sqlasync_io import AsyncSQL
 
 # Import FAISS and SentenceTransformer for semantic search.
 try:
@@ -601,3 +628,5 @@ if __name__ == "__main__":
         print("Semantic Search:", semantic_results)
 
     asyncio.run(main())
+
+

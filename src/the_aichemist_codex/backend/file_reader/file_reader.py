@@ -19,8 +19,8 @@ except ImportError:
 
 from the_aichemist_codex.backend.config import settings
 from the_aichemist_codex.backend.metadata.manager import MetadataManager
-from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
-from the_aichemist_codex.backend.utils.cache_manager import CacheManager
+from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.cache.cache_manager import CacheManager
 
 from .file_metadata import FileMetadata
 from .parsers import get_parser_for_mime_type

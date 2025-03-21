@@ -1,0 +1,121 @@
+Directory structure:
+└── savagelysubtle-the_aichemist_codex/
+    └── src/
+        └── the_aichemist_codex/
+            ├── __init__.py
+            ├── __main__.py
+            └── backend/
+                ├── __init__.py
+                ├── cli.py
+                ├── main.py
+                ├── pytest.ini
+                ├── .env.template
+                ├── config/
+                │   ├── __init__.py
+                │   ├── config_loader.py
+                │   ├── logging_config.py
+                │   ├── rules_engine.py
+                │   ├── schemas.py
+                │   ├── secure_config.py
+                │   ├── settings.py
+                │   ├── sorting_rules.yaml
+                │   └── .codexconfig
+                ├── file_manager/
+                │   ├── __init__.py
+                │   ├── batch_file_operations.py
+                │   ├── change_detector.py
+                │   ├── change_history_manager.py
+                │   ├── common.py
+                │   ├── directory_manager.py
+                │   ├── directory_monitor.py
+                │   ├── duplicate_detector.py
+                │   ├── file_mover.py
+                │   ├── file_tree.py
+                │   ├── file_watcher.py
+                │   ├── fix_circular_imports.py
+                │   ├── sorter.py
+                │   └── version_manager.py
+                ├── file_reader/
+                │   ├── __init__.py
+                │   ├── file_metadata.py
+                │   ├── file_reader.py
+                │   ├── ocr_parser.py
+                │   └── parsers.py
+                ├── ingest/
+                │   ├── __init__.py
+                │   ├── aggregator.py
+                │   ├── reader.py
+                │   └── scanner.py
+                ├── metadata/
+                │   ├── __init__.py
+                │   ├── audio_extractor.py
+                │   ├── code_extractor.py
+                │   ├── database_extractor.py
+                │   ├── document_extractor.py
+                │   ├── extractor.py
+                │   ├── image_extractor.py
+                │   ├── manager.py
+                │   ├── pdf_extractor.py
+                │   ├── text_extractor.py
+                │   └── video_extractor.py
+                ├── notification/
+                │   ├── __init__.py
+                │   ├── email_subscriber.py
+                │   ├── notification_manager.py
+                │   ├── rule_engine.py
+                │   └── webhook_subscriber.py
+                ├── output_formatter/
+                │   ├── __init__.py
+                │   ├── csv_writer.py
+                │   ├── html_writer.py
+                │   ├── json_writer.py
+                │   └── markdown_writer.py
+                ├── project_reader/
+                │   ├── __init__.py
+                │   ├── code_summary.py
+                │   ├── notebooks.py
+                │   ├── tags.py
+                │   ├── token_counter.py
+                │   └── version.py
+                ├── relationships/
+                │   ├── __init__.py
+                │   ├── detector.py
+                │   ├── graph.py
+                │   ├── relationship.py
+                │   ├── store.py
+                │   └── detectors/
+                │       ├── __init__.py
+                │       └── directory_structure.py
+                ├── rollback/
+                │   ├── __init__.py
+                │   └── rollback_manager.py
+                ├── search/
+                │   ├── __init__.py
+                │   ├── search_engine.py
+                │   └── providers/
+                │       ├── __init__.py
+                │       ├── regex_provider.py
+                │       └── similarity_provider.py
+                ├── tagging/
+                │   ├── __init__.py
+                │   ├── classifier.py
+                │   ├── hierarchy.py
+                │   ├── manager.py
+                │   ├── schema.py
+                │   └── suggester.py
+                └── utils/
+                    ├── __init__.py
+                    ├── async_io.py
+                    ├── batch_processor.py
+                    ├── cache_manager.py
+                    ├── concurrency.py
+                    ├── environment.py
+                    ├── errors.py
+                    ├── mime_type_detector.py
+                    ├── patterns.py
+                    ├── safety.py
+                    ├── sqlasync_io.py
+                    ├── utils.py
+                    ├── validate_data_dir.py
+                    └── validator.py
+

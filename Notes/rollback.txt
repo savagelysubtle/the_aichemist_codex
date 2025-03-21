@@ -1,3 +1,13 @@
+
+================================================
+File: src/the_aichemist_codex/backend/rollback/__init__.py
+================================================
+
+
+
+================================================
+File: src/the_aichemist_codex/backend/rollback/rollback_manager.py
+================================================
 # backend/src/rollback/rollback_manager.py
 
 """
@@ -30,7 +40,7 @@ from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 
-from the_aichemist_codex.backend.utils.io.async_io import AsyncFileIO
+from the_aichemist_codex.backend.utils.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
@@ -943,3 +953,5 @@ class RollbackManager:
 
 # Create a singleton instance for the entire project.
 rollback_manager = RollbackManager()
+
+
