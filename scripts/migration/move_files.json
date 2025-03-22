@@ -1,0 +1,131 @@
+{
+  "version": "1.0.0",
+  "description": "AIchemist Codex Restructuring Plan - File Migration",
+  "operations": [
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/filesystem"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/parsing"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/extraction"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/utils"
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/file_metadata.py",
+      "destination": "src/the_aichemist_codex/core/filesystem/file_metadata.py",
+      "refactor": [
+        {
+          "pattern": "from the_aichemist_codex.backend",
+          "replacement": "from the_aichemist_codex"
+        }
+      ]
+    },
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/file_reader.py",
+      "destination": "src/the_aichemist_codex/core/filesystem/file_reader.py",
+      "refactor": [
+        {
+          "pattern": "from the_aichemist_codex.backend.config",
+          "replacement": "from the_aichemist_codex.core.config"
+        },
+        {
+          "pattern": "from the_aichemist_codex.backend.metadata.manager",
+          "replacement": "from the_aichemist_codex.core.extraction.manager"
+        },
+        {
+          "pattern": "from the_aichemist_codex.backend.utils",
+          "replacement": "from the_aichemist_codex.core.utils"
+        },
+        {
+          "pattern": "from .file_metadata import FileMetadata",
+          "replacement": "from the_aichemist_codex.core.filesystem.file_metadata import FileMetadata"
+        },
+        {
+          "pattern": "from .parsers import get_parser_for_mime_type",
+          "replacement": "from the_aichemist_codex.core.parsing.parsers import get_parser_for_mime_type"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/filesystem/__init__.py",
+      "content_template": "\"\"\"File system operations for the AIchemist Codex.\"\"\"\n\nfrom .file_metadata import FileMetadata\nfrom .file_reader import FileReader\n\n__all__ = [\n    \"FileMetadata\",\n    \"FileReader\",\n]\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/__init__.py",
+      "content_template": "\"\"\"Core module for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/parsers.py",
+      "destination": "src/the_aichemist_codex/core/parsing/parsers.py",
+      "refactor": [
+        {
+          "pattern": "from the_aichemist_codex.backend",
+          "replacement": "from the_aichemist_codex"
+        },
+        {
+          "pattern": "from .file_metadata import FileMetadata",
+          "replacement": "from the_aichemist_codex.core.filesystem.file_metadata import FileMetadata"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/parsing/__init__.py",
+      "content_template": "\"\"\"Parsing operations for the AIchemist Codex.\"\"\"\n\nfrom .parsers import (\n    ArchiveParser,\n    BaseParser,\n    CodeParser,\n    CsvParser,\n    DocumentParser,\n    JsonParser,\n    SpreadsheetParser,\n    TextParser,\n    VectorParser,\n    XmlParser,\n    YamlParser,\n    get_parser_for_mime_type,\n)\n\n__all__ = [\n    \"ArchiveParser\",\n    \"BaseParser\",\n    \"CodeParser\",\n    \"CsvParser\",\n    \"DocumentParser\",\n    \"JsonParser\",\n    \"SpreadsheetParser\",\n    \"TextParser\",\n    \"VectorParser\",\n    \"XmlParser\",\n    \"YamlParser\",\n    \"get_parser_for_mime_type\",\n]\n"
+    },
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/ocr_parser.py",
+      "destination": "src/the_aichemist_codex/core/parsing/ocr_parser.py",
+      "refactor": [
+        {
+          "pattern": "from the_aichemist_codex.backend",
+          "replacement": "from the_aichemist_codex"
+        },
+        {
+          "pattern": "from .parsers import BaseParser",
+          "replacement": "from the_aichemist_codex.core.parsing.parsers import BaseParser"
+        }
+      ]
+    },
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/metadata/manager.py",
+      "destination": "src/the_aichemist_codex/core/extraction/manager.py",
+      "refactor": [
+        {
+          "pattern": "from the_aichemist_codex.backend",
+          "replacement": "from the_aichemist_codex"
+        },
+        {
+          "pattern": "from the_aichemist_codex.backend.file_reader",
+          "replacement": "from the_aichemist_codex.core.filesystem"
+        }
+      ]
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/extraction/__init__.py",
+      "content_template": "\"\"\"Extraction operations for the AIchemist Codex.\"\"\"\n\nfrom .manager import MetadataManager\n\n__all__ = [\"MetadataManager\"]\n"
+    },
+    {
+      "type": "create_file",
+      "path": "scripts/migration/MIGRATION_README.md",
+      "content_template": "# AIchemist Codex File Migration\n\nThis document describes the file migration process for the AIchemist Codex codebase restructuring.\n\n## Process Overview\n\n1. Execute the `move_files.json` configuration with the `codebase_restructure.py` script to migrate existing files to the new structure.\n2. This approach focuses on preserving existing code by moving files rather than creating duplicates.\n\n## Migration Commands\n\n```bash\n# Run a dry-run to verify the file migrations before applying\npython scripts/migration/codebase_restructure.py --config scripts/migration/move_files.json --dry-run\n\n# Execute the file migrations\npython scripts/migration/codebase_restructure.py --config scripts/migration/move_files.json\n```\n\n## Structure Overview\n\nThe migration process moves files to these logical modules while preserving functionality:\n\n- **Core**: Central domain logic and models\n  - **filesystem**: Contains FileMetadata and FileReader from the original file_reader module\n  - **parsing**: Contains parsers from the original file_reader module\n  - **extraction**: Contains metadata extraction functionality from the original metadata module\n  - **utils**: Utility functions and helpers\n\n## Next Steps\n\n1. Test the codebase after migration to ensure functionality is maintained\n2. Continue migrating additional modules as needed\n3. Update import references in other parts of the codebase\n"
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "version": "1.0.0",
+  "description": "AIchemist Codex Restructuring Plan - Structure Creation Only",
+  "operations": [
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/filesystem"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/parsing"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/extraction"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/versioning"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/analysis"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/relations"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/tagging"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/ingest"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/output"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/utils"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/config"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/__init__.py",
+      "content_template": "\"\"\"Core module for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/filesystem/__init__.py",
+      "content_template": "\"\"\"File system operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/parsing/__init__.py",
+      "content_template": "\"\"\"Parsing operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/extraction/__init__.py",
+      "content_template": "\"\"\"Extraction operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/versioning/__init__.py",
+      "content_template": "\"\"\"Versioning operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/analysis/__init__.py",
+      "content_template": "\"\"\"Analysis operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/relations/__init__.py",
+      "content_template": "\"\"\"Relationship operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/tagging/__init__.py",
+      "content_template": "\"\"\"Tagging operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/ingest/__init__.py",
+      "content_template": "\"\"\"Ingestion operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/output/__init__.py",
+      "content_template": "\"\"\"Output operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/utils/__init__.py",
+      "content_template": "\"\"\"Utility functions for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/config/__init__.py",
+      "content_template": "\"\"\"Configuration operations for the AIchemist Codex.\"\"\"\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/models.py",
+      "content_template": "\"\"\"Core domain models for the AIchemist Codex.\"\"\"\n\nfrom dataclasses import dataclass, field\nfrom datetime import datetime\nfrom enum import Enum\nfrom pathlib import Path\nfrom typing import Dict, List, Optional, Union, Any\n\n# Core models will be moved here\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/interfaces.py",
+      "content_template": "\"\"\"Core interfaces for the AIchemist Codex.\"\"\"\n\nfrom abc import ABC, abstractmethod\nfrom pathlib import Path\nfrom typing import Any, Dict, List, Optional, Union\n\nfrom .models import FileMetadata\n\n# Base interfaces will be defined here\n\nclass Parser(ABC):\n    \"\"\"Base interface for file parsers.\"\"\"\n    \n    @abstractmethod\n    def parse(self, file_path: Path) -> Any:\n        \"\"\"Parse the content of a file.\"\"\"\n        pass\n        \nclass Extractor(ABC):\n    \"\"\"Base interface for metadata extractors.\"\"\"\n    \n    @abstractmethod\n    def extract(self, file_path: Path) -> Dict[str, Any]:\n        \"\"\"Extract metadata from a file.\"\"\"\n        pass\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/exceptions.py",
+      "content_template": "\"\"\"Custom exceptions for the AIchemist Codex.\"\"\"\n\nclass AIchemistError(Exception):\n    \"\"\"Base exception for all AIchemist Codex errors.\"\"\"\n    pass\n\nclass FileReadError(AIchemistError):\n    \"\"\"Raised when a file cannot be read.\"\"\"\n    pass\n\nclass ParsingError(AIchemistError):\n    \"\"\"Raised when a file cannot be parsed.\"\"\"\n    pass\n\nclass ExtractionError(AIchemistError):\n    \"\"\"Raised when metadata cannot be extracted.\"\"\"\n    pass\n\nclass VersionControlError(AIchemistError):\n    \"\"\"Raised when there is an error with version control.\"\"\"\n    pass\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/constants.py",
+      "content_template": "\"\"\"Constants and enums for the AIchemist Codex.\"\"\"\n\nfrom enum import Enum, auto\n\nclass FileType(Enum):\n    \"\"\"Types of files supported by the AIchemist Codex.\"\"\"\n    TEXT = auto()\n    MARKDOWN = auto()\n    JSON = auto()\n    YAML = auto()\n    CODE = auto()\n    BINARY = auto()\n    IMAGE = auto()\n    DOCUMENT = auto()\n    SPREADSHEET = auto()\n    PRESENTATION = auto()\n    AUDIO = auto()\n    VIDEO = auto()\n    OTHER = auto()\n\nclass CodeLanguage(Enum):\n    \"\"\"Programming languages supported by the AIchemist Codex.\"\"\"\n    PYTHON = auto()\n    JAVASCRIPT = auto()\n    TYPESCRIPT = auto()\n    JAVA = auto()\n    CSHARP = auto()\n    CPP = auto()\n    C = auto()\n    GO = auto()\n    RUST = auto()\n    RUBY = auto()\n    PHP = auto()\n    SWIFT = auto()\n    KOTLIN = auto()\n    SCALA = auto()\n    OTHER = auto()\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "scripts/migration/STRUCTURE_README.md",
+      "content_template": "# AIchemist Codex Structure Creation\n\nThis document describes the initial structure creation for the AIchemist Codex codebase restructuring.\n\n## Process Overview\n\n1. Execute the `create_structure.json` configuration with the `codebase_restructure.py` script to create the new directory structure and base files.\n2. After the structure is in place, file migration can be performed using the full `restructure_config.json` configuration.\n\n## Structure Creation Commands\n\n```bash\n# Run a dry-run to verify the structure creation before applying\npython scripts/migration/codebase_restructure.py --config scripts/migration/create_structure.json --dry-run\n\n# Create the new directory structure and initial files\npython scripts/migration/codebase_restructure.py --config scripts/migration/create_structure.json\n```\n\n## New Structure Overview\n\nThe new codebase structure organizes functionality into logical modules:\n\n- **Core**: Central domain logic and models\n  - **filesystem**: File handling operations\n  - **parsing**: Content parsing (markdown, JSON, YAML)\n  - **extraction**: Data extraction from codefiles\n  - **versioning**: Git operations and version tracking\n  - **analysis**: Code analysis functions\n  - **relations**: Module relationship handling\n  - **tagging**: Code tagging capabilities\n  - **ingest**: Project ingestion functionality \n  - **output**: Knowledge graph and documentation generation\n  - **utils**: Utility functions and helpers\n  - **config**: Configuration management\n\n## Next Steps\n\n1. After the structure is created, begin migrating files using the separate migration configuration\n2. Update import statements as needed for the new structure\n3. Test the codebase after migration to ensure functionality is maintained\n"
+    }
+  ]
+}
