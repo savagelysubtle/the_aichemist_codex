@@ -1,7 +1,7 @@
 File Reader Module
 ==================
 
-The File Reader Module module provides functionality for 
+The File Reader Module module provides functionality for
 reading and processing different file types.
 
 

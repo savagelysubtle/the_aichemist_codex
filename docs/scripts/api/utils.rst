@@ -1,7 +1,7 @@
 Utils Module
 ============
 
-The Utils Module module provides functionality for 
+The Utils Module module provides functionality for
 providing utility functions.
 
 

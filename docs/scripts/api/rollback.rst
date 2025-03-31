@@ -1,7 +1,7 @@
 Rollback Module
 ===============
 
-The Rollback Module module provides functionality for 
+The Rollback Module module provides functionality for
 providing transaction-based undo capabilities.
 
 

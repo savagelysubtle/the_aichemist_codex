@@ -1,7 +1,7 @@
 Metadata Module
 ===============
 
-The Metadata Module module provides functionality for 
+The Metadata Module module provides functionality for
 extracting and analyzing file metadata.
 
 
