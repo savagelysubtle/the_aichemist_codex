@@ -1,0 +1,467 @@
+{
+  "version": "1.0.0",
+  "description": "AIchemist Codex Restructuring Plan",
+  "operations": [
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/filesystem"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/parsing"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/extraction"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/versioning"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/analysis"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/relations"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/core/tagging"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/ingest"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/output"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/utils"
+    },
+    {
+      "type": "create_directory",
+      "path": "src/the_aichemist_codex/config"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/__init__.py",
+      "content_template": "\"\"\"Core module for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/filesystem/__init__.py",
+      "content_template": "\"\"\"File system operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/parsing/__init__.py",
+      "content_template": "\"\"\"Parsing operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/extraction/__init__.py",
+      "content_template": "\"\"\"Extraction operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/versioning/__init__.py",
+      "content_template": "\"\"\"Versioning operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/analysis/__init__.py",
+      "content_template": "\"\"\"Analysis operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/relations/__init__.py",
+      "content_template": "\"\"\"Relationship operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/tagging/__init__.py",
+      "content_template": "\"\"\"Tagging operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/ingest/__init__.py",
+      "content_template": "\"\"\"Ingestion operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/output/__init__.py",
+      "content_template": "\"\"\"Output operations for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/utils/__init__.py",
+      "content_template": "\"\"\"Utility functions for the AIchemist Codex.\"\"\"\n"
+    },
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/config/__init__.py",
+      "content_template": "\"\"\"Configuration operations for the AIchemist Codex.\"\"\"\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/core/models.py",
+      "content_template": "\"\"\"Core domain models for the AIchemist Codex.\"\"\"\n\nfrom dataclasses import dataclass, field\nfrom datetime import datetime\nfrom enum import Enum\nfrom pathlib import Path\nfrom typing import Dict, List, Optional, Union, Any\n\n# Core models will be moved here\n"
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/file_metadata.py",
+      "destination": "src/the_aichemist_codex/core/filesystem/file_metadata.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/filesystem/file_metadata.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .. import",
+          "new": "from the_aichemist_codex.core import"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/file_reader.py",
+      "destination": "src/the_aichemist_codex/core/filesystem/file_reader.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/filesystem/file_reader.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .file_metadata",
+          "new": "from the_aichemist_codex.core.filesystem.file_metadata"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/markdown_parser.py",
+      "destination": "src/the_aichemist_codex/core/parsing/markdown_parser.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/parsing/markdown_parser.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .file_metadata",
+          "new": "from the_aichemist_codex.core.filesystem.file_metadata"
+        },
+        {
+          "type": "replace_import",
+          "old": "from .file_reader",
+          "new": "from the_aichemist_codex.core.filesystem.file_reader"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/json_parser.py",
+      "destination": "src/the_aichemist_codex/core/parsing/json_parser.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/parsing/json_parser.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .file_metadata",
+          "new": "from the_aichemist_codex.core.filesystem.file_metadata"
+        },
+        {
+          "type": "replace_import",
+          "old": "from .file_reader",
+          "new": "from the_aichemist_codex.core.filesystem.file_reader"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/file_reader/yaml_parser.py",
+      "destination": "src/the_aichemist_codex/core/parsing/yaml_parser.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/parsing/yaml_parser.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .file_metadata",
+          "new": "from the_aichemist_codex.core.filesystem.file_metadata"
+        },
+        {
+          "type": "replace_import",
+          "old": "from .file_reader",
+          "new": "from the_aichemist_codex.core.filesystem.file_reader"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/extractors/code_extractor.py",
+      "destination": "src/the_aichemist_codex/core/extraction/code_extractor.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/extraction/code_extractor.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..file_reader",
+          "new": "from the_aichemist_codex.core.filesystem"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/extractors/metadata_extractor.py",
+      "destination": "src/the_aichemist_codex/core/extraction/metadata_extractor.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/extraction/metadata_extractor.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..file_reader",
+          "new": "from the_aichemist_codex.core.filesystem"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/versioning/git_handler.py",
+      "destination": "src/the_aichemist_codex/core/versioning/git_handler.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/versioning/git_handler.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..file_reader",
+          "new": "from the_aichemist_codex.core.filesystem"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/versioning/commit_analyzer.py",
+      "destination": "src/the_aichemist_codex/core/versioning/commit_analyzer.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/versioning/commit_analyzer.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from .git_handler",
+          "new": "from the_aichemist_codex.core.versioning.git_handler"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/analyzer/code_analyzer.py",
+      "destination": "src/the_aichemist_codex/core/analysis/code_analyzer.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/analysis/code_analyzer.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..extractors",
+          "new": "from the_aichemist_codex.core.extraction"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/analyzer/dependency_analyzer.py",
+      "destination": "src/the_aichemist_codex/core/analysis/dependency_analyzer.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/analysis/dependency_analyzer.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..extractors",
+          "new": "from the_aichemist_codex.core.extraction"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/relationships/module_relationship.py",
+      "destination": "src/the_aichemist_codex/core/relations/module_relationship.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/relations/module_relationship.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..analyzer",
+          "new": "from the_aichemist_codex.core.analysis"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/core/tagger/code_tagger.py",
+      "destination": "src/the_aichemist_codex/core/tagging/code_tagger.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/core/tagging/code_tagger.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..analyzer",
+          "new": "from the_aichemist_codex.core.analysis"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/ingest/project_ingestor.py",
+      "destination": "src/the_aichemist_codex/ingest/project_ingestor.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/ingest/project_ingestor.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..core.file_reader",
+          "new": "from the_aichemist_codex.core.filesystem"
+        },
+        {
+          "type": "replace_import",
+          "old": "from ..core.extractors",
+          "new": "from the_aichemist_codex.core.extraction"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/output/knowledge_graph.py",
+      "destination": "src/the_aichemist_codex/output/knowledge_graph.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/output/knowledge_graph.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..core.relationships",
+          "new": "from the_aichemist_codex.core.relations"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/output/documentation_generator.py",
+      "destination": "src/the_aichemist_codex/output/documentation_generator.py",
+      "merge": false
+    },
+    {
+      "type": "refactor",
+      "path": "src/the_aichemist_codex/output/documentation_generator.py",
+      "operations": [
+        {
+          "type": "replace_import",
+          "old": "from ..core.analyzer",
+          "new": "from the_aichemist_codex.core.analysis"
+        },
+        {
+          "type": "replace_import",
+          "old": "from ..core.tagger",
+          "new": "from the_aichemist_codex.core.tagging"
+        }
+      ]
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/utils/logger.py",
+      "destination": "src/the_aichemist_codex/utils/logger.py",
+      "merge": false
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/utils/performance.py",
+      "destination": "src/the_aichemist_codex/utils/performance.py",
+      "merge": false
+    },
+
+    {
+      "type": "move",
+      "source": "src/the_aichemist_codex/backend/config/app_config.py",
+      "destination": "src/the_aichemist_codex/config/app_config.py",
+      "merge": false
+    },
+
+    {
+      "type": "create_file",
+      "path": "src/the_aichemist_codex/main.py",
+      "content_template": "\"\"\"Main entry point for the AIchemist Codex.\"\"\"\n\nfrom the_aichemist_codex.ingest import project_ingestor\nfrom the_aichemist_codex.output import knowledge_graph, documentation_generator\nfrom the_aichemist_codex.config import app_config\n\n\ndef main():\n    \"\"\"Run the AIchemist Codex.\"\"\"\n    config = app_config.load_config()\n    \n    # Initialize components\n    ingestor = project_ingestor.ProjectIngestor(config)\n    graph_builder = knowledge_graph.KnowledgeGraph(config)\n    doc_generator = documentation_generator.DocumentationGenerator(config)\n    \n    # Run pipeline\n    project_data = ingestor.ingest_project(config['project_path'])\n    graph = graph_builder.build_graph(project_data)\n    doc_generator.generate_documentation(graph, project_data)\n    \n    print(\"AIchemist Codex processing complete.\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+    },
+
+    {
+      "type": "create_file",
+      "path": "scripts/migration/MIGRATION_README.md",
+      "content_template": "# AIchemist Codex Migration Guide\n\nThis document describes the codebase restructuring process that was implemented to improve the organization and maintainability of the AIchemist Codex project.\n\n## Migration Process\n\n1. The codebase restructuring was performed using the `codebase_restructure.py` script\n2. Configuration for the migration is defined in `restructure_config.json`\n3. The migration involved moving files from their original locations to a new organized structure\n\n## Migration Commands\n\n```bash\n# Run a dry-run to verify changes before applying them\npython scripts/migration/codebase_restructure.py --config scripts/migration/restructure_config.json --dry-run\n\n# Apply the changes\npython scripts/migration/codebase_restructure.py --config scripts/migration/restructure_config.json\n```\n\n## New Structure Overview\n\nThe new codebase structure organizes functionality into logical modules:\n\n- **Core**: Central domain logic and models\n  - **filesystem**: File handling operations\n  - **parsing**: Content parsing (markdown, JSON, YAML)\n  - **extraction**: Data extraction from codefiles\n  - **versioning**: Git operations and version tracking\n  - **analysis**: Code analysis functions\n  - **relations**: Module relationship handling\n  - **tagging**: Code tagging capabilities\n- **Ingest**: Project ingestion functionality \n- **Output**: Knowledge graph and documentation generation\n- **Utils**: Utility functions and helpers\n- **Config**: Configuration management\n\n## Post-Migration Tasks\n\n1. Update import statements in any files not covered by the migration script\n2. Run tests to ensure functionality is maintained\n3. Update documentation to reflect the new structure\n\n## Rollback Procedure\n\nIf needed, the migration can be rolled back by:\n\n1. Using git to revert to a pre-migration state\n2. Using the backup files created in the `.restructure_backup` directory\n\n## Questions and Support\n\nIf you encounter issues with the restructured codebase, please refer to the updated documentation or contact the development team.\n"
+    }
+  ]
+}

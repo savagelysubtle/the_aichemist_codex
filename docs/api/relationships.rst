@@ -1,7 +1,7 @@
 Relationships Module
 ====================
 
-The Relationships Module module provides functionality for 
+The Relationships Module module provides functionality for
 mapping relationships between files.
 
 

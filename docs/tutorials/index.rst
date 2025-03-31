@@ -6,6 +6,11 @@ Welcome to The Aichemist Codex tutorials! These step-by-step guides will help yo
 .. toctree::
    :maxdepth: 2
    :caption: Available Tutorials:
+   file_organization
+   getting_started
+   quick_start
+   search_techniques
+   semantic_search
 
    quick_start
    tagging_workflow

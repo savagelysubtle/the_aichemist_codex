@@ -42,6 +42,8 @@ Contents
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
+   changelog
+   README
 
    getting_started
    installation
@@ -88,6 +90,7 @@ Contents
    code_review
    implementation_plan
    development_guide
+   guides/configuration_migration
    roadmap
    changelog
    project_summary

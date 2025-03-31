@@ -22,8 +22,10 @@ venv/
 .pre-commit/
 .pre-commit-hooks.yaml
 .pre-commit-hooks/
-.cursorrules
+.cursor/rules/**/*
+.cursor/**
 .cursorignore
+.cursor
 .github
 
 
@@ -97,7 +99,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/build/
+docs/_build/
 
 # PyBuilder
 target/
@@ -304,3 +306,6 @@ checkpoint
 **/backups/
 _*/
 _bak/
+
+# Local environment variable overrides
+.env.local

@@ -1,7 +1,7 @@
 Search Module
 =============
 
-The Search Module module provides functionality for 
+The Search Module module provides functionality for
 searching for files and content.
 
 

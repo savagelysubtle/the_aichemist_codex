@@ -1,3 +1,7 @@
+# Pre-commit configuration
+# Note: The default_language_version has been migrated to pyproject.toml
+# but hook configurations remain here for compatibility with pre-commit tools
+
 default_language_version:
   python: python3
 repos:

@@ -1,7 +1,7 @@
 Integration Module
 ==================
 
-The Integration Module module provides functionality for 
+The Integration Module module provides functionality for
 integrating with external systems.
 
 

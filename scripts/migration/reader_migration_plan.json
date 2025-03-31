@@ -1,0 +1,11 @@
+[
+  {
+    "source": "src\\the_aichemist_codex\\backend\\core\\file_reader\\__init__.py",
+    "destination": "src\\the_aichemist_codex\\core\\filesystem\\__init__.py",
+    "imports_to_update": {
+      "from .. import": "from the_aichemist_codex.core import",
+      "from ..": "from the_aichemist_codex.core.",
+      "from .": "from the_aichemist_codex.core.filesystem."
+    }
+  }
+]

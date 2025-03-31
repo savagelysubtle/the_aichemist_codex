@@ -1,7 +1,7 @@
 Ui Module
 =========
 
-The Ui Module module provides functionality for 
+The Ui Module module provides functionality for
 providing user interface components.
 
 

@@ -1,0 +1,217 @@
+{
+  "directories": {
+    "src": {
+      "directories": {
+        "the_aichemist_codex": {
+          "directories": {
+            "domain": {
+              "directories": {
+                "models": {},
+                "entities": {},
+                "value_objects": {},
+                "exceptions": {},
+                "events": {},
+                "repositories": {
+                  "directories": {
+                    "interfaces": {}
+                  }
+                },
+                "services": {
+                  "directories": {
+                    "interfaces": {}
+                  }
+                }
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "application": {
+              "directories": {
+                "use_cases": {},
+                "commands": {},
+                "queries": {},
+                "services": {},
+                "handlers": {
+                  "directories": {
+                    "command_handlers": {},
+                    "event_handlers": {},
+                    "query_handlers": {}
+                  }
+                },
+                "dto": {},
+                "exceptions": {},
+                "mappers": {},
+                "validators": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "infrastructure": {
+              "directories": {
+                "persistence": {
+                  "directories": {
+                    "repositories": {},
+                    "migrations": {}
+                  }
+                },
+                "messaging": {
+                  "directories": {
+                    "publishers": {},
+                    "consumers": {}
+                  }
+                },
+                "storage": {},
+                "search": {},
+                "authentication": {},
+                "logging": {},
+                "cache": {},
+                "config": {},
+                "telemetry": {},
+                "utils": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "interfaces": {
+              "directories": {
+                "api": {
+                  "directories": {
+                    "rest": {},
+                    "graphql": {}
+                  }
+                },
+                "cli": {},
+                "events": {},
+                "stream": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "plugins": {
+              "directories": {
+                "core": {},
+                "extensions": {}
+              },
+              "files": {
+                "__init__.py": "",
+                "plugin_manager.py": ""
+              }
+            },
+            "cross_cutting": {
+              "directories": {
+                "error_handling": {},
+                "security": {},
+                "validation": {},
+                "telemetry": {
+                  "directories": {
+                    "logging": {},
+                    "metrics": {},
+                    "tracing": {}
+                  }
+                },
+                "caching": {},
+                "workflows": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "utils": {
+              "directories": {
+                "helpers": {},
+                "decorators": {},
+                "constants": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            },
+            "ai": {
+              "directories": {
+                "models": {},
+                "transformers": {},
+                "embeddings": {},
+                "classifiers": {}
+              },
+              "files": {
+                "__init__.py": ""
+              }
+            }
+          },
+          "files": {
+            "__init__.py": "",
+            "main.py": "# Main entry point for The Aichemist Codex\n"
+          }
+        }
+      }
+    },
+    "tests": {
+      "directories": {
+        "unit": {
+          "directories": {
+            "domain": {},
+            "application": {},
+            "infrastructure": {},
+            "interfaces": {}
+          }
+        },
+        "integration": {
+          "directories": {
+            "repositories": {},
+            "api": {},
+            "services": {}
+          }
+        },
+        "e2e": {},
+        "performance": {},
+        "fixtures": {}
+      },
+      "files": {
+        "conftest.py": "",
+        "__init__.py": ""
+      }
+    },
+    "docs": {
+      "directories": {
+        "architecture": {},
+        "api": {},
+        "guides": {},
+        "diagrams": {}
+      },
+      "files": {
+        "README.md": "# The Aichemist Codex Documentation"
+      }
+    },
+    "scripts": {
+      "directories": {
+        "deployment": {},
+        "migration": {},
+        "analysis": {}
+      }
+    },
+    "config": {
+      "files": {
+        "settings.yaml": "",
+        "logging.yaml": ""
+      }
+    },
+    "deployment": {
+      "directories": {
+        "docker": {},
+        "kubernetes": {},
+        "terraform": {}
+      }
+    }
+  },
+  "files": {
+    "README.md": "# The Aichemist Codex\n\nAdvanced content management and organization system with AI capabilities.\n",
+    "pyproject.toml": "[build-system]\nrequires = [\"setuptools>=45\", \"wheel\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"the_aichemist_codex\"\nversion = \"0.1.0\"\ndescription = \"Advanced content management system with AI capabilities\"\n",
+    ".gitignore": "__pycache__/\n*.py[cod]\n*$py.class\n*.so\n.Python\nbuild/\ndevelop-eggs/\ndist/\ndownloads/\neggs/\n.eggs/\nlib/\nlib64/\nparts/\nsdist/\nvar/\nwheels/\n*.egg-info/\n.installed.cfg\n*.egg\n.env\n.venv\nenv/\nvenv/\nENV/\nenv.bak/\nvenv.bak/\n",
+    "CHANGELOG.md": "# Changelog\n\n## [0.1.0] - 2023-06-30\n\n### Added\n- Initial project structure\n",
+    "CONTRIBUTING.md": "# Contributing to The Aichemist Codex\n"
+  }
+}

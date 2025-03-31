@@ -1,7 +1,7 @@
 Security Module
 ===============
 
-The Security Module module provides functionality for 
+The Security Module module provides functionality for
 ensuring secure file operations.
 
 
