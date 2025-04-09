@@ -37,7 +37,7 @@ class FileOperation:
         affected_path: Path,
         original_state: Any = None,
         additional_info: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new file operation.
 
@@ -75,12 +75,12 @@ class RollbackManager:
     _instance = None
     _initialized = False
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: object, **kwargs: object) -> "RollbackManager":
         if cls._instance is None:
-            cls._instance = super(RollbackManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, backup_dir: Path | None = None):
+    def __init__(self, backup_dir: Path | None = None) -> None:
         """
         Initialize the rollback manager.
 
@@ -164,7 +164,7 @@ class RollbackManager:
             return None
 
     def record_operation(
-        self, operation_type: OperationType, affected_path: Path, **kwargs
+        self, operation_type: OperationType, affected_path: Path, **kwargs: object
     ) -> FileOperation | None:
         """
         Record a file operation for potential rollback.
@@ -283,7 +283,8 @@ class RollbackManager:
 
             else:
                 logger.warning(
-                    f"Unsupported operation type for rollback: {operation.operation_type}"
+                    f"Unsupported operation type for rollback: "
+                    f"{operation.operation_type}"
                 )
                 return False
 
@@ -321,7 +322,8 @@ class RollbackManager:
             if not op_success:
                 success = False
                 logger.error(
-                    f"Failed to roll back operation in transaction {transaction_id}: {operation}"
+                    f"Failed to roll back operation in transaction {transaction_id}: "
+                    f"{operation}"
                 )
 
         return success
@@ -344,7 +346,8 @@ class RollbackManager:
         to_rollback = self.operations[-count:]
         if len(to_rollback) < count:
             logger.warning(
-                f"Requested to roll back {count} operations, but only {len(to_rollback)} available"
+                f"Requested to roll back {count} operations, but only "
+                f"{len(to_rollback)} available"
             )
 
         # Roll back in reverse order

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class AsyncSQL:
     """Provides asynchronous SQL operations."""
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path) -> None:
         """Initialize with database path."""
         self.db_path = db_path
 
@@ -67,5 +67,6 @@ class AsyncSQL:
                 await db.commit()
         except Exception as e:
             logger.error(
-                f"Error executing many for query: {query} with params {params_list}: {e}"
+                f"Error executing many for query: {query} with params "
+                f"{params_list}: {e}"
             )

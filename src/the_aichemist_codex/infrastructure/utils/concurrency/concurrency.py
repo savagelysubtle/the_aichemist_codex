@@ -23,7 +23,7 @@ class TaskPriority(Enum):
 class AsyncThreadPoolExecutor:
     """Thread pool executor with async interface and priority scheduling."""
 
-    def __init__(self, max_workers: int | None = None):
+    def __init__(self, max_workers: int | None = None) -> None:
         """Initialize the executor with a maximum number of workers.
 
         Args:
@@ -38,9 +38,9 @@ class AsyncThreadPoolExecutor:
     async def submit(
         self,
         func: Callable[..., T],
-        *args: Any,
+        *args: object,
         priority: TaskPriority = TaskPriority.MEDIUM,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> T:
         """
         Submit a function for execution with priority scheduling.
@@ -98,7 +98,7 @@ class AsyncThreadPoolExecutor:
             else self.semaphore
         )
 
-        async def process_item(item):
+        async def process_item(item: object) -> T:
             async with semaphore:
                 return await self.submit(func, item, priority=priority)
 
@@ -108,7 +108,7 @@ class AsyncThreadPoolExecutor:
         # Filter out exceptions and return only successful results
         return [r for r in results if not isinstance(r, BaseException)]
 
-    def shutdown(self, wait: bool = True):
+    def shutdown(self, wait: bool = True) -> None:
         """
         Shutdown the executor.
 
@@ -121,7 +121,7 @@ class AsyncThreadPoolExecutor:
 class RateLimiter:
     """Rate limiter for controlling operation frequency."""
 
-    def __init__(self, max_rate: float, time_period: float = 1.0):
+    def __init__(self, max_rate: float, time_period: float = 1.0) -> None:
         """
         Initialize rate limiter.
 
@@ -135,7 +135,7 @@ class RateLimiter:
         self.last_update = asyncio.get_event_loop().time()
         self.lock = asyncio.Lock()
 
-    async def acquire(self):
+    async def acquire(self) -> None:
         """Acquire a token, waiting if necessary."""
         async with self.lock:
             while self.tokens <= 0:
@@ -159,7 +159,7 @@ class TaskQueue:
         max_concurrent: int = 10,
         max_rate: float | None = None,
         time_period: float = 1.0,
-    ):
+    ) -> None:
         """
         Initialize task queue.
 
@@ -179,9 +179,9 @@ class TaskQueue:
     async def add_task(
         self,
         coro: Callable[..., T],
-        *args: Any,
+        *args: object,
         priority: TaskPriority = TaskPriority.MEDIUM,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> T:
         """
         Add a task to the queue.
@@ -212,10 +212,10 @@ class TaskQueue:
 
     async def add_batch(
         self,
-        coro: Callable[[Any], T],
-        items: list[Any],
+        coro: Callable[[object], T],
+        items: list[object],
         priority: TaskPriority = TaskPriority.MEDIUM,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> list[T | BaseException]:
         """
         Add a batch of items for processing.

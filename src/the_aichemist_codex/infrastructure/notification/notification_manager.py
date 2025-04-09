@@ -2,8 +2,9 @@
 Notification system for managing and delivering notifications.
 
 This module provides a comprehensive notification system with a publisher-subscriber
-pattern. It handles creation, storage, and delivery of notifications across the application.
-Notifications are categorized by levels (info, warning, error) and types (system, file, task).
+pattern. It handles creation, storage, and delivery of notifications
+across the application. Notifications are categorized by levels (info, warning, error)
+and types (system, file, task).
 
 The module uses a centralized data directory to store notifications in JSON format.
 

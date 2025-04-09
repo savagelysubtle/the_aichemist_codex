@@ -184,8 +184,8 @@ async def strengthen_associations_on_recall(
                     await repository.save_association(assoc)
 
                     logger.debug(
-                        f"Strengthened association between {memory1.id} and {memory2.id} "
-                        f"to {assoc.strength:.2f}"
+                        f"Strengthened association between {memory1.id} and "
+                        f"{memory2.id} to {assoc.strength:.2f}"
                     )
 
 
@@ -258,7 +258,8 @@ async def find_knowledge_gap_recommendations(
                 {
                     "tag": tag,
                     "frequency": count,
-                    "suggestion": f"Consider connecting with memory about '{unconnected_memories[0].content[:50]}...'",
+                    "suggestion": f"Consider connecting with memory about "
+                    f"'{unconnected_memories[0].content[:50]}...'",
                     "memory_id": str(unconnected_memories[0].id),
                     "confidence": count / len(connected_memories),
                 }

@@ -49,7 +49,7 @@ class FileMetadata:
     extraction_confidence: float = 0.0
     extraction_time: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Ensure extension starts with a dot and is lowercase."""
         if self.extension and not self.extension.startswith("."):
             self.extension = f".{self.extension}"

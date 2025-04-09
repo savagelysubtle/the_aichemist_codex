@@ -9,10 +9,10 @@ from the_aichemist_codex.infrastructure.config.loader.config_loader import confi
 class PatternMatcher:
     """Checks if files should be ignored based on configured patterns."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ignore_patterns = set(config.get("ignore_patterns"))
 
-    def add_patterns(self, patterns: set):
+    def add_patterns(self, patterns: set) -> None:
         """Allows dynamically adding more ignore patterns."""
         self.ignore_patterns.update(patterns)
 

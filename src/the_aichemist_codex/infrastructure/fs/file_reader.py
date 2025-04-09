@@ -9,7 +9,6 @@ import logging
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
 
 # Import python-magic safely
 try:
@@ -31,7 +30,7 @@ class FileReader:
         self,
         max_workers: int = 2,
         preview_length: int = 100,
-        cache_manager: Any | None = None,
+        cache_manager: object | None = None,
     ) -> None:
         """Initialize FileReader.
 
@@ -76,7 +75,8 @@ class FileReader:
         # Simple approach to handle the different implementations
         try:
             # Try direct function call (common in python-magic-bin)
-            # Suppress errors from linter about from_file - we're handling this at runtime
+            # Suppress errors from linter about from_file -
+            #  we're handling this at runtime
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 from_file_attr = getattr(magic, "from_file", None)
@@ -118,9 +118,17 @@ class FileReader:
             ".mp3": "audio/mpeg",
             ".mp4": "video/mp4",
             ".zip": "application/zip",
-            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".docx": (
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document"
+            ),
+            ".xlsx": (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+            ".pptx": (
+                "application/vnd.openxmlformats-officedocument"
+                ".presentationml.presentation"
+            ),
         }
         return mime_map.get(extension, "application/octet-stream")
 

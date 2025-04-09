@@ -15,12 +15,12 @@ import csv
 import json
 import logging
 import tarfile
-import xml.etree.ElementTree as ET
 import zipfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+import defusedxml.ElementTree as ET_defused
 import pandas as pd
 import py7zr
 import rarfile  # RAR support
@@ -192,7 +192,7 @@ class XmlParser(BaseParser):
                 "metadata": {},
                 "preview": "",
             }
-        root = ET.fromstring(content)
+        root = ET_defused.fromstring(content)
         return {
             "content": content,
             "preview": content[:1000] if len(content) > 1000 else content,
@@ -230,7 +230,7 @@ class DocumentParser(BaseParser):
     async def _parse_pdf(self, file_path: Path) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
 
-        def parse_pdf_sync(p):
+        def parse_pdf_sync(p: Path) -> dict[str, Any]:
             reader = PdfReader(str(p))
             text_content = []
             for page in reader.pages:
@@ -246,7 +246,7 @@ class DocumentParser(BaseParser):
     async def _parse_docx(self, file_path: Path) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
 
-        def parse_docx_sync(p):
+        def parse_docx_sync(p: Path) -> dict[str, Any]:
             doc = Document(str(p))
             content = "\n".join(para.text for para in doc.paragraphs)
             return {
@@ -285,7 +285,7 @@ class SpreadsheetParser(BaseParser):
     async def _parse_csv(self, file_path: Path) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
 
-        def parse_csv_sync(p):
+        def parse_csv_sync(p: Path) -> dict[str, Any]:
             df = pd.read_csv(p)
             preview = df.head().to_string()
             return {
@@ -303,7 +303,7 @@ class SpreadsheetParser(BaseParser):
     async def _parse_xlsx(self, file_path: Path) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
 
-        def parse_xlsx_sync(p):
+        def parse_xlsx_sync(p: Path) -> dict[str, Any]:
             df = pd.read_excel(p)
             preview = df.head().to_string()
             return {
@@ -322,7 +322,7 @@ class SpreadsheetParser(BaseParser):
     async def _parse_ods(self, file_path: Path) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
 
-        def parse_ods_sync(p):
+        def parse_ods_sync(p: Path) -> dict[str, Any]:
             df = pd.read_excel(p, engine="odf")
             preview = df.head().to_string()
             return {
@@ -443,7 +443,7 @@ class CodeParser(BaseParser):
 
     async def _parse_xml(self, file_path: Path) -> dict[str, Any]:
         content = await AsyncFileIO.read_text(file_path)
-        root = ET.fromstring(content)
+        root = ET_defused.fromstring(content)
         return {
             "content": content,
             "preview": content[:1000] if len(content) > 1000 else content,
@@ -516,7 +516,10 @@ class VectorParser(BaseParser):
             }
             return {
                 "content": str(doc.entitydb),
-                "preview": f"CAD drawing with {sum(entities.values())} entities across {len(layers)} layers",
+                "preview": (
+                    f"CAD drawing with {sum(entities.values())} entities across "
+                    f"{len(layers)} layers"
+                ),
                 "metadata": metadata,
             }
         except Exception as e:
@@ -525,7 +528,7 @@ class VectorParser(BaseParser):
 
     async def _parse_svg(self, file_path: Path) -> dict[str, Any]:
         try:
-            tree = ET.parse(file_path)
+            tree = ET_defused.parse(file_path)
             root = tree.getroot()
             width = root.get("width", "unknown")
             height = root.get("height", "unknown")
@@ -542,7 +545,10 @@ class VectorParser(BaseParser):
                 return {"error": content, "preview": content, "metadata": {}}
             return {
                 "content": content,
-                "preview": f"SVG image ({width}x{height}) with {sum(elements.values())} elements",
+                "preview": (
+                    f"SVG image ({width}x{height}) with {sum(elements.values())} "
+                    f"elements"
+                ),
                 "metadata": {
                     "dimensions": {
                         "width": width,
@@ -618,7 +624,9 @@ def get_parser_for_mime_type(mime_type: str) -> BaseParser | None:
         "text/xml": XmlParser(),
         "application/pdf": DocumentParser(),
         # Office document formats
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": DocumentParser(),
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+            DocumentParser()
+        ),
         "application/vnd.oasis.opendocument.text": DocumentParser(),
         "application/epub+zip": DocumentParser(),
         "application/zip": ArchiveParser(),

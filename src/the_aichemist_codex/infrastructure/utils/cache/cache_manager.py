@@ -40,12 +40,12 @@ def get_cache_dir() -> Path:
 class LRUCache:
     """Limited size in-memory LRU cache implementation."""
 
-    def __init__(self, max_size: int = 1000):
+    def __init__(self, max_size: int = 1000) -> None:
         """Initialize LRU cache with maximum size."""
         self.cache: OrderedDict[str, Any] = OrderedDict()
         self.max_size = max_size
 
-    def get(self, key: str) -> Any | None:
+    def get(self, key: str) -> object | None:
         """Get value from cache, moving item to end (most recently used)."""
         if key not in self.cache:
             return None
@@ -54,7 +54,7 @@ class LRUCache:
         self.cache.move_to_end(key)
         return self.cache[key]
 
-    def put(self, key: str, value: Any) -> None:
+    def put(self, key: str, value: object) -> None:
         """Add or update value in cache, evicting oldest item if full."""
         # If already exists, update and move to end
         if key in self.cache:
@@ -78,7 +78,7 @@ class CacheManager:
         cache_dir: Path | None = None,
         memory_cache_size: int = 1000,
         disk_cache_ttl: int = 3600,
-    ):  # 1 hour TTL by default
+    ) -> None:  # 1 hour TTL by default
         """Initialize the cache manager with both memory and disk caches."""
         # Use the provided cache_dir or get it dynamically
         self.cache_dir = cache_dir if cache_dir is not None else get_cache_dir()
@@ -114,12 +114,12 @@ class CacheManager:
             # Keep the beginning and end, replacing the middle with a hash
             import hashlib
 
-            middle_hash = hashlib.md5(key.encode()).hexdigest()[:8]
+            middle_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
             sanitized = sanitized[:95] + "_" + middle_hash + "_" + sanitized[-95:]
 
         return sanitized
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> object | None:
         """
         Get item from cache (memory first, then disk).
 
@@ -155,7 +155,7 @@ class CacheManager:
 
         return None
 
-    async def put(self, key: str, value: Any) -> bool:
+    async def put(self, key: str, value: object) -> bool:
         """
         Store item in both memory and disk cache.
 

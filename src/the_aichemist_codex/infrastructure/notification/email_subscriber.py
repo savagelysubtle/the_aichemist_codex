@@ -134,7 +134,10 @@ class EmailSubscriber(NotificationSubscriber):
         msg["Date"] = formatdate(localtime=True)
 
         # Create subject based on notification level and type
-        subject = f"{self.subject_prefix}{notification.level.name}: {notification.notification_type.name.capitalize()}"
+        subject = (
+            f"{self.subject_prefix}{notification.level.name}: "
+            f"{notification.notification_type.name.capitalize()}"
+        )
         if notification.source:
             subject = f"{subject} - {notification.source}"
         msg["Subject"] = subject

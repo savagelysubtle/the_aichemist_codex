@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def main():
+async def main() -> None:
     """Run file reader tests."""
     # Create a file reader
     reader = FileReader(max_workers=2, preview_length=200)

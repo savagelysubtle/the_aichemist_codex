@@ -50,7 +50,7 @@ class ChangeInfo:
         timestamp: float | None = None,
         details: dict | None = None,
         old_path: Path | None = None,
-    ):
+    ) -> None:
         """
         Initialize change information.
 
@@ -111,7 +111,7 @@ class ChangeDetector:
     - Change severity classification
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the change detector with debounce settings."""
         self.file_cache: dict[str, dict] = {}
         self.debounce_interval = config.get("change_debounce_interval", 2.0)
@@ -455,7 +455,7 @@ class ChangeDetector:
             hasher = hashlib.sha256()
 
             # Process in chunks to handle large files
-            async def process_file():
+            async def process_file() -> None:
                 chunk_size = 65536  # 64KB chunks
                 with open(file_path, "rb") as f:
                     while chunk := f.read(chunk_size):

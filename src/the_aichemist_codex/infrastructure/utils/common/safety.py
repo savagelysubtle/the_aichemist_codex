@@ -54,7 +54,8 @@ class SafeFileHandler:
                     or ignored_path == file_path.resolve()
                 ):
                     logger.info(
-                        f"Skipping file in ignored directory: {file_path} (in {ignored_dir})"
+                        f"Skipping file in ignored directory: {file_path} "
+                        f"(in {ignored_dir})"
                     )
                     return True
             except (FileNotFoundError, RuntimeError):

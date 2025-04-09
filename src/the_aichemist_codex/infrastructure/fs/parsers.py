@@ -121,7 +121,8 @@ def get_parser_for_mime_type(mime_type: str) -> BaseParser | None:
         mime_type: The MIME type of the file
 
     Returns:
-        A parser instance appropriate for the given MIME type or None if no parser is available
+        A parser instance appropriate for the given MIME type
+        or None if no parser is available
     """
     # Try to use the comprehensive parser system first
     if HAS_PARSING_MODULE and parsing_get_parser:

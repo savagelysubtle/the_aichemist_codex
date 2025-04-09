@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class AsyncSQL:
     """Provides asynchronous SQLite database operations."""
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path) -> None:
         """
         Initialize AsyncSQL with database path.
 
@@ -35,7 +35,7 @@ class AsyncSQL:
         async with self._connection_lock:
             try:
 
-                def _execute():
+                def _execute() -> None:
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
 
@@ -66,7 +66,7 @@ class AsyncSQL:
         async with self._connection_lock:
             try:
 
-                def _executemany():
+                def _executemany() -> None:
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
                     cursor.executemany(sql, params_list)
@@ -95,7 +95,7 @@ class AsyncSQL:
         async with self._connection_lock:
             try:
 
-                def _fetchone():
+                def _fetchone() -> tuple | None:
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
 
@@ -130,7 +130,7 @@ class AsyncSQL:
         async with self._connection_lock:
             try:
 
-                def _fetchall():
+                def _fetchall() -> list[tuple]:
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
 
@@ -159,7 +159,7 @@ class AsyncSQL:
         async with self._connection_lock:
             try:
 
-                def _execute_script():
+                def _execute_script() -> None:
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
                     cursor.executescript(script)

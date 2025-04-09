@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class SQLiteMemoryRepository:
     """SQLite implementation of the MemoryRepository interface."""
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path) -> None:
         """
         Initialize the repository with a database path.
 
@@ -107,11 +107,13 @@ class SQLiteMemoryRepository:
             commit=True,
         )
         await self.sql.execute(
-            "CREATE INDEX IF NOT EXISTS idx_associations_source ON memory_associations (source_id)",
+            "CREATE INDEX IF NOT EXISTS idx_associations_source "
+            "ON memory_associations (source_id)",
             commit=True,
         )
         await self.sql.execute(
-            "CREATE INDEX IF NOT EXISTS idx_associations_target ON memory_associations (target_id)",
+            "CREATE INDEX IF NOT EXISTS idx_associations_target "
+            "ON memory_associations (target_id)",
             commit=True,
         )
 
@@ -177,7 +179,7 @@ class SQLiteMemoryRepository:
                 operation="save",
                 entity_id=str(memory.id),
                 cause=e,
-            )
+            ) from e
 
     async def get_memory(self, memory_id: UUID) -> Memory | None:
         """
@@ -209,7 +211,7 @@ class SQLiteMemoryRepository:
                 operation="get",
                 entity_id=str(memory_id),
                 cause=e,
-            )
+            ) from e
 
     async def delete_memory(self, memory_id: UUID) -> bool:
         """
@@ -256,7 +258,7 @@ class SQLiteMemoryRepository:
                 operation="delete",
                 entity_id=str(memory_id),
                 cause=e,
-            )
+            ) from e
 
     async def update_memory(self, memory: Memory) -> bool:
         """
@@ -283,7 +285,7 @@ class SQLiteMemoryRepository:
                 operation="update",
                 entity_id=str(memory.id),
                 cause=e,
-            )
+            ) from e
 
     async def save_association(self, association: MemoryAssociation) -> UUID:
         """
@@ -342,7 +344,7 @@ class SQLiteMemoryRepository:
                 operation="save",
                 entity_id=str(association.id),
                 cause=e,
-            )
+            ) from e
 
     async def get_association(self, association_id: UUID) -> MemoryAssociation | None:
         """
@@ -374,7 +376,7 @@ class SQLiteMemoryRepository:
                 operation="get",
                 entity_id=str(association_id),
                 cause=e,
-            )
+            ) from e
 
     async def find_associations(
         self, memory_id: UUID, bidirectional: bool = True
@@ -427,7 +429,7 @@ class SQLiteMemoryRepository:
                 operation="find",
                 details={"memory_id": str(memory_id)},
                 cause=e,
-            )
+            ) from e
 
     async def recall_memories(self, context: RecallContext) -> list[Memory]:
         """
@@ -550,7 +552,7 @@ class SQLiteMemoryRepository:
                 operation="recall",
                 details={"query": context.query},
                 cause=e,
-            )
+            ) from e
 
     async def find_by_tags(
         self, tags: set[str], match_all: bool = False
@@ -602,7 +604,7 @@ class SQLiteMemoryRepository:
                 operation="find_by_tags",
                 details={"tags": str(tags)},
                 cause=e,
-            )
+            ) from e
 
     async def find_by_type(self, memory_type: MemoryType) -> list[Memory]:
         """
@@ -631,7 +633,7 @@ class SQLiteMemoryRepository:
                 operation="find_by_type",
                 details={"type": memory_type.name},
                 cause=e,
-            )
+            ) from e
 
     async def find_strongest_associations(
         self,
@@ -700,7 +702,7 @@ class SQLiteMemoryRepository:
                 operation="find_strongest",
                 details={"memory_id": str(memory_id)},
                 cause=e,
-            )
+            ) from e
 
     def _row_to_memory(self, row: tuple) -> Memory:
         """Convert a database row to a Memory entity."""

@@ -5,7 +5,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 class MemoryCache:
     """In-memory LRU cache implementation."""
 
-    def __init__(self, max_items: int = 1000, ttl: int = 3600):
+    def __init__(self, max_items: int = 1000, ttl: int = 3600) -> None:
         """
         Initialize memory cache with max size and TTL.
 
@@ -23,11 +22,11 @@ class MemoryCache:
         """
         self.max_items = max_items
         self.ttl = ttl
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[str, object] = {}
         self._access_times: dict[str, float] = {}
         self._lock = asyncio.Lock()
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> object | None:
         """
         Get item from cache.
 
@@ -53,7 +52,7 @@ class MemoryCache:
             self._access_times[key] = time.time()
             return self._cache[key]
 
-    async def put(self, key: str, value: Any) -> None:
+    async def put(self, key: str, value: object) -> None:
         """
         Add item to cache.
 
@@ -98,7 +97,7 @@ class MemoryCache:
             self._cache.clear()
             self._access_times.clear()
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> dict[str, object]:
         """
         Get cache statistics.
 
@@ -122,7 +121,7 @@ class MemoryCache:
 class CacheManager:
     """Manages multiple caching mechanisms for the application."""
 
-    def __init__(self, data_dir: Path | None = None, ttl: int = 3600):
+    def __init__(self, data_dir: Path | None = None, ttl: int = 3600) -> None:
         """
         Initialize the cache manager.
 
@@ -138,7 +137,7 @@ class CacheManager:
         if self.data_dir:
             self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> object | None:
         """
         Get item from cache.
 
@@ -163,7 +162,7 @@ class CacheManager:
 
         return None
 
-    async def put(self, key: str, value: Any, ttl: int | None = None) -> None:
+    async def put(self, key: str, value: object, ttl: int | None = None) -> None:
         """
         Store item in cache.
 
@@ -206,7 +205,7 @@ class CacheManager:
                 except Exception as e:
                     logger.error(f"Error removing cache file {cache_file}: {e}")
 
-    async def _get_from_disk(self, key: str) -> Any | None:
+    async def _get_from_disk(self, key: str) -> object | None:
         """
         Get item from disk cache.
 
@@ -238,7 +237,7 @@ class CacheManager:
             logger.error(f"Error reading from disk cache for key {key}: {e}")
             return None
 
-    async def _store_to_disk(self, key: str, value: Any, ttl: int) -> None:
+    async def _store_to_disk(self, key: str, value: object, ttl: int) -> None:
         """
         Store item in disk cache.
 

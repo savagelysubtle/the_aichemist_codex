@@ -183,7 +183,7 @@ class AsyncFileIO:
             return {}
 
     @staticmethod
-    async def write_json(file_path: Path, data: Any, indent: int = 4) -> bool:
+    async def write_json(file_path: Path, data: object, indent: int = 4) -> bool:
         """Writes data as JSON to a file asynchronously.
 
         Args:

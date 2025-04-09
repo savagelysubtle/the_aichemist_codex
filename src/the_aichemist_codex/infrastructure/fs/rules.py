@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 class RulesEngine:
     """Manages dynamic file movement rules."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.rules = []
         self._load_rules()
 
-    def _load_rules(self):
+    def _load_rules(self) -> None:
         """Loads file handling rules from a configuration file."""
         # For now, use default rules to avoid config dependency
         self.rules = []

@@ -14,7 +14,7 @@ R = TypeVar("R")
 class BatchProcessor:
     """Utility for processing items in batches asynchronously."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the batch processor."""
         pass
 

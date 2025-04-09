@@ -44,7 +44,8 @@ class TemporaryChangeHistoryManager:
 
     def record_move(self, src_path: Path, dest_path: Path) -> None:
         logger.warning(
-            f"ChangeHistoryManager.record_move not fully migrated: {src_path} -> {dest_path}"
+            f"ChangeHistoryManager.record_move not fully migrated: "
+            f"{src_path} -> {dest_path}"
         )
 
 
@@ -63,7 +64,8 @@ version_manager = TemporaryVersionManager()
 class EnhancedChangeDetector(ChangeDetector):
     """
     Enhanced version of ChangeDetector with additional tracking capabilities.
-    Temporary implementation until these features are fully integrated into the main class.
+    Temporary implementation until these features are
+    fully integrated into the main class.
     """
 
     def __init__(self) -> None:

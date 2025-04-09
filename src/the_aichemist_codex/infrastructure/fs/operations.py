@@ -56,7 +56,8 @@ class FileMover:
 
     @staticmethod
     async def verify_file_copy(source: Path, destination: Path) -> bool:
-        """Verify that the destination file exists and has the same size and hash as the source."""
+        """Verify that the destination file exists and has the same size
+        and hash as the source."""
         try:
             if not await AsyncFileIO.exists(destination):
                 logger.error(f"Destination file does not exist: {destination}")
@@ -74,7 +75,8 @@ class FileMover:
 
             if source_size != dest_size:
                 logger.error(
-                    f"File size mismatch: {source} ({source_size} bytes) -> {destination} ({dest_size} bytes)"
+                    f"File size mismatch: {source} ({source_size} bytes) -> "
+                    f"{destination} ({dest_size} bytes)"
                 )
                 return False
 
@@ -170,7 +172,8 @@ class FileMover:
                         )
                 else:
                     logger.error(
-                        f"File verification failed, cancelling move operation: {source} -> {destination}"
+                        f"File verification failed, cancelling move operation: "
+                        f"{source} -> {destination}"
                     )
                     # Try to clean up the potentially corrupted destination file
                     try:
@@ -272,7 +275,8 @@ class FileMover:
         try:
             # Use AsyncFileIO where possible
             file_stats = await asyncio.to_thread(file_path.stat)
-            # Try to use st_birthtime first (macOS/BSD), fall back to st_mtime (modification time)
+            # Try to use st_birthtime first (macOS/BSD),
+            #  fall back to st_mtime (modification time)
             creation_time = getattr(file_stats, "st_birthtime", file_stats.st_mtime)
             dt = datetime.datetime.fromtimestamp(creation_time)
             date_folder = dt.strftime("%Y-%m")

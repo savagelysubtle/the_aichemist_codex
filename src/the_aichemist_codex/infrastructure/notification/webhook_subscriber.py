@@ -128,7 +128,8 @@ class WebhookSubscriber(NotificationSubscriber):
                         else:
                             error_text = await response.text()
                             logger.warning(
-                                f"Webhook notification failed with status {response.status}: {error_text}"
+                                f"Webhook notification failed with status "
+                                f"{response.status}: {error_text}"
                             )
             except TimeoutError:
                 logger.warning(
