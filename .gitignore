@@ -309,3 +309,13 @@ _bak/
 
 # Local environment variable overrides
 .env.local
+
+# cursor and roo folders
+.roo/
+.cursorignore
+.roomodes
+.benchmarks/
+.github/
+.vscode/
+bin/
+.uv_cache/
