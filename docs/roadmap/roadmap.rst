@@ -292,7 +292,7 @@ If you're interested in contributing to any planned features:
 
 1. Check the GitHub issues labeled with "roadmap" to find tasks related to future features
 2. Comment on the issue to express your interest
-3. Follow our :doc:`contributing` guidelines to submit your work
+3. Follow our :doc:`../guides/contributing` guidelines to submit your work
 
 We particularly welcome contributions in these areas:
 

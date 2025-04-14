@@ -113,8 +113,8 @@ def build_docs(output_format: str = "html", clean: bool = False) -> None:
         output_format: Format to build (html, pdf, epub)
         clean: Whether to clean the build directory first
     """
-    # Get the docs directory
-    docs_dir = Path(__file__).resolve().parent
+    # Get the docs directory (parent of the scripts directory)
+    docs_dir = Path(__file__).resolve().parent.parent
     build_dir = docs_dir / "_build"
 
     # Create build directory if it doesn't exist

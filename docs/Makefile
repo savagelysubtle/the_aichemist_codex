@@ -17,19 +17,21 @@ help:
 # Generate API documentation
 autodoc:
 	@echo "Generating API documentation..."
-	@python generate_api_docs.py
+	@python scripts/generate_api_docs.py
 
 # Run the full build script
 docsbuild:
 	@echo "Building documentation using build_docs.py..."
-	@python build_docs.py --clean
+	@python scripts/build_docs.py --clean
 
-# Clean the build directory
+# Clean the build directory and generated API files
 clean:
 	@echo "Cleaning build directory..."
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@echo "Removing API directory contents..."
-	@rm -rf $(SOURCEDIR)/api/*.rst 2>/dev/null || true
+	@echo "Removing generated API directory contents..."
+	@rm -rf $(SOURCEDIR)/api 2>/dev/null || true
+	@echo "Removing any misplaced generated API files in scripts..."
+	@rm -rf $(SOURCEDIR)/scripts/api 2>/dev/null || true
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

@@ -8,9 +8,14 @@ This section provides detailed information for developers who want to contribute
    :caption: Development Guides
 
    testing
-   code_style
-   contributing
-   architecture
+   ../guides/code_style
+   ../guides/contributing
+   ../architecture/overview
+   ../architecture/domain_layer
+   ../architecture/application_layer
+   ../architecture/infrastructure_layer
+   ../architecture/interfaces_layer
+   ../architecture/cross_cutting_concerns
    cli_development
    api_development
 
@@ -22,17 +27,17 @@ The AIchemist Codex has a comprehensive testing strategy including unit tests, i
 Code Style
 ---------
 
-The project follows a consistent code style to ensure readability and maintainability. See the :doc:`code_style` guide for details.
+The project follows a consistent code style to ensure readability and maintainability. See the :doc:`../guides/code_style` guide for details.
 
 Contributing
 -----------
 
-Contributions to The AIchemist Codex are welcome! See the :doc:`contributing` guide for information on how to contribute.
+Contributions to The AIchemist Codex are welcome! See the :doc:`../guides/contributing` guide for information on how to contribute.
 
 Architecture
 -----------
 
-The AIchemist Codex follows a clean architecture pattern. See the :doc:`architecture` guide for details on the architecture and design patterns used.
+The AIchemist Codex follows a clean architecture pattern. See the :doc:`../architecture/overview` guide for details on the architecture and design patterns used.
 
 CLI Development
 --------------

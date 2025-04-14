@@ -18,13 +18,8 @@ def main() -> None:
     print("Generating API documentation...")
 
     # Configuration for modules to document
-    api_dir = Path(__file__).resolve().parent / "api"
-    src_dir = (
-        Path(__file__).resolve().parent.parent
-        / "src"
-        / "the_aichemist_codex"
-        / "backend"
-    )
+    api_dir = Path(__file__).resolve().parent.parent / "api"
+    src_dir = Path(__file__).resolve().parent.parent / "src" / "the_aichemist_codex"
 
     # Ensure the API directory exists
     api_dir.mkdir(exist_ok=True)
@@ -32,18 +27,51 @@ def main() -> None:
     # Define the modules to document
     # Format: module_name -> [submodule1, submodule2, ...]
     modules: dict[str, list[str]] = {
-        "file_reader": [],
-        "file_manager": ["directory_monitor", "directory_organizer", "change_detector"],
-        "metadata": ["extractors", "analyzers"],
-        "search": ["engines", "indexers", "query_parser"],
-        "relationships": ["detector", "graph", "detectors"],
-        "rollback": ["transaction", "snapshot"],
-        "security": ["permissions", "encryption", "authentication"],
-        "ai": ["embeddings", "clustering", "recommendation"],
-        "integration": ["plugins", "api", "exporters"],
-        "ui": ["cli", "components", "dashboards"],
-        "utils": ["validators", "profilers", "helpers"],
-        "config": ["settings", "validation", "secure_config"],
+        "domain": [
+            "entities",
+            "value_objects",
+            "repositories",
+            "services",
+            "events",
+            "exceptions",
+        ],
+        "application": [
+            "use_cases",
+            "commands",
+            "queries",
+            "dto",
+            "mappers",
+            "services",
+            "validators",
+        ],
+        "infrastructure": [
+            "persistence",
+            "messaging",
+            "search",
+            "config",
+            "security",
+            "ai",
+            "utils",
+        ],
+        "interfaces": ["api", "cli", "events", "stream", "presenters"],
+        "cross_cutting": [
+            "caching",
+            "error_handling",
+            "security",
+            "telemetry",
+            "validation",
+            "workflows",
+        ],
+        # Legacy modules - will be migrated to the new architecture
+        "backend": [
+            "file_reader",
+            "file_manager",
+            "metadata",
+            "search",
+            "relationships",
+            "rollback",
+            "security",
+        ],
     }
 
     # Generate API documentation for all modules
@@ -66,6 +94,14 @@ def get_module_description(module_name: str) -> str:
         str: A description of the module
     """
     descriptions = {
+        # Clean architecture layers
+        "domain": "core business logic and entities",
+        "application": "orchestrating domain objects to perform tasks",
+        "infrastructure": "implementing interfaces defined in inner layers",
+        "interfaces": "providing ways for users and external systems to interact with the application",
+        "cross_cutting": "handling concerns that span multiple layers",
+        # Legacy modules
+        "backend": "legacy code that will be migrated to the new architecture",
         "file_reader": "reading and processing different file types",
         "file_manager": "managing file operations and organization",
         "metadata": "extracting and analyzing file metadata",
@@ -107,7 +143,7 @@ def generate_api_docs(
             print(f"Warning: Module directory {module_path} does not exist")
 
         # Create the package module path for importing
-        import_path = f"the_aichemist_codex.backend.{module_name}"
+        import_path = f"the_aichemist_codex.{module_name}"
 
         # Create RST file for module
         with open(api_dir / f"{module_name}.rst", "w") as f:
