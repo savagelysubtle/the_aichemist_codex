@@ -4,4 +4,4 @@ from .classifier import TagClassifier
 from .manager import TagManager
 from .schema import TagSchema
 
-__all__ = ["TagManager", "TagClassifier", "TagSchema"]
+__all__ = ["TagClassifier", "TagManager", "TagSchema"]

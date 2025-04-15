@@ -138,7 +138,7 @@ def add_tag(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @tagging_app.command("remove")
@@ -249,7 +249,7 @@ def remove_tag(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @tagging_app.command("list")
@@ -367,7 +367,7 @@ def list_tags(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @tagging_app.command("suggest")
@@ -465,7 +465,7 @@ def suggest_tags(
                         metadata = await file_reader.process_file(file)
                     except Exception as e:
                         console.print(
-                            f"[yellow]Warning: Error processing {file}: {str(e)}[/]"
+                            f"[yellow]Warning: Error processing {file}: {e!s}[/]"
                         )
                         progress.update(task, advance=1)
                         continue
@@ -522,4 +522,4 @@ def suggest_tags(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")

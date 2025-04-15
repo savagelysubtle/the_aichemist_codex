@@ -66,6 +66,6 @@ class RepositoryError(Exception):
             components.append(f"Details: {details_str}")
 
         if self.cause:
-            components.append(f"Cause: {str(self.cause)}")
+            components.append(f"Cause: {self.cause!s}")
 
         return " | ".join(components)

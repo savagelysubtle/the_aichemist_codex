@@ -10,14 +10,34 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from the_aichemist_codex.infrastructure.fs.file_metadata import FileMetadata
-from the_aichemist_codex.infrastructure.utils.cache.cache_manager import CacheManager
 
 from .base_extractor import BaseMetadataExtractor, MetadataExtractorRegistry
 
 logger = logging.getLogger(__name__)
+
+
+class DocumentStatisticsDict(TypedDict):
+    word_count: int
+    estimated_page_count: int
+    character_count: int
+    paragraph_count: int
+    section_count: int
+
+
+class DocumentMetadataDict(TypedDict):
+    authors: list[str]
+    title: str
+    date: str
+    version: str
+    statistics: DocumentStatisticsDict
+    keywords: list[str] | None
+    extraction_complete: bool
+    extraction_confidence: float
+    extraction_time: float
+    error: str | None
 
 
 @MetadataExtractorRegistry.register
@@ -28,13 +48,9 @@ class DocumentMetadataExtractor(BaseMetadataExtractor):
     page counts, and other document-specific metadata.
     """
 
-    def __init__(self, cache_manager: CacheManager | None = None):
-        """Initialize the document metadata extractor.
-
-        Args:
-            cache_manager: Optional cache manager for caching extraction results
-        """
-        super().__init__(cache_manager)
+    def __init__(self) -> None:
+        """Initialize the document metadata extractor."""
+        super().__init__()
 
         # Common patterns for extracting document metadata
         self.author_patterns = [
@@ -80,13 +96,13 @@ class DocumentMetadataExtractor(BaseMetadataExtractor):
             "application/x-latex",
         ]
 
-    async def extract(  # type: ignore
+    async def extract(
         self,
         file_path: str | Path,
         content: str | None = None,
         mime_type: str | None = None,
         metadata: FileMetadata | None = None,
-    ) -> dict[str, Any]:
+    ) -> DocumentMetadataDict:
         """Extract metadata from a document file.
 
         Args:
@@ -96,18 +112,9 @@ class DocumentMetadataExtractor(BaseMetadataExtractor):
             metadata: Optional existing metadata to enhance
 
         Returns:
-            A dictionary containing extracted metadata
+            A DocumentMetadataDict containing extracted metadata
         """
         start_time = time.time()
-
-        # Check if we have cached results
-        if self.cache_manager and hasattr(self.cache_manager, "get"):
-            cache_key = f"document_metadata:{file_path}"
-            # Properly await the async cache manager get method
-            cached_result = await self.cache_manager.get(cache_key)
-            if cached_result and isinstance(cached_result, dict):
-                logger.debug(f"Using cached metadata for {file_path}")
-                return cached_result  # type: ignore
 
         # Convert file_path to Path object
         if isinstance(file_path, str):
@@ -118,17 +125,46 @@ class DocumentMetadataExtractor(BaseMetadataExtractor):
 
         # Get the content if not provided
         if content is None:
-            content = await self._get_content(file_path)  # type: ignore
+            content = await self._get_content(file_path)
             if not content:
                 return {
                     "error": "Failed to read file content",
                     "extraction_complete": False,
                     "extraction_confidence": 0.0,
                     "extraction_time": time.time() - start_time,
+                    "authors": [],
+                    "title": "",
+                    "date": "",
+                    "version": "",
+                    "statistics": {
+                        "word_count": 0,
+                        "estimated_page_count": 0,
+                        "character_count": 0,
+                        "paragraph_count": 0,
+                        "section_count": 0,
+                    },
+                    "keywords": None,
                 }
 
         # Extract document metadata
-        extracted_data: dict[str, Any] = {}
+        extracted_data: DocumentMetadataDict = {
+            "authors": [],
+            "title": "",
+            "date": "",
+            "version": "",
+            "statistics": {
+                "word_count": 0,
+                "estimated_page_count": 0,
+                "character_count": 0,
+                "paragraph_count": 0,
+                "section_count": 0,
+            },
+            "keywords": None,
+            "extraction_complete": False,
+            "extraction_confidence": 0.0,
+            "extraction_time": 0.0,
+            "error": None,
+        }
 
         # Try to extract basic document metadata using regular expressions
         authors = self._extract_authors(content)
@@ -157,10 +193,7 @@ class DocumentMetadataExtractor(BaseMetadataExtractor):
         extracted_data["extraction_complete"] = True
         extracted_data["extraction_confidence"] = 0.7  # Reasonable default
         extracted_data["extraction_time"] = time.time() - start_time
-
-        # Cache the results if we have a cache manager
-        if self.cache_manager and hasattr(self.cache_manager, "put"):
-            await self.cache_manager.put(cache_key, extracted_data)  # type: ignore
+        extracted_data["error"] = None  # Ensure error is None on success
 
         return extracted_data
 

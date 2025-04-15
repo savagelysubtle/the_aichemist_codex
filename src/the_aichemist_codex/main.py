@@ -9,7 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from the_aichemist_codex.interfaces.cli.cli import cli_app
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     # Run the CLI app
     cli_app()

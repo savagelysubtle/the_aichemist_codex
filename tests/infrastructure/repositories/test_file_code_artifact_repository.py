@@ -55,7 +55,7 @@ class TestFileCodeArtifactRepository:
         assert saved_artifact == self.sample_artifact
 
         # Check that the file was created
-        artifact_path = self.temp_dir / f"{str(self.sample_artifact.id)}.json"
+        artifact_path = self.temp_dir / f"{self.sample_artifact.id!s}.json"
         assert artifact_path.exists()
 
         # Verify the file content
@@ -179,7 +179,7 @@ class TestFileCodeArtifactRepository:
         assert result is True
 
         # Check that the file was deleted
-        artifact_path = self.temp_dir / f"{str(self.sample_artifact.id)}.json"
+        artifact_path = self.temp_dir / f"{self.sample_artifact.id!s}.json"
         assert not artifact_path.exists()
 
         # Check that the artifact is no longer retrievable
@@ -219,7 +219,7 @@ class TestFileCodeArtifactRepository:
         first_retrieval = self.repository.get_by_id(self.sample_artifact.id)
 
         # Modify the file to check if the cache is being used
-        artifact_path = self.temp_dir / f"{str(self.sample_artifact.id)}.json"
+        artifact_path = self.temp_dir / f"{self.sample_artifact.id!s}.json"
         with open(artifact_path, encoding="utf-8") as f:
             data = json.load(f)
 

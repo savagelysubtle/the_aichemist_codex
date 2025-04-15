@@ -6,35 +6,59 @@ import re
 import time
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
+from the_aichemist_codex.infrastructure.config import get_codex_config
 from the_aichemist_codex.infrastructure.utils.io.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
 
+# Private singleton instance
+_cache_manager_instance: Optional["CacheManager"] = None
+
+
+def get_cache_manager(
+    cache_dir: Path | None = None,
+    memory_cache_size: int = 1000,
+    disk_cache_ttl: int = 3600,
+) -> "CacheManager":
+    """
+    Get or create a CacheManager instance using the factory pattern.
+
+    Args:
+        cache_dir: Optional custom cache directory path
+        memory_cache_size: Maximum number of items in memory cache
+        disk_cache_ttl: Time-to-live for disk cache entries in seconds
+
+    Returns:
+        CacheManager: Singleton instance of the cache manager
+    """
+    global _cache_manager_instance
+
+    if _cache_manager_instance is None:
+        _cache_manager_instance = CacheManager(
+            cache_dir=cache_dir,
+            memory_cache_size=memory_cache_size,
+            disk_cache_ttl=disk_cache_ttl,
+        )
+
+    return _cache_manager_instance
+
 
 def get_cache_dir() -> Path:
     """
-    Get the cache directory path dynamically to avoid circular imports.
+    Get the cache directory path from configuration.
 
     Returns:
         Path: The cache directory path
     """
-    # Check for environment variable first
-    env_cache_dir = os.environ.get("AICHEMIST_CACHE_DIR")
-    if env_cache_dir:
-        return Path(env_cache_dir).resolve()
+    config = get_codex_config()
 
-    # Check for environment variable for data directory
-    env_data_dir = os.environ.get("AICHEMIST_DATA_DIR")
-    if env_data_dir:
-        data_dir = Path(env_data_dir).resolve()
-        return data_dir / "cache"
+    # Get cache directory from config, with fallback to default
+    cache_dir = config.get("cache_dir", str(Path.home() / ".aichemist" / "cache"))
 
-    # Fallback to a relative path from the current file
-    current_file = Path(__file__).resolve()
-    project_root = current_file.parent.parent.parent.parent
-    return project_root / "data" / "cache"
+    # Convert to Path and resolve
+    return Path(cache_dir).resolve()
 
 
 class LRUCache:
@@ -261,7 +285,3 @@ class CacheManager:
             "disk_cache_count": disk_cache_count,
             "disk_cache_ttl": self.disk_cache_ttl,
         }
-
-
-# Create a singleton instance for application-wide use
-cache_manager = CacheManager()

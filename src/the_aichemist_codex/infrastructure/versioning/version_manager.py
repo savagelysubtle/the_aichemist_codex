@@ -1,11 +1,12 @@
 """Version management for The Aichemist Codex.
 
-This module provides the main interface for creating, retrieving, and
-managing file versions.
+This module provides the main interface (`VersionManager`) for creating,
+retrieving, and managing file versions. It handles version storage (as
+full snapshots or diffs), metadata tracking (`VersionMetadata`, `VersionGraph`),
+and automatic versioning based on configurable change thresholds.
 """
 
 import logging
-import os
 from pathlib import Path
 
 from the_aichemist_codex.infrastructure.config.settings import determine_project_root
@@ -18,10 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 class VersionManager:
-    """Manages file versioning with configurable policies."""
+    """Manages file versioning operations and policies.
+
+    Provides an interface to create new file versions, retrieve specific
+    versions, list version history, and automatically version files based
+    on change detection. It utilizes `DiffEngine` for comparing versions
+    and `AsyncFileIO` for storage operations.
+    """
 
     def __init__(self) -> None:
-        """Initialize the version manager."""
+        """Initializes the VersionManager.
+
+        Sets up dependencies (`DiffEngine`, `AsyncFileIO`), determines project paths,
+        and initializes the version graph cache and auto-versioning settings.
+        Note: Directory creation here is synchronous, typically acceptable during startup.
+        For fully async initialization, consider an `async def setup()` method.
+        """
         self.diff_engine = DiffEngine()
         self.file_io = AsyncFileIO()
 
@@ -49,17 +62,23 @@ class VersionManager:
         author: str = "",
         tags: list[str] | None = None,
     ) -> VersionMetadata | None:
-        """Create a new version of the specified file.
+        """Create a new version of the specified file asynchronously.
+
+        Checks if the file exists, determines the parent version, generates
+        metadata, decides whether to store a full snapshot or a diff based
+        on changes from the parent, saves the version data and metadata, and
+        updates the version graph.
 
         Args:
-            file_path: Path to the file to version
-            manual: Whether this is a manual (user-initiated) version
-            annotation: Optional description of this version
-            author: Optional author of the changes
-            tags: Optional list of tags for this version
+            file_path: Absolute path to the file to version.
+            manual: If True, mark as `VersionType.MANUAL`.
+            annotation: A description of the changes for this version.
+            author: Identifier for the user/process creating the version.
+            tags: Optional list of tags to associate with this version.
 
         Returns:
-            The created version metadata, or None if creation failed
+            The `VersionMetadata` for the newly created version, or None if
+            creation failed (e.g., file not found, storage error).
         """
         file_path = file_path.resolve()
 
@@ -116,15 +135,22 @@ class VersionManager:
     async def get_version(
         self, file_path: Path, version_id: str | None = None
     ) -> tuple[Path | None, VersionMetadata | None]:
-        """Retrieve a specific version of a file.
+        """Retrieve a specific version of a file asynchronously.
+
+        Fetches the version metadata from the graph. If the version exists,
+        it reconstructs the file content (either by copying a snapshot or
+        rebuilding from diffs) into a temporary file.
 
         Args:
-            file_path: Path to the file
-            version_id: ID of the version to retrieve, or None for latest
+            file_path: Absolute path to the file whose version is needed.
+            version_id: The ID of the specific version to retrieve. If None,
+                retrieves the latest version on the main branch.
 
         Returns:
-            Tuple of (temp file path with version contents, version metadata)
-            or (None, None) if retrieval failed
+            A tuple containing:
+            - The absolute path to the temporary file holding the reconstructed
+              version content (or None if retrieval failed).
+            - The `VersionMetadata` of the retrieved version (or None).
         """
         file_path = file_path.resolve()
 
@@ -150,7 +176,7 @@ class VersionManager:
 
             # Create a temporary file to hold the version contents
             temp_dir = self.project_root / "data" / "temp"
-            temp_dir.mkdir(parents=True, exist_ok=True)
+            await self.file_io.mkdir(temp_dir, parents=True, exist_ok=True)
 
             temp_file = temp_dir / f"{file_path.name}.{version_metadata.version_id}"
 
@@ -180,13 +206,17 @@ class VersionManager:
             return None, None
 
     async def list_versions(self, file_path: Path) -> list[VersionMetadata]:
-        """List all versions of a file with their metadata.
+        """List all available versions of a file, sorted newest first.
+
+        Retrieves the version graph for the file and returns a list of its
+        version metadata objects, ordered by timestamp descending.
 
         Args:
-            file_path: Path to the file
+            file_path: Absolute path to the file.
 
         Returns:
-            List of version metadata objects, newest first
+            A list of `VersionMetadata` objects, or an empty list if the file
+            has no versions or an error occurs.
         """
         file_path = file_path.resolve()
 
@@ -207,11 +237,16 @@ class VersionManager:
     async def should_auto_version(self, file_path: Path) -> bool:
         """Determine if a file should be automatically versioned based on changes.
 
+        Checks if auto-versioning is enabled. If so, compares the current file
+        content against the latest stored version using `DiffEngine`.
+
         Args:
-            file_path: Path to the file
+            file_path: Absolute path to the file to check.
 
         Returns:
-            True if the file should be versioned, False otherwise
+            True if auto-versioning is enabled and the change percentage meets
+            or exceeds the configured threshold, or if it's the first version.
+            False otherwise.
         """
         if not self.auto_versioning_enabled:
             return False
@@ -252,15 +287,21 @@ class VersionManager:
         metadata: VersionMetadata,
         parent_metadata: VersionMetadata,
     ) -> bool:
-        """Store a version as a diff from its parent.
+        """Store a new version as a diff relative to its parent version.
+
+        Calculates the diff between the current file and the parent version's
+        stored content. If changes exist and the change percentage is below a
+        threshold (currently 50%), the diff content is saved. Otherwise, falls
+        back to storing a full snapshot via `_store_full_file`.
 
         Args:
-            file_path: Path to the current file
-            metadata: Metadata for the new version
-            parent_metadata: Metadata for the parent version
+            file_path: Absolute path to the current state of the file.
+            metadata: The `VersionMetadata` object for the new version being created.
+            parent_metadata: The `VersionMetadata` of the parent version.
 
         Returns:
-            True if successful, False otherwise
+            True if the diff (or fallback snapshot) was stored successfully,
+            False otherwise (e.g., parent not found, no changes, storage error).
         """
         try:
             # Make sure the parent storage path exists
@@ -301,7 +342,7 @@ class VersionManager:
             # Create the storage directory for this file
             file_hash = file_path.name.replace(".", "_")
             version_dir = self.versions_dir / file_hash
-            version_dir.mkdir(parents=True, exist_ok=True)
+            await self.file_io.mkdir(version_dir, parents=True, exist_ok=True)
 
             # Create the diff storage path
             diff_path = version_dir / f"{metadata.version_id}.diff"
@@ -319,20 +360,24 @@ class VersionManager:
     async def _store_full_file(
         self, file_path: Path, metadata: VersionMetadata
     ) -> bool:
-        """Store a full snapshot of a file.
+        """Store a new version as a full snapshot (copy) of the current file.
+
+        Creates the necessary version storage directory and copies the current
+        file content to a uniquely named snapshot file.
 
         Args:
-            file_path: Path to the file
-            metadata: Metadata for the new version
+            file_path: Absolute path to the current state of the file.
+            metadata: The `VersionMetadata` for the new version being created.
 
         Returns:
-            True if successful, False otherwise
+            True if the file was copied and metadata updated successfully,
+            False on storage error.
         """
         try:
             # Create the storage directory for this file
             file_hash = file_path.name.replace(".", "_")
             version_dir = self.versions_dir / file_hash
-            version_dir.mkdir(parents=True, exist_ok=True)
+            await self.file_io.mkdir(version_dir, parents=True, exist_ok=True)
 
             # Create the storage path
             storage_path = version_dir / f"{metadata.version_id}.snapshot"
@@ -351,14 +396,21 @@ class VersionManager:
     async def _rebuild_from_diffs(
         self, target_metadata: VersionMetadata, output_path: Path
     ) -> bool:
-        """Rebuild a file from a chain of diffs.
+        """Reconstruct a specific file version by applying diffs from a base snapshot.
+
+        Finds the version history chain leading to the `target_metadata`.
+        Locates the nearest ancestor full snapshot, copies it to `output_path`,
+        and then sequentially applies all subsequent diffs in the chain until
+        the target version is reconstructed.
 
         Args:
-            target_metadata: Metadata for the target version
-            output_path: Path where the reconstructed file should be written
+            target_metadata: Metadata of the version to reconstruct.
+            output_path: The file path where the reconstructed version content
+                will be written.
 
         Returns:
-            True if successful, False otherwise
+            True if reconstruction was successful, False otherwise (e.g., missing
+            snapshot/diff, diff application error).
         """
         try:
             # Get the version graph
@@ -437,7 +489,7 @@ class VersionManager:
 
                 # Clean up the temp file
                 try:
-                    os.remove(temp_path)
+                    await self.file_io.remove(temp_path)
                 except (OSError, FileNotFoundError):
                     pass
 
@@ -448,13 +500,17 @@ class VersionManager:
             return False
 
     async def _get_version_graph(self, file_path: Path) -> VersionGraph:
-        """Get the version graph for a file.
+        """Retrieve or load the version graph for a specific file.
+
+        Checks an in-memory cache first. If not found, attempts to load the
+        graph from its corresponding JSON file in the metadata directory.
+        If the file doesn't exist or loading fails, creates a new empty graph.
 
         Args:
-            file_path: Path to the file
+            file_path: Absolute path to the file whose graph is needed.
 
         Returns:
-            VersionGraph for the file
+            The `VersionGraph` object for the file.
         """
         file_path = file_path.resolve()
         key = str(file_path)
@@ -502,13 +558,16 @@ class VersionManager:
             return False
 
     def _get_graph_file_path(self, file_path: Path) -> Path:
-        """Get the path to the version graph file for a file.
+        """Construct the path to the metadata file for a given version graph.
+
+        Creates a unique filename based on the hashed absolute path of the
+        original file to store its version graph metadata.
 
         Args:
-            file_path: Path to the file
+            file_path: Absolute path to the file.
 
         Returns:
-            Path to the version graph file
+            The absolute path to the corresponding metadata JSON file.
         """
         # Create a unique filename based on the full path
         file_path_str = str(file_path.resolve())

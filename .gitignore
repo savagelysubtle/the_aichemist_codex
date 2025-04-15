@@ -27,6 +27,11 @@ venv/
 .cursorignore
 .cursor
 .github
+.env
+.svg
+.png
+
+
 
 
 ################################

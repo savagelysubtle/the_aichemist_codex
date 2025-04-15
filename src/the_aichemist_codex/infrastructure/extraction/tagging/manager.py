@@ -40,10 +40,30 @@ class TagManager:
         Initialize the tag manager and create database tables if needed.
 
         Raises:
-            Exception: If initialization fails
+            sqlite3.OperationalError: If database is corrupted or cannot be opened
+            sqlite3.DatabaseError: If there's a general database error
+            PermissionError: If the database file cannot be accessed due to permissions
+            RuntimeError: If initialization fails for other reasons
         """
-        await self.schema.initialize()
-        logger.info("Initialized TagManager")
+        try:
+            await self.schema.initialize()
+            logger.info("Initialized TagManager")
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error initializing TagManager: {e}")
+            raise
+        except sqlite3.DatabaseError as e:
+            logger.error(f"Database error initializing TagManager: {e}")
+            raise
+        except PermissionError as e:
+            logger.error(
+                f"Permission error initializing TagManager database at {self.db_path}: {e}"
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                f"Unexpected error initializing TagManager: {e}", exc_info=True
+            )
+            raise RuntimeError(f"Failed to initialize tag database: {e!s}") from e
 
     async def close(self) -> None:
         """Close any resources used by the tag manager."""
@@ -72,10 +92,16 @@ class TagManager:
             int: Tag ID
 
         Raises:
-            Exception: If tag creation fails
+            ValueError: If tag creation fails or name is invalid
+            sqlite3.IntegrityError: If there's a constraint violation
+            sqlite3.OperationalError: If database is corrupted or cannot be accessed
+            RuntimeError: For other unexpected errors
         """
         # Normalize tag name (lowercase, strip whitespace)
         name = name.strip().lower()
+
+        if not name:
+            raise ValueError("Tag name cannot be empty")
 
         # Insert tag and return ID
         try:
@@ -99,9 +125,19 @@ class TagManager:
 
             raise ValueError(f"Failed to retrieve ID for newly created tag: {name}")
 
-        except Exception as e:
-            logger.error(f"Error creating tag '{name}': {e}")
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Database integrity error creating tag '{name}': {e}")
             raise
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error creating tag '{name}': {e}")
+            raise
+        except ValueError as e:
+            # Re-raise ValueError without wrapping
+            logger.error(f"Value error creating tag '{name}': {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating tag '{name}': {e}", exc_info=True)
+            raise RuntimeError(f"Failed to create tag '{name}': {e!s}") from e
 
     async def get_tag(self, tag_id: int) -> dict[str, Any] | None:
         """
@@ -112,6 +148,9 @@ class TagManager:
 
         Returns:
             Dict containing tag data, or None if not found
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         try:
             result = await self.schema.db.fetchone(
@@ -126,8 +165,14 @@ class TagManager:
                     "modified_at": result[4],
                 }
             return None
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting tag with id {tag_id}: {e}")
+            raise  # Re-raise specific database errors
         except Exception as e:
-            logger.error(f"Error getting tag with id {tag_id}: {e}")
+            logger.error(
+                f"Unexpected error getting tag with id {tag_id}: {e}", exc_info=True
+            )
+            # For unexpected errors, returning None might be safer than raising
             return None
 
     async def get_tag_by_name(self, name: str) -> dict[str, Any] | None:
@@ -139,6 +184,9 @@ class TagManager:
 
         Returns:
             Dict containing tag data, or None if not found
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         try:
             # Normalize tag name (lowercase, strip whitespace)
@@ -156,8 +204,13 @@ class TagManager:
                     "modified_at": result[4],
                 }
             return None
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting tag with name '{name}': {e}")
+            raise  # Re-raise specific database errors
         except Exception as e:
-            logger.error(f"Error getting tag with name '{name}': {e}")
+            logger.error(
+                f"Unexpected error getting tag with name '{name}': {e}", exc_info=True
+            )
             return None
 
     async def update_tag(
@@ -173,38 +226,69 @@ class TagManager:
 
         Returns:
             bool: True if updated, False if not found or not updated
+
+        Raises:
+            sqlite3.IntegrityError: If the new name conflicts with an existing tag.
+            sqlite3.OperationalError: If there is a database operational error.
+            sqlite3.Error: For other database errors.
         """
+        # Get current tag data first to check existence
         try:
-            # Get current tag data
             tag = await self.get_tag(tag_id)
             if not tag:
+                logger.warning(f"Attempted to update non-existent tag {tag_id}")
                 return False
+        except sqlite3.Error as e:
+            logger.error(
+                f"Database error checking existence for tag {tag_id} before update: {e}"
+            )
+            return False  # Can't update if we can't check existence
+        except Exception as e:
+            logger.error(
+                f"Unexpected error checking existence for tag {tag_id} before update: {e}",
+                exc_info=True,
+            )
+            return False
 
-            # Prepare update data
-            update_data = []
-            params = []
-            if name is not None:
-                # Normalize tag name (lowercase, strip whitespace)
-                name = name.strip().lower()
-                update_data.append("name = ?")
-                params.append(name)
-            if description is not None:
-                update_data.append("description = ?")
-                params.append(description)
+        # Prepare update data
+        update_data = []
+        params = []
+        if name is not None:
+            # Normalize tag name (lowercase, strip whitespace)
+            name = name.strip().lower()
+            if not name:
+                logger.warning(f"Attempted to update tag {tag_id} with empty name.")
+                return False  # Or raise ValueError?
+            update_data.append("name = ?")
+            params.append(name)
+        if description is not None:
+            update_data.append("description = ?")
+            params.append(description)
 
-            if not update_data:
-                # Nothing to update
-                return False
+        if not update_data:
+            # Nothing to update
+            logger.debug(f"No update needed for tag {tag_id}")
+            return False
 
-            # Build and execute update query
-            query = f"UPDATE tags SET {', '.join(update_data)} WHERE id = ?"
+        # Build and execute update query
+        try:
+            query = f"UPDATE tags SET {', '.join(update_data)}, modified_at = CURRENT_TIMESTAMP WHERE id = ?"
             params.append(tag_id)
             await self.schema.db.execute(query, tuple(params), commit=True)
             logger.debug(f"Updated tag {tag_id}")
             return True
-
+        except sqlite3.IntegrityError as e:
+            # Handle potential unique constraint violation on 'name'
+            logger.error(f"Database integrity error updating tag {tag_id}: {e}")
+            raise
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error updating tag {tag_id}: {e}")
+            raise
+        except sqlite3.Error as e:
+            logger.error(f"Database error updating tag {tag_id}: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error updating tag {tag_id}: {e}")
+            logger.error(f"Unexpected error updating tag {tag_id}: {e}", exc_info=True)
             return False
 
     async def delete_tag(self, tag_id: int) -> bool:
@@ -216,22 +300,45 @@ class TagManager:
 
         Returns:
             bool: True if deleted, False if not found or not deleted
+
+        Raises:
+            sqlite3.OperationalError: If there is a database operational error.
+            sqlite3.Error: For other database errors.
         """
+        # Check if tag exists first
         try:
-            # Check if tag exists
             tag = await self.get_tag(tag_id)
             if not tag:
+                logger.warning(f"Attempted to delete non-existent tag {tag_id}")
                 return False
+        except sqlite3.Error as e:
+            logger.error(
+                f"Database error checking existence for tag {tag_id} before delete: {e}"
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Unexpected error checking existence for tag {tag_id} before delete: {e}",
+                exc_info=True,
+            )
+            return False
 
-            # Delete tag (cascade will delete from tag_hierarchy and file_tags)
+        # Delete tag
+        try:
+            # Cascade should delete from file_tags
             await self.schema.db.execute(
                 "DELETE FROM tags WHERE id = ?", (tag_id,), commit=True
             )
             logger.debug(f"Deleted tag {tag_id}")
             return True
-
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database operational error deleting tag {tag_id}: {e}")
+            raise
+        except sqlite3.Error as e:
+            logger.error(f"Database error deleting tag {tag_id}: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error deleting tag {tag_id}: {e}")
+            logger.error(f"Unexpected error deleting tag {tag_id}: {e}", exc_info=True)
             return False
 
     async def get_all_tags(self) -> list[dict[str, Any]]:
@@ -240,6 +347,9 @@ class TagManager:
 
         Returns:
             List of dicts containing tag data
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         try:
             results = await self.schema.db.fetchall("SELECT * FROM tags ORDER BY name")
@@ -253,8 +363,11 @@ class TagManager:
                 }
                 for row in results
             ]
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting all tags: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error getting all tags: {e}")
+            logger.error(f"Unexpected error getting all tags: {e}", exc_info=True)
             return []
 
     # File tag operations
@@ -283,47 +396,85 @@ class TagManager:
             bool: True if a new tag was added, False if an existing tag was updated
 
         Raises:
-            ValueError: If neither tag_id nor tag_name is provided
-            Exception: If tag addition fails
+            ValueError: If neither tag_id nor tag_name is provided or if parameters are invalid
+            FileNotFoundError: If the file path does not exist (when validation is added)
+            sqlite3.IntegrityError: If there's a constraint violation in the database
+            sqlite3.OperationalError: If the database cannot be accessed
+            RuntimeError: For other unexpected errors
         """
         if tag_id is None and tag_name is None:
             raise ValueError("Either tag_id or tag_name must be provided")
 
+        if not isinstance(file_path, Path):
+            raise ValueError(f"file_path must be a Path object, got {type(file_path)}")
+
+        if confidence < 0.0 or confidence > 1.0:
+            raise ValueError(
+                f"confidence must be between 0.0 and 1.0, got {confidence}"
+            )
+
         file_path_str = str(file_path.resolve())
 
-        # If tag_name is provided, get or create the tag
-        if tag_id is None and tag_name is not None:
-            tag = await self.get_tag_by_name(tag_name)
-            if tag:
-                tag_id = tag["id"]
-            else:
-                tag_id = await self.create_tag(tag_name)
-
-        # At this point, tag_id should be set
-        assert tag_id is not None, "tag_id should not be None at this point"
-
-        # Try to insert the file tag
         try:
-            # First try to insert
-            await self.schema.db.execute(
-                "INSERT INTO file_tags (file_path, tag_id, source, confidence) VALUES (?, ?, ?, ?)",
-                (file_path_str, tag_id, source, confidence),
-                commit=True,
+            # If tag_name is provided, get or create the tag
+            if tag_id is None and tag_name is not None:
+                try:
+                    tag = await self.get_tag_by_name(tag_name)
+                    if tag:
+                        tag_id = tag["id"]
+                    else:
+                        tag_id = await self.create_tag(tag_name)
+                except ValueError as e:
+                    logger.error(f"Error with tag name '{tag_name}': {e}")
+                    raise ValueError(f"Invalid tag name: {tag_name}") from e
+                except Exception as e:
+                    logger.error(f"Error creating tag '{tag_name}': {e}")
+                    raise RuntimeError(f"Failed to create tag: {e!s}") from e
+
+            # At this point, tag_id should be set
+            assert tag_id is not None, "tag_id should not be None at this point"
+
+            # Try to insert the file tag
+            try:
+                # First try to insert
+                await self.schema.db.execute(
+                    "INSERT INTO file_tags (file_path, tag_id, source, confidence) VALUES (?, ?, ?, ?)",
+                    (file_path_str, tag_id, source, confidence),
+                    commit=True,
+                )
+                logger.debug(f"Added tag {tag_id} to file '{file_path}'")
+                return True
+            except sqlite3.IntegrityError:
+                # Update if already exists
+                await self.schema.db.execute(
+                    "UPDATE file_tags SET source = ?, confidence = ? WHERE file_path = ? AND tag_id = ?",
+                    (source, confidence, file_path_str, tag_id),
+                    commit=True,
+                )
+                logger.debug(f"Updated tag {tag_id} for file '{file_path}'")
+                return False
+        except sqlite3.IntegrityError as e:
+            # This could happen if there are foreign key constraints or unique constraints
+            logger.error(
+                f"Database integrity error adding tag {tag_id} to file '{file_path}': {e}"
             )
-            logger.debug(f"Added tag {tag_id} to file '{file_path}'")
-            return True
-        except sqlite3.IntegrityError:
-            # Update if already exists
-            await self.schema.db.execute(
-                "UPDATE file_tags SET source = ?, confidence = ? WHERE file_path = ? AND tag_id = ?",
-                (source, confidence, file_path_str, tag_id),
-                commit=True,
-            )
-            logger.debug(f"Updated tag {tag_id} for file '{file_path}'")
-            return False
-        except Exception as e:
-            logger.error(f"Error adding tag {tag_id} to file '{file_path}': {e}")
             raise
+        except sqlite3.OperationalError as e:
+            logger.error(
+                f"Database operational error adding tag {tag_id} to file '{file_path}': {e}"
+            )
+            raise sqlite3.OperationalError(f"Database error: {e!s}") from e
+        except AssertionError as e:
+            logger.error(f"Assertion error adding tag to file '{file_path}': {e}")
+            raise RuntimeError(
+                "Internal error: tag_id is None after processing"
+            ) from e
+        except Exception as e:
+            logger.error(
+                f"Unexpected error adding tag {tag_id} to file '{file_path}': {e}",
+                exc_info=True,
+            )
+            raise RuntimeError(f"Failed to add tag to file: {e!s}") from e
 
     async def add_file_tags(
         self, file_path: Path, tags: list[tuple[str, float]], source: str = "auto"
@@ -350,8 +501,13 @@ class TagManager:
                 )
                 if added:
                     count += 1
-            except Exception as e:
+            except (ValueError, sqlite3.Error, RuntimeError) as e:
                 logger.error(f"Error adding tag '{tag_name}' to '{file_path}': {e}")
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error adding tag '{tag_name}' to '{file_path}': {e}",
+                    exc_info=True,
+                )
         return count
 
     async def remove_file_tag(self, file_path: Path, tag_id: int) -> bool:
@@ -364,16 +520,25 @@ class TagManager:
 
         Returns:
             bool: True if the tag was removed, False if not found
+
+        Raises:
+            sqlite3.OperationalError: If there is a database operational error.
+            sqlite3.Error: For other database errors.
         """
         file_path_str = str(file_path.resolve())
         try:
+            # Check existence first
             result = await self.schema.db.fetchone(
                 "SELECT 1 FROM file_tags WHERE file_path = ? AND tag_id = ?",
                 (file_path_str, tag_id),
             )
             if not result:
+                logger.debug(
+                    f"Attempted to remove non-existent tag {tag_id} from file '{file_path}'"
+                )
                 return False
 
+            # Perform delete
             await self.schema.db.execute(
                 "DELETE FROM file_tags WHERE file_path = ? AND tag_id = ?",
                 (file_path_str, tag_id),
@@ -381,8 +546,21 @@ class TagManager:
             )
             logger.debug(f"Removed tag {tag_id} from file '{file_path}'")
             return True
+        except sqlite3.OperationalError as e:
+            logger.error(
+                f"Database operational error removing tag {tag_id} from file '{file_path}': {e}"
+            )
+            raise
+        except sqlite3.Error as e:
+            logger.error(
+                f"Database error removing tag {tag_id} from file '{file_path}': {e}"
+            )
+            raise
         except Exception as e:
-            logger.error(f"Error removing tag {tag_id} from file '{file_path}': {e}")
+            logger.error(
+                f"Unexpected error removing tag {tag_id} from file '{file_path}': {e}",
+                exc_info=True,
+            )
             return False
 
     async def get_file_tags(self, file_path: Path) -> list[dict[str, Any]]:
@@ -394,6 +572,9 @@ class TagManager:
 
         Returns:
             List of dicts containing tag data
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         file_path_str = str(file_path.resolve())
         try:
@@ -417,8 +598,14 @@ class TagManager:
                 }
                 for row in results
             ]
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting tags for file '{file_path}': {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error getting tags for file '{file_path}': {e}")
+            logger.error(
+                f"Unexpected error getting tags for file '{file_path}': {e}",
+                exc_info=True,
+            )
             return []
 
     # Query operations
@@ -440,6 +627,7 @@ class TagManager:
 
         Raises:
             ValueError: If neither tag_id nor tag_name is provided
+            sqlite3.Error: If there is a database error.
         """
         if tag_id is None and tag_name is None:
             raise ValueError("Either tag_id or tag_name must be provided")
@@ -459,8 +647,13 @@ class TagManager:
                 "SELECT file_path FROM file_tags WHERE tag_id = ?", (tag_id,)
             )
             return [row[0] for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting files for tag {tag_id}: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error getting files for tag {tag_id}: {e}")
+            logger.error(
+                f"Unexpected error getting files for tag {tag_id}: {e}", exc_info=True
+            )
             return []
 
     async def get_files_by_tags(
@@ -475,6 +668,9 @@ class TagManager:
 
         Returns:
             List[str]: List of file paths
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         if not tag_ids:
             return []
@@ -504,8 +700,11 @@ class TagManager:
                 )
 
             return [row[0] for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting files by tags: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error getting files by tags: {e}")
+            logger.error(f"Unexpected error getting files by tags: {e}", exc_info=True)
             return []
 
     async def get_tag_counts(self) -> list[dict[str, Any]]:
@@ -514,6 +713,9 @@ class TagManager:
 
         Returns:
             List[Dict[str, Any]]: List of tags with count information
+
+        Raises:
+            sqlite3.Error: If there is a database error.
         """
         try:
             results = await self.schema.db.fetchall(
@@ -535,8 +737,11 @@ class TagManager:
                 }
                 for row in results
             ]
+        except sqlite3.Error as e:
+            logger.error(f"Database error getting tag counts: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error getting tag counts: {e}")
+            logger.error(f"Unexpected error getting tag counts: {e}", exc_info=True)
             return []
 
     # Batch operations
@@ -577,8 +782,11 @@ class TagManager:
 
             logger.debug(f"Added {added_count} tags in batch")
             return added_count
+        except sqlite3.Error as e:
+            logger.error(f"Database error in batch_add_tags: {e}")
+            return 0  # Return 0 on database error
         except Exception as e:
-            logger.error(f"Error in batch_add_tags: {e}")
+            logger.error(f"Unexpected error in batch_add_tags: {e}", exc_info=True)
             return 0
 
     async def batch_add_file_tags(self, file_tags: list[dict[str, Any]]) -> int:
@@ -639,11 +847,20 @@ class TagManager:
                 """
 
                 await self.schema.db.executemany(query, data)
+                # Assuming executemany doesn't raise for ON CONFLICT update, count is len(data)
+                # If specific rows failed, count might be inaccurate, but hard to track without rowid/returning
                 count = len(data)
+            except sqlite3.Error as e:
+                logger.error(f"Database error in batch_add_file_tags: {e}")
+                # Partial success is possible, but difficult to determine count accurately
+                count = 0  # Indicate potential failure or partial success
             except Exception as e:
-                logger.error(f"Error in batch_add_file_tags: {e}")
+                logger.error(
+                    f"Unexpected error in batch_add_file_tags: {e}", exc_info=True
+                )
+                count = 0
 
-        logger.debug(f"Added {count} file tags in batch")
+        logger.debug(f"Attempted to add {count} file tags in batch")
         return count
 
     # Cleanup and maintenance
@@ -676,8 +893,11 @@ class TagManager:
             count = len(orphaned_tag_ids)
             logger.debug(f"Removed {count} orphaned tags")
             return count
+        except sqlite3.Error as e:
+            logger.error(f"Database error removing orphaned tags: {e}")
+            return 0
         except Exception as e:
-            logger.error(f"Error removing orphaned tags: {e}")
+            logger.error(f"Unexpected error removing orphaned tags: {e}", exc_info=True)
             return 0
 
     async def clean_missing_files(self) -> int:
@@ -717,8 +937,14 @@ class TagManager:
 
             logger.debug(f"Removed tags for {count} missing files")
             return count
+        except sqlite3.Error as e:
+            logger.error(f"Database error cleaning missing files: {e}")
+            return 0
+        except OSError as e:  # Catch potential OS errors during Path.exists()
+            logger.error(f"OS error checking file existence during cleanup: {e}")
+            return 0
         except Exception as e:
-            logger.error(f"Error cleaning missing files: {e}")
+            logger.error(f"Unexpected error cleaning missing files: {e}", exc_info=True)
             return 0
 
     async def get_tag_suggestions(self, file_path: Path) -> list[dict[str, Any]]:
@@ -808,6 +1034,14 @@ class TagManager:
 
             return result
 
+        except sqlite3.Error as e:
+            logger.error(
+                f"Database error getting tag suggestions for file '{file_path}': {e}"
+            )
+            return []
         except Exception as e:
-            logger.error(f"Error getting tag suggestions for file '{file_path}': {e}")
+            logger.error(
+                f"Unexpected error getting tag suggestions for file '{file_path}': {e}",
+                exc_info=True,
+            )
             return []

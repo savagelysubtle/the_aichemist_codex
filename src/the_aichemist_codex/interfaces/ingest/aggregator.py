@@ -58,7 +58,8 @@ def format_token_count(total_tokens: int) -> str:
 
 def aggregate_digest(file_paths: list[Path], content_map: dict[Path, str]) -> str:
     """
-    Combines the list of file paths and their corresponding full content into a comprehensive digest string.
+    Combines the list of file paths and their corresponding
+    full content into a comprehensive digest string.
 
     The header includes:
       - Total Files
@@ -75,7 +76,8 @@ def aggregate_digest(file_paths: list[Path], content_map: dict[Path, str]) -> st
     Returns
     -------
     str
-        A formatted digest containing file headers, full content, and summary statistics.
+        A formatted digest containing file headers,
+        full content, and summary statistics.
     """
     lines = []
     total_files = len(file_paths)

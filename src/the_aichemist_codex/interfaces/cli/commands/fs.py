@@ -111,7 +111,7 @@ def list_directory(
                     )
                 except Exception as e:
                     # Handle any errors accessing file information
-                    table.add_row("[red]ERR[/]", str(name), "-", f"Error: {str(e)}")
+                    table.add_row("[red]ERR[/]", str(name), "-", f"Error: {e!s}")
 
             console.print(f"Contents of [bold cyan]{escape(str(dir_path))}[/]:")
             console.print(table)
@@ -129,7 +129,7 @@ def list_directory(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @fs_app.command("read")
@@ -188,7 +188,7 @@ def read_file(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @fs_app.command("info")
@@ -230,7 +230,7 @@ def file_info(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 # Helper functions

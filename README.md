@@ -2,24 +2,49 @@
 
 An intelligent file management and analysis system with advanced content extraction capabilities.
 
-## New Architecture
+## Architecture
 
-The AIchemist Codex has been restructured to follow clean architecture principles with a clear separation of concerns:
+The AIchemist Codex follows clean architecture principles with a clear separation of concerns:
 
 ```plaintext
 src/the_aichemist_codex/
-├── core/              # Core domain models and interfaces
-├── fs/                # File system operations
-├── parsing/           # File content parsing
-├── extraction/        # Content extraction and metadata
-├── versioning/        # Version control
-├── analysis/          # Project analysis
-├── relations/         # Relationship management
-├── tagging/           # Tagging functionality
-├── ingest/            # Content ingestion
-├── output/            # Output formatting
-├── utils/             # Utility functions
-└── config/            # Configuration handling
+├── domain/            # Core business logic and entities
+│   ├── entities/      # Domain objects with identity and lifecycle
+│   ├── value_objects/ # Immutable objects defined by their attributes
+│   ├── repositories/  # Repository interfaces for data access
+│   ├── services/      # Domain services
+│   ├── events/        # Domain events
+│   └── exceptions/    # Domain-specific exceptions
+│
+├── application/       # Orchestrates domain objects to perform tasks
+│   ├── use_cases/     # Application-specific business rules
+│   ├── commands/      # Operations that change state
+│   ├── queries/       # Operations that retrieve data
+│   ├── dto/           # Data Transfer Objects
+│   ├── mappers/       # Transform between domain objects and DTOs
+│   └── services/      # Application services
+│
+├── infrastructure/    # Implements interfaces defined in inner layers
+│   ├── repositories/  # Concrete repository implementations
+│   ├── persistence/   # Database access
+│   ├── fs/            # File system operations
+│   ├── ai/            # AI capabilities and models
+│   ├── config/        # Configuration handling
+│   └── utils/         # Infrastructure utilities
+│
+├── interfaces/        # User and external system interaction
+│   ├── api/           # API endpoints
+│   ├── cli/           # Command-line interface
+│   ├── events/        # External event handlers
+│   ├── ingest/        # Content ingestion interfaces
+│   └── output/        # Output formatting
+│
+└── cross_cutting/     # Concerns that span multiple layers
+    ├── logging/       # Centralized logging
+    ├── error_handling/# Error management
+    ├── security/      # Authentication and authorization
+    ├── validation/    # Input validation
+    └── telemetry/     # Performance monitoring and metrics
 ```
 
 ## Configuration
@@ -39,18 +64,23 @@ pip install -e .
 ### Usage
 
 ```python
-from the_aichemist_codex.fs.file_reader import FileReader
-from the_aichemist_codex.ingest.scanner import DirectoryScanner
+from the_aichemist_codex.infrastructure.fs.file_reader import FileReader
+from the_aichemist_codex.interfaces.ingest.scanner import DirectoryScanner
+from the_aichemist_codex.application.use_cases.document_analysis import AnalyzeDocumentsUseCase
 
 # Example usage
 reader = FileReader()
 scanner = DirectoryScanner()
+analyzer = AnalyzeDocumentsUseCase()
 
 # Scan a directory
 results = scanner.scan('path/to/directory')
 
 # Read files
-metadata = reader.read_files(results)
+documents = reader.read_files(results)
+
+# Analyze documents
+analysis_results = analyzer.execute(documents)
 ```
 
 ## Development

@@ -16,7 +16,7 @@ class PathEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-async def save_as_json_async(data, output_file: Path):
+async def save_as_json_async(data, output_file: Path) -> None:
     """Saves data as JSON asynchronously, converting Path objects to strings."""
     try:
         json_data = json.dumps(data, cls=PathEncoder, indent=4)
@@ -27,7 +27,7 @@ async def save_as_json_async(data, output_file: Path):
         logger.error(f"Error writing JSON to {output_file}: {e}")
 
 
-def save_as_json(output_file: Path, data: dict):
+def save_as_json(output_file: Path, data: dict) -> None:
     """Saves extracted code summary as a structured JSON file."""
     import asyncio
 

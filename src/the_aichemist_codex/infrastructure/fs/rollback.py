@@ -5,16 +5,20 @@ if needed, ensuring data integrity during file operations.
 """
 
 import logging
-import shutil
 import uuid
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 from typing import Any
 
-from ..config import get_config
+from the_aichemist_codex.infrastructure.config import config
+from the_aichemist_codex.infrastructure.utils import AsyncFileIO, get_thread_pool
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
+
+# Instantiate utilities
+async_file_io = AsyncFileIO()
+thread_pool = get_thread_pool()
 
 
 class OperationType(Enum):
@@ -59,7 +63,7 @@ class FileOperation:
         """Return a string representation of the operation."""
         return (
             f"FileOperation(id={self.id}, type={self.operation_type.name}, "
-            f"path='{self.affected_path}', timestamp={self.timestamp.isoformat()})"
+            f"path='{self.affected_path!s}', timestamp={self.timestamp.isoformat()})"
         )
 
 
@@ -93,13 +97,19 @@ class RollbackManager:
 
         # Set up backup directory
         if backup_dir is None:
-            data_dir = Path(get_config("data_dir"))
+            data_dir = Path(config.get("data_dir"))
             self.backup_dir = data_dir / ".backups"
         else:
             self.backup_dir = backup_dir
 
-        # Create backup directory if it doesn't exist
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        # Create backup directory if it doesn't exist (use synchronous for init)
+        # Note: Consider if __init__ should be async if it needs async setup.
+        # For now, keeping sync init with sync mkdir.
+        try:
+            self.backup_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create backup directory {self.backup_dir}: {e}")
+            # Decide how to handle this failure - maybe raise an exception?
 
         # Initialize operation tracking
         self.operations: list[FileOperation] = []
@@ -133,9 +143,10 @@ class RollbackManager:
             logger.debug(f"Ended transaction: {self.current_transaction_id}")
             self.current_transaction_id = None
 
-    def _make_backup(self, file_path: Path) -> Path | None:
+    # Make backup async
+    async def _make_backup(self, file_path: Path) -> Path | None:
         """
-        Create a backup of a file.
+        Create a backup of a file asynchronously.
 
         Args:
             file_path: Path to the file to back up
@@ -143,70 +154,114 @@ class RollbackManager:
         Returns:
             Optional[Path]: Path to the backup file, or None if backup failed
         """
-        if not file_path.exists():
+        if not await async_file_io.exists(file_path):
             logger.warning(f"Cannot back up non-existent file: {file_path}")
             return None
 
         # Create a unique backup filename
-        backup_name = (
-            f"{file_path.stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            f"{file_path.suffix}"
-        )
+        timestamp_str = datetime.now().strftime(
+            "%Y%m%d_%H%M%S_%f"
+        )  # Added microseconds
+        backup_name = f"{file_path.stem}_{timestamp_str}{file_path.suffix}"
         backup_path = self.backup_dir / backup_name
 
         try:
-            # Create the backup
-            shutil.copy2(file_path, backup_path)
-            logger.debug(f"Created backup of {file_path} at {backup_path}")
-            return backup_path
+            # Create the backup using AsyncFileIO
+            # Ensure backup directory exists first (though done in init, check again just in case)
+            await async_file_io.mkdir(self.backup_dir, parents=True, exist_ok=True)
+            success = await async_file_io.copy(file_path, backup_path)
+            if success:
+                logger.debug(f"Created backup of {file_path} at {backup_path}")
+                return backup_path
+            else:
+                logger.error(f"Async copy failed to create backup of {file_path}")
+                return None
         except Exception as e:
             logger.error(f"Failed to create backup of {file_path}: {e}")
             return None
 
-    def record_operation(
-        self, operation_type: OperationType, affected_path: Path, **kwargs: object
+    # Make record_operation async because it calls async _make_backup
+    async def record_operation(
+        self, operation_type: OperationType, target_path: Path, **kwargs: Any
     ) -> FileOperation | None:
         """
-        Record a file operation for potential rollback.
+        Record a file operation asynchronously for potential rollback.
 
         Args:
             operation_type: Type of operation being performed
-            affected_path: Path to the file or directory affected
-            **kwargs: Additional information needed for rollback
+            target_path: Path primarily affected by the operation (e.g., destination for MOVE/COPY)
+            **kwargs: Additional information needed for rollback (e.g., source, details)
 
         Returns:
             Optional[FileOperation]: The recorded operation, or None if recording failed
         """
-        # Create a backup for relevant operations
+        affected_path = target_path  # Use target_path as the main affected path
         original_state = None
-        if operation_type in (OperationType.MODIFY, OperationType.DELETE):
-            if affected_path.exists() and affected_path.is_file():
-                backup_path = self._make_backup(affected_path)
-                if backup_path:
-                    original_state = {"backup_path": backup_path}
+        additional_info = kwargs.copy()  # Use a copy of kwargs
 
-        # Handle move and rename operations
+        # Determine path for backup based on operation type
+        path_to_backup = None
+        if operation_type == OperationType.DELETE:
+            path_to_backup = affected_path  # Backup the file being deleted
+        elif operation_type == OperationType.MODIFY:
+            path_to_backup = affected_path  # Backup the file being modified
+        elif operation_type in (OperationType.MOVE, OperationType.RENAME):
+            # Backup the source file BEFORE it's moved/renamed
+            source_path_str = additional_info.get("source")
+            if isinstance(source_path_str, (str, Path)):
+                path_to_backup = Path(source_path_str)
+            else:
+                logger.warning(
+                    "Source path not provided or invalid for MOVE/RENAME backup."
+                )
+
+        # Create backup if a path was identified
+        if (
+            path_to_backup
+            and await async_file_io.exists(path_to_backup)
+            and await async_file_io.is_file(path_to_backup)
+        ):
+            backup_path = await self._make_backup(path_to_backup)
+            if backup_path:
+                original_state = {
+                    "backup_path": str(backup_path)
+                }  # Store backup path as string
+            else:
+                logger.warning(
+                    f"Failed to backup {path_to_backup} for {operation_type.name} operation."
+                )
+                # Decide if failure to backup should prevent recording the operation
+
+        # Validate required info for MOVE/RENAME
         if operation_type in (OperationType.MOVE, OperationType.RENAME):
-            # These require source and destination
-            if "source" not in kwargs or "destination" not in kwargs:
+            if "source" not in additional_info or "destination" not in additional_info:
                 logger.error(
-                    f"{operation_type.name} operation requires source and destination"
+                    f"{operation_type.name} operation requires 'source' and 'destination' in details"
                 )
                 return None
+            # Ensure paths are stored as strings for potential serialization
+            additional_info["source"] = str(additional_info["source"])
+            additional_info["destination"] = str(additional_info["destination"])
 
         # Create operation record
         operation = FileOperation(
             operation_type=operation_type,
-            affected_path=affected_path,
+            affected_path=affected_path,  # The path primarily affected (often destination)
             original_state=original_state,
-            additional_info=kwargs,
+            additional_info=additional_info,
         )
 
         # Add to current transaction if one is active
         if self.current_transaction_id:
-            self.transactions[self.current_transaction_id].append(operation)
+            if self.current_transaction_id in self.transactions:
+                self.transactions[self.current_transaction_id].append(operation)
+            else:
+                logger.error(
+                    f"Transaction ID {self.current_transaction_id} not found in transactions dict."
+                )
+                # Handle error appropriately - maybe don't record?
 
-        # Add to operations list
+        # Add to overall operations list
         self.operations.append(operation)
 
         logger.debug(f"Recorded operation: {operation}")
@@ -234,52 +289,100 @@ class RollbackManager:
                 # Restore from backup
                 if (
                     operation.original_state
+                    and isinstance(operation.original_state, dict)
                     and "backup_path" in operation.original_state
                 ):
                     backup_path = Path(operation.original_state["backup_path"])
-                    if backup_path.exists():
+                    if await async_file_io.exists(backup_path):
                         # Ensure parent directory exists
-                        operation.affected_path.parent.mkdir(
-                            parents=True, exist_ok=True
+                        await async_file_io.mkdir(
+                            operation.affected_path.parent, parents=True, exist_ok=True
                         )
-                        # Restore file
-                        shutil.copy2(backup_path, operation.affected_path)
-                        success = True
+                        # Restore file using async copy
+                        success = await async_file_io.copy(
+                            backup_path, operation.affected_path
+                        )
+                    else:
+                        logger.warning(
+                            f"Backup file not found for rollback: {backup_path}"
+                        )
+                else:
+                    logger.warning(
+                        f"No backup path found for DELETE rollback: {operation}"
+                    )
 
             elif operation.operation_type == OperationType.MODIFY:
                 # Restore from backup
                 if (
                     operation.original_state
+                    and isinstance(operation.original_state, dict)
                     and "backup_path" in operation.original_state
                 ):
                     backup_path = Path(operation.original_state["backup_path"])
-                    if backup_path.exists():
-                        shutil.copy2(backup_path, operation.affected_path)
-                        success = True
+                    if await async_file_io.exists(backup_path):
+                        # Restore file using async copy
+                        success = await async_file_io.copy(
+                            backup_path, operation.affected_path
+                        )
+                    else:
+                        logger.warning(
+                            f"Backup file not found for rollback: {backup_path}"
+                        )
+                else:
+                    logger.warning(
+                        f"No backup path found for MODIFY rollback: {operation}"
+                    )
 
             elif (
                 operation.operation_type == OperationType.MOVE
                 or operation.operation_type == OperationType.RENAME
             ):
                 # Move back to original location
-                source = Path(operation.additional_info.get("destination", ""))
-                destination = Path(operation.additional_info.get("source", ""))
+                # Destination of the original operation becomes the source for rollback
+                source_rb = Path(operation.additional_info.get("destination", ""))
+                # Source of the original operation becomes the destination for rollback
+                destination_rb = Path(operation.additional_info.get("source", ""))
 
-                if source.exists() and destination.parent.exists():
-                    # Ensure parent directory exists
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    # Move back
-                    shutil.move(source, destination)
-                    success = True
+                if not source_rb or not destination_rb:
+                    logger.error(
+                        f"Missing source or destination path in MOVE/RENAME rollback info: {operation}"
+                    )
+                    return False
+
+                # Check if the file/dir to move back exists
+                if await async_file_io.exists(source_rb):
+                    # Ensure parent directory for the original location exists
+                    await async_file_io.mkdir(
+                        destination_rb.parent, parents=True, exist_ok=True
+                    )
+                    # Move back using async move
+                    success = await async_file_io.move(source_rb, destination_rb)
+                else:
+                    logger.warning(
+                        f"Source path for rollback does not exist: {source_rb}"
+                    )
+                    # Decide if this is success (already undone?) or failure
+                    # Let's consider it a potential success if the destination *doesn't* exist either
+                    success = not await async_file_io.exists(destination_rb)
 
             elif operation.operation_type == OperationType.CREATE:
-                # Delete the created file
-                if operation.affected_path.exists():
-                    if operation.affected_path.is_file():
-                        operation.affected_path.unlink()
-                    elif operation.affected_path.is_dir():
-                        shutil.rmtree(operation.affected_path)
-                    success = True
+                # Delete the created file/directory
+                if await async_file_io.exists(operation.affected_path):
+                    if await async_file_io.is_file(operation.affected_path):
+                        await async_file_io.remove(operation.affected_path)
+                        success = True
+                    elif await async_file_io.is_dir(operation.affected_path):
+                        await async_file_io.rmtree(operation.affected_path)
+                        success = True
+                    else:
+                        logger.warning(
+                            f"Cannot rollback CREATE for unknown file type: {operation.affected_path}"
+                        )
+                else:
+                    logger.info(
+                        f"Path to rollback CREATE for already gone: {operation.affected_path}"
+                    )
+                    success = True  # Already rolled back / deleted
 
             else:
                 logger.warning(

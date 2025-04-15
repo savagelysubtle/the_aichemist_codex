@@ -1,8 +1,18 @@
 """File metadata module for The AIchemist Codex."""
 
+import asyncio
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from the_aichemist_codex.infrastructure.utils import AsyncFileIO, get_thread_pool
+from the_aichemist_codex.infrastructure.utils.io import MimeTypeDetector
+
+logger = logging.getLogger(__name__)
+async_file_io = AsyncFileIO()
+mime_detector = MimeTypeDetector()
+thread_pool = get_thread_pool()
 
 
 @dataclass
@@ -61,8 +71,8 @@ class FileMetadata:
         return self.path.name
 
     @classmethod
-    def from_path(cls, path: Path) -> "FileMetadata":
-        """Create basic metadata from a file path.
+    async def from_path(cls, path: Path) -> "FileMetadata":
+        """Create basic metadata from a file path asynchronously.
 
         Args:
             path: Path to the file
@@ -70,18 +80,57 @@ class FileMetadata:
         Returns:
             FileMetadata object with basic information
         """
-        try:
-            if path.exists():
-                stats = path.stat()
-                size = stats.st_size
-                extension = path.suffix.lower()
+        size = -1
+        mime_type = "unknown"
+        error_str = None
+        extension = path.suffix.lower()
 
-                # Simple mime type inference based on extension
-                mime_type = cls._infer_mime_type(extension)
+        try:
+            path = path.resolve()
+            exists = await async_file_io.exists(path)
+
+            if exists:
+                try:
+                    stat_task = asyncio.create_task(async_file_io.stat(path))
+                    mime_task = asyncio.create_task(
+                        asyncio.get_event_loop().run_in_executor(
+                            thread_pool, mime_detector.get_mime_type, path
+                        )
+                    )
+
+                    stat_result, mime_result = await asyncio.gather(
+                        stat_task, mime_task, return_exceptions=True
+                    )
+
+                    if isinstance(stat_result, Exception):
+                        logger.warning(f"Failed to get stat for {path}: {stat_result}")
+                        error_str = f"Stat failed: {stat_result!s}"
+                    else:
+                        size = stat_result.st_size
+
+                    if isinstance(mime_result, Exception):
+                        logger.warning(
+                            f"Failed to get MIME type for {path}: {mime_result}"
+                        )
+                        mime_type = "application/octet-stream"
+                        error_str = (
+                            f"{error_str}; MIME detection failed: {mime_result!s}"
+                            if error_str
+                            else f"MIME detection failed: {mime_result!s}"
+                        )
+                    else:
+                        mime_type = mime_result
+
+                except Exception as gather_exc:
+                    logger.error(
+                        f"Error during concurrent stat/mime fetch for {path}: {gather_exc}"
+                    )
+                    error_str = f"Concurrent fetch failed: {gather_exc!s}"
+                    if mime_type == "unknown":
+                        mime_type = "application/octet-stream"
             else:
-                size = -1
-                extension = path.suffix.lower()
-                mime_type = "unknown"
+                error_str = "File does not exist"
+                logger.warning(f"File not found when creating metadata: {path}")
 
             return cls(
                 path=path,
@@ -89,75 +138,18 @@ class FileMetadata:
                 size=size,
                 extension=extension,
                 preview="",
+                error=error_str,
             )
         except Exception as e:
+            logger.exception(f"Unexpected error creating FileMetadata for {path}: {e}")
             return cls(
                 path=path,
-                mime_type="unknown",
+                mime_type="error",
                 size=-1,
-                extension=path.suffix.lower(),
+                extension=extension,
                 preview="",
-                error=str(e),
+                error=f"Unexpected error: {e!s}",
             )
-
-    @staticmethod
-    def _infer_mime_type(extension: str) -> str:
-        """Infer MIME type from file extension.
-
-        Args:
-            extension: File extension (with or without leading dot)
-
-        Returns:
-            Inferred MIME type
-        """
-        extension = extension.lower()
-        if not extension.startswith("."):
-            extension = f".{extension}"
-
-        mime_map = {
-            ".txt": "text/plain",
-            ".md": "text/markdown",
-            ".html": "text/html",
-            ".htm": "text/html",
-            ".css": "text/css",
-            ".js": "application/javascript",
-            ".json": "application/json",
-            ".xml": "application/xml",
-            ".yaml": "application/yaml",
-            ".yml": "application/yaml",
-            ".py": "text/x-python",
-            ".java": "text/x-java",
-            ".c": "text/x-c",
-            ".cpp": "text/x-c++",
-            ".cs": "text/x-csharp",
-            ".go": "text/x-go",
-            ".rs": "text/x-rust",
-            ".rb": "text/x-ruby",
-            ".php": "text/x-php",
-            ".sh": "text/x-shellscript",
-            ".bat": "text/x-bat",
-            ".ps1": "text/x-powershell",
-            ".pdf": "application/pdf",
-            ".doc": "application/msword",
-            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".xls": "application/vnd.ms-excel",
-            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".ppt": "application/vnd.ms-powerpoint",
-            ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".gif": "image/gif",
-            ".svg": "image/svg+xml",
-            ".mp3": "audio/mpeg",
-            ".mp4": "video/mp4",
-            ".zip": "application/zip",
-            ".tar": "application/x-tar",
-            ".gz": "application/gzip",
-            ".7z": "application/x-7z-compressed",
-        }
-
-        return mime_map.get(extension, "application/octet-stream")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary.
@@ -181,7 +173,6 @@ class FileMetadata:
             "extraction_confidence": self.extraction_confidence,
         }
 
-        # Include optional fields if they have values
         if self.error:
             result["error"] = self.error
         if self.summary:

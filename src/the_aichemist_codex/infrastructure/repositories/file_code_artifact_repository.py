@@ -1,7 +1,6 @@
 """File-based implementation of the CodeArtifactRepository interface."""
 
-import json
-import os
+import logging
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -11,6 +10,9 @@ from the_aichemist_codex.domain.exceptions.repository_exception import Repositor
 from the_aichemist_codex.domain.repositories.code_artifact_repository import (
     CodeArtifactRepository,
 )
+from the_aichemist_codex.infrastructure.utils.io.async_io import AsyncFileIO
+
+logger = logging.getLogger(__name__)
 
 
 class FileCodeArtifactRepository(CodeArtifactRepository):
@@ -30,22 +32,22 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
             RepositoryError: If the storage directory cannot be created or accessed
         """
         self.storage_dir = storage_dir
-        self._ensure_storage_dir_exists()
+        self.async_io = AsyncFileIO(storage_dir)
 
         # In-memory cache to speed up lookups
         self._cache: dict[str, CodeArtifact] = {}
         self._path_index: dict[str, str] = {}  # Maps path string to ID string
         self._name_index: dict[str, list[str]] = {}  # Maps name to list of ID strings
 
-    def _ensure_storage_dir_exists(self) -> None:
+    async def _ensure_storage_dir_exists(self) -> None:
         """Ensure the storage directory exists.
 
         Raises:
             RepositoryError: If the directory cannot be created or accessed
         """
         try:
-            os.makedirs(self.storage_dir, exist_ok=True)
-        except OSError as e:
+            await self.async_io.makedirs(self.storage_dir, exist_ok=True)
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to create storage directory",
                 entity_type="CodeArtifact",
@@ -63,7 +65,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
         Returns:
             The path to the artifact file
         """
-        return self.storage_dir / f"{str(artifact_id)}.json"
+        return self.storage_dir / f"{artifact_id!s}.json"
 
     def _serialize_artifact(self, artifact: CodeArtifact) -> dict[str, Any]:
         """Serialize a code artifact to a dictionary.
@@ -115,7 +117,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def save(self, artifact: CodeArtifact) -> CodeArtifact:
+    async def save(self, artifact: CodeArtifact) -> CodeArtifact:
         """Save a code artifact to the repository.
 
         Args:
@@ -128,13 +130,14 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
             RepositoryError: If the artifact cannot be saved
         """
         try:
+            await self._ensure_storage_dir_exists()
+
             # Serialize the artifact
             data = self._serialize_artifact(artifact)
 
             # Save to file
             artifact_path = self._get_artifact_path(artifact.id)
-            with open(artifact_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            await self.async_io.write_json(artifact_path, data)
 
             # Update cache and indexes
             artifact_id_str = str(artifact.id)
@@ -147,7 +150,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 self._name_index[artifact.name].append(artifact_id_str)
 
             return artifact
-        except (OSError, TypeError) as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to save artifact",
                 entity_type="CodeArtifact",
@@ -157,7 +160,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_by_id(self, artifact_id: UUID) -> CodeArtifact | None:
+    async def get_by_id(self, artifact_id: UUID) -> CodeArtifact | None:
         """Get a code artifact by its ID.
 
         Args:
@@ -177,13 +180,11 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
 
         # Load from file
         artifact_path = self._get_artifact_path(artifact_id)
-        if not artifact_path.exists():
-            return None
-
         try:
-            with open(artifact_path, encoding="utf-8") as f:
-                data = json.load(f)
+            if not await self.async_io.exists(artifact_path):
+                return None
 
+            data = await self.async_io.read_json(artifact_path)
             artifact = self._deserialize_artifact(data)
 
             # Update cache and indexes
@@ -196,7 +197,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 self._name_index[artifact.name].append(artifact_id_str)
 
             return artifact
-        except (OSError, json.JSONDecodeError) as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to load artifact",
                 entity_type="CodeArtifact",
@@ -205,7 +206,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_by_path(self, path: Path) -> CodeArtifact | None:
+    async def get_by_path(self, path: Path) -> CodeArtifact | None:
         """Get a code artifact by its path.
 
         Args:
@@ -222,19 +223,20 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
         # Check the path index
         if path_str in self._path_index:
             artifact_id_str = self._path_index[path_str]
-            return self.get_by_id(UUID(artifact_id_str))
+            return await self.get_by_id(UUID(artifact_id_str))
 
         # If not in index, scan all artifacts
         try:
-            for artifact_id_str in self._list_artifact_ids():
-                artifact = self.get_by_id(UUID(artifact_id_str))
+            artifact_ids = await self._list_artifact_ids()
+            for artifact_id_str in artifact_ids:
+                artifact = await self.get_by_id(UUID(artifact_id_str))
                 if artifact and str(artifact.path) == path_str:
                     # Update path index for future lookups
                     self._path_index[path_str] = artifact_id_str
                     return artifact
 
             return None
-        except OSError as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to search artifacts by path",
                 entity_type="CodeArtifact",
@@ -243,7 +245,24 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_by_name(self, name: str) -> list[CodeArtifact]:
+    async def _list_artifact_ids(self) -> list[str]:
+        """List all artifact IDs in the repository.
+
+        Returns:
+            A list of artifact ID strings
+        """
+        try:
+            files = await self.async_io.glob("*.json")
+            return [f.stem for f in files]
+        except Exception as e:
+            raise RepositoryError(
+                message="Failed to list artifacts",
+                entity_type="CodeArtifact",
+                operation="list",
+                cause=e,
+            ) from e
+
+    async def get_by_name(self, name: str) -> list[CodeArtifact]:
         """Retrieve code artifacts by name.
 
         Args:
@@ -262,7 +281,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
             # Build list of artifacts
             results = []
             for artifact_id in artifact_ids:
-                artifact = self.get_by_id(UUID(artifact_id))
+                artifact = await self.get_by_id(UUID(artifact_id))
                 if artifact is not None:
                     results.append(artifact)
 
@@ -276,15 +295,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def _list_artifact_ids(self) -> list[str]:
-        """List all artifact IDs in the repository.
-
-        Returns:
-            A list of artifact ID strings
-        """
-        return [f.stem for f in self.storage_dir.glob("*.json")]
-
-    def find_all(self) -> list[CodeArtifact]:
+    async def find_all(self) -> list[CodeArtifact]:
         """Retrieve all code artifacts in the repository.
 
         Returns:
@@ -295,13 +306,13 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
         """
         try:
             # List all JSON files in the directory
-            json_files = [f for f in self.storage_dir.glob("*.json") if f.is_file()]
+            json_files = await self.async_io.glob("*.json")
 
             results = []
             for file_path in json_files:
                 try:
                     artifact_id = UUID(file_path.stem)
-                    artifact = self.get_by_id(artifact_id)
+                    artifact = await self.get_by_id(artifact_id)
                     if artifact is not None:
                         results.append(artifact)
                 except ValueError:
@@ -309,7 +320,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                     continue
 
             return results
-        except (OSError, json.JSONDecodeError) as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to retrieve all artifacts",
                 entity_type="CodeArtifact",
@@ -318,7 +329,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def find_by_criteria(self, criteria: dict) -> list[CodeArtifact]:
+    async def find_by_criteria(self, criteria: dict) -> list[CodeArtifact]:
         """Find code artifacts matching the given criteria.
 
         Args:
@@ -331,7 +342,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
             RepositoryError: If an error occurs during search
         """
         try:
-            all_artifacts = self.find_all()
+            all_artifacts = await self.find_all()
             results = []
 
             for artifact in all_artifacts:
@@ -345,7 +356,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                     results.append(artifact)
 
             return results
-        except (AttributeError, TypeError, OSError) as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to find artifacts by criteria",
                 entity_type="CodeArtifact",
@@ -354,7 +365,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def delete(self, artifact_id: UUID) -> bool:
+    async def delete(self, artifact_id: UUID) -> bool:
         """Delete a code artifact by its ID.
 
         Args:
@@ -369,7 +380,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
         artifact_id_str = str(artifact_id)
 
         # Get the artifact first to update indexes
-        artifact = self.get_by_id(artifact_id)
+        artifact = await self.get_by_id(artifact_id)
         if not artifact:
             return False
 
@@ -392,11 +403,11 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
 
             # Delete the file
             artifact_path = self._get_artifact_path(artifact_id)
-            if artifact_path.exists():
-                os.remove(artifact_path)
+            if await self.async_io.exists(artifact_path):
+                await self.async_io.remove(artifact_path)
 
             return True
-        except OSError as e:
+        except Exception as e:
             raise RepositoryError(
                 message="Failed to delete artifact",
                 entity_type="CodeArtifact",
@@ -405,7 +416,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_children(self, parent_id: UUID) -> list[CodeArtifact]:
+    async def get_children(self, parent_id: UUID) -> list[CodeArtifact]:
         """Get child artifacts of a parent artifact.
 
         Args:
@@ -431,7 +442,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_dependencies(self, artifact_id: UUID) -> list[CodeArtifact]:
+    async def get_dependencies(self, artifact_id: UUID) -> list[CodeArtifact]:
         """Get dependencies of an artifact.
 
         Args:
@@ -456,7 +467,7 @@ class FileCodeArtifactRepository(CodeArtifactRepository):
                 cause=e,
             ) from e
 
-    def get_dependents(self, artifact_id: UUID) -> list[CodeArtifact]:
+    async def get_dependents(self, artifact_id: UUID) -> list[CodeArtifact]:
         """Get artifacts that depend on an artifact.
 
         Args:

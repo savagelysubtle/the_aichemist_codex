@@ -1,9 +1,6 @@
 """
-Tag classification module for automatic file tagging.
-
-This module provides the TagClassifier class, which is responsible for
-training and applying machine learning models to automatically tag files
-based on their content and metadata.
+Tag classification module implementation.
+Implements the TagClassifierInterface.
 """
 
 import json
@@ -22,27 +19,30 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.svm import LinearSVC
 
+# Import domain interface
+from the_aichemist_codex.domain.services.interfaces.tag_classifier import (
+    TagClassifierInterface,
+)
+
+# Import infrastructure types/utils
 from the_aichemist_codex.infrastructure.fs.file_metadata import FileMetadata
 
 logger = logging.getLogger(__name__)
 
 
-class TagClassifier:
+class TagClassifier(TagClassifierInterface):  # Implement the interface
     """
     Machine learning classifier for automatic file tagging.
-
-    This class provides methods for training and applying machine learning
-    models to automatically tag files based on their content and metadata.
+    Implements the TagClassifierInterface.
     """
 
-    DEFAULT_CONFIDENCE_THRESHOLD = 0.6
-
-    def __init__(self, model_dir: Path):
+    def __init__(self, model_dir: Path, default_confidence_threshold: float = 0.6):
         """
         Initialize the TagClassifier with a model directory.
 
         Args:
             model_dir: Directory to store model files
+            default_confidence_threshold: Default threshold for classification confidence.
         """
         self.model_dir = model_dir
         self.model_path = self.model_dir / "tag_classifier.pkl"
@@ -53,291 +53,267 @@ class TagClassifier:
         self.feature_names: np.ndarray | None = None
         self.tag_names: list[str] = []
         self.training_metadata: dict[str, Any] = {}
+        self.default_confidence_threshold = default_confidence_threshold
+        self._model_loaded = False  # Track loading status
 
-        # Initialize the default model
+        # Initialize the default model structure immediately
         self._initialize_default_model()
 
     def _initialize_default_model(self) -> None:
         """Initialize the default model pipeline."""
-        # Create a basic pipeline with TF-IDF and SVM
         self.pipeline = Pipeline(
             [
                 ("vectorizer", TfidfVectorizer(max_features=10000, ngram_range=(1, 2))),
                 (
                     "classifier",
                     MultiOutputClassifier(
-                        LinearSVC(C=1.0, class_weight="balanced", max_iter=10000)
+                        LinearSVC(
+                            C=1.0, class_weight="balanced", dual="auto", max_iter=2000
+                        )  # Added dual='auto'
                     ),
                 ),
             ]
         )
-
-        # Initialize MultiLabelBinarizer for tag encoding
         self.mlb = MultiLabelBinarizer()
-
-        # Initialize empty tag set
         self.tag_names = []
+        self.feature_names = None
+        self.training_metadata = {}
+        self._model_loaded = False  # Reset loaded status
 
     async def load_model(self) -> bool:
-        """
-        Load a trained model from disk.
-
-        Returns:
-            bool: True if a model was loaded, False otherwise
-        """
+        """Load a trained model from disk."""
+        if self._model_loaded:
+            return True
         try:
-            # Ensure model directory exists
             self.model_dir.mkdir(parents=True, exist_ok=True)
-
-            # Check if model file exists
             if not self.model_path.exists():
-                logger.info("No trained model found, using default model")
-                return False
+                logger.info(
+                    "No trained model found at %s, using default.", self.model_path
+                )
+                # Keep the initialized default model
+                self._model_loaded = True  # Mark as "loaded" (default is loaded)
+                return False  # Indicate that no *trained* model was loaded
 
-            # Load the model
             with open(self.model_path, "rb") as f:
                 model_data = pickle.load(f)
-                self.pipeline = model_data["pipeline"]
-                self.mlb = model_data["mlb"]
+                self.pipeline = model_data.get("pipeline")
+                self.mlb = model_data.get("mlb")
                 self.feature_names = model_data.get("feature_names")
-                self.tag_names = model_data.get("tag_names", [])
+                # Ensure tag_names are loaded correctly
+                if self.mlb:
+                    self.tag_names = list(self.mlb.classes_)
+                else:
+                    self.tag_names = []  # Fallback
 
-            # Load metadata if available
             if self.metadata_path.exists():
                 with open(self.metadata_path) as f:
                     self.training_metadata = json.load(f)
 
-            logger.info(f"Loaded tag classifier model with {len(self.tag_names)} tags")
+            self._model_loaded = True
+            logger.info(
+                f"Loaded tag classifier model with {len(self.tag_names)} tags from {self.model_path}"
+            )
             return True
-
+        except FileNotFoundError as e:
+            logger.error(f"Failed to load tag classifier model: file not found - {e}")
+            self._initialize_default_model()  # Reset to default on load failure
+            self._model_loaded = True  # Default is considered "loaded"
+            return False
+        except PermissionError as e:
+            logger.error(
+                f"Failed to load tag classifier model: permission denied - {e}"
+            )
+            self._initialize_default_model()  # Reset to default on load failure
+            self._model_loaded = True  # Default is considered "loaded"
+            return False
+        except pickle.UnpicklingError as e:
+            logger.error(f"Failed to load tag classifier model: unpickling error - {e}")
+            self._initialize_default_model()  # Reset to default on load failure
+            self._model_loaded = True  # Default is considered "loaded"
+            return False
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to load tag classifier metadata: invalid JSON - {e}")
+            # Continue with model but without metadata
+            self.training_metadata = {}
+            self._model_loaded = True
+            return True
         except Exception as e:
-            logger.error(f"Failed to load tag classifier model: {e}")
-            self._initialize_default_model()
+            logger.error(
+                f"Failed to load tag classifier model: unexpected error - {e}",
+                exc_info=True,
+            )
+            self._initialize_default_model()  # Reset to default on load failure
+            self._model_loaded = True  # Default is considered "loaded"
             return False
 
     async def save_model(self) -> bool:
-        """
-        Save the current model to disk.
-
-        Returns:
-            bool: True if the model was saved successfully, False otherwise
-        """
+        """Save the current model to disk."""
+        if not self.pipeline or not self.mlb:
+            logger.warning("Cannot save model - pipeline or mlb not initialized.")
+            return False
         try:
-            # Ensure model directory exists
             os.makedirs(self.model_dir, exist_ok=True)
-
-            # Save the model
+            # Update tag names from MLB before saving
+            self.tag_names = list(self.mlb.classes_)
             model_data = {
                 "pipeline": self.pipeline,
                 "mlb": self.mlb,
                 "feature_names": self.feature_names,
+                # Explicitly save tag_names derived from mlb
+                "tag_names": self.tag_names,
             }
-
             with open(self.model_path, "wb") as f:
                 pickle.dump(model_data, f)
 
-            # Update training metadata
             self.training_metadata.update(
                 {
                     "last_updated": datetime.now().isoformat(),
-                    "tag_names": self.tag_names,
+                    "tag_names": self.tag_names,  # Ensure metadata matches mlb
                     "num_tags": len(self.tag_names),
                 }
             )
-
-            # Save metadata
             with open(self.metadata_path, "w") as f:
                 json.dump(self.training_metadata, f, indent=2)
 
-            logger.info(f"Saved tag classifier model with {len(self.tag_names)} tags")
+            logger.info(
+                f"Saved tag classifier model with {len(self.tag_names)} tags to {self.model_path}"
+            )
             return True
-
+        except PermissionError as e:
+            logger.error(f"Error saving tag classifier model: permission denied - {e}")
+            return False
+        except OSError as e:
+            logger.error(f"Error saving tag classifier model: OS error - {e}")
+            return False
+        except pickle.PicklingError as e:
+            logger.error(f"Error saving tag classifier model: pickling error - {e}")
+            return False
+        except TypeError as e:
+            logger.error(
+                f"Error saving tag classifier model: type error (unpicklable object) - {e}"
+            )
+            return False
         except Exception as e:
-            logger.error(f"Error saving tag classifier model: {e}")
+            logger.error(
+                f"Error saving tag classifier model: unexpected error - {e}",
+                exc_info=True,
+            )
             return False
 
     def _extract_features(self, file_metadata: FileMetadata) -> str:
-        """
-        Extract features from file metadata for classification.
-
-        Args:
-            file_metadata: FileMetadata object
-
-        Returns:
-            str: Text features extracted from metadata
-        """
+        """Extract features from file metadata for classification."""
         features = []
-
-        # Add filename and extension
         if file_metadata.path:
             path = Path(file_metadata.path)
             features.append(path.name)
             if path.suffix:
                 features.append(path.suffix.lstrip("."))
-
-        # Add MIME type
         if file_metadata.mime_type:
             features.append(file_metadata.mime_type)
-
-        # Add extracted content
         if file_metadata.preview:
-            features.append(file_metadata.preview[:5000])  # Limit preview size
-
-        # Add topics if available
+            features.append(file_metadata.preview[:5000])
         if hasattr(file_metadata, "topics") and file_metadata.topics:
             for topic_dict in file_metadata.topics:
                 for topic, score in topic_dict.items():
                     features.append(f"topic:{topic}")
-
-        # Add keywords if available
         if hasattr(file_metadata, "keywords") and file_metadata.keywords:
             for keyword in file_metadata.keywords:
                 features.append(f"keyword:{keyword}")
-
-        # Add entities if available
         if hasattr(file_metadata, "entities") and file_metadata.entities:
             for entity_type, entities in file_metadata.entities.items():
                 for entity in entities:
                     features.append(f"entity:{entity_type}:{entity}")
-
-        # Add language if available
         if hasattr(file_metadata, "language") and file_metadata.language:
             features.append(f"lang:{file_metadata.language}")
-
-        # Add content type if available
         if hasattr(file_metadata, "content_type") and file_metadata.content_type:
             features.append(f"content_type:{file_metadata.content_type}")
-
-        # Join all features
         return " ".join(str(feature) for feature in features if feature)
-
-    def _get_tag_scores(self, file_metadata: FileMetadata) -> list[tuple[str, float]]:
-        """
-        Get confidence scores for all tags for a file.
-
-        Args:
-            file_metadata: File metadata
-
-        Returns:
-            List[Tuple[str, float]]: List of (tag_name, confidence) tuples
-        """
-        if not self.pipeline or not self.mlb or not self.tag_names:
-            logger.warning("Model not initialized, cannot get tag scores")
-            return []
-
-        # Pipeline must not be None at this point
-        pipeline = self.pipeline
-        if pipeline is None:  # This is for type checking only
-            return []
-
-        try:
-            # Extract features
-            features = self._extract_features(file_metadata)
-            if not features:
-                logger.warning(f"No features extracted from file: {file_metadata.path}")
-                return []
-
-            # Convert to vector
-            X = [features]
-
-            # Get classifier from pipeline
-            classifier = pipeline.named_steps["classifier"]
-
-            # Transform text to TF-IDF
-            X_tfidf = pipeline.named_steps["vectorizer"].transform(X)
-
-            # For each classifier, get decision function scores
-            tag_scores = []
-
-            for i, estimator in enumerate(classifier.estimators_):
-                if i < len(self.tag_names):
-                    if hasattr(estimator, "decision_function"):
-                        # Get decision score
-                        score = estimator.decision_function(X_tfidf)[0]
-
-                        # Convert to probability-like score (0-1)
-                        # Using sigmoid function: 1 / (1 + exp(-x))
-                        confidence = 1 / (1 + np.exp(-score))
-
-                        tag_scores.append((self.tag_names[i], float(confidence)))
-                    else:
-                        # If no decision function, use predict_proba
-                        proba = estimator.predict_proba(X_tfidf)[0][1]
-                        tag_scores.append((self.tag_names[i], float(proba)))
-
-            # Sort by confidence
-            tag_scores.sort(key=lambda x: x[1], reverse=True)
-            return tag_scores
-
-        except Exception as e:
-            logger.error(f"Error getting tag scores: {e}")
-            return []
 
     async def classify(
         self,
         file_metadata: FileMetadata,
-        confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        confidence_threshold: float | None = None,
     ) -> list[tuple[str, float]]:
-        """
-        Classify a file and suggest tags with confidence scores.
-
-        Args:
-            file_metadata: FileMetadata object
-            confidence_threshold: Minimum confidence threshold for tag suggestions
-
-        Returns:
-            List[Tuple[str, float]]: List of (tag_name, confidence) tuples
-        """
-        # Check if model is loaded
-        if self.pipeline is None or self.mlb is None or not self.tag_names:
+        """Classify a file and suggest tags with confidence scores."""
+        if not self._model_loaded:
             await self.load_model()
-            if not self.tag_names:
-                logger.warning("No tags available for classification")
-                return []
-
-        # At this point, ensure pipeline is not None
-        pipeline = self.pipeline
-        if pipeline is None:  # This is for type checking only
+        if not self.pipeline or not self.mlb or not self.tag_names:
+            logger.warning("Model/tags not available for classification.")
             return []
 
+        # Use instance default threshold if none is provided
+        if confidence_threshold is None:
+            confidence_threshold = self.default_confidence_threshold
+
         try:
-            # Extract features
             features = self._extract_features(file_metadata)
             if not features:
-                logger.warning(f"No features extracted from file: {file_metadata.path}")
                 return []
 
-            # Convert to vector
             X = [features]
-
-            # Get classifier from pipeline
-            classifier = pipeline.named_steps["classifier"]
-
-            # Transform text to TF-IDF
-            X_tfidf = pipeline.named_steps["vectorizer"].transform(X)
-
-            # For each classifier, get decision function scores
+            X_tfidf = self.pipeline.named_steps["vectorizer"].transform(X)
+            classifier = self.pipeline.named_steps["classifier"]
             tag_scores = []
 
-            for i, estimator in enumerate(classifier.estimators_):
-                if i < len(self.tag_names):
-                    if hasattr(estimator, "decision_function"):
-                        # Get decision score
-                        score = estimator.decision_function(X_tfidf)[0]
-
-                        # Convert to probability-like confidence (sigmoid)
+            # Use decision_function if available (LinearSVC), otherwise predict_proba
+            if hasattr(classifier.estimators_[0], "decision_function"):
+                decision_scores = classifier.decision_function(X_tfidf)[0]
+                for i, score in enumerate(decision_scores):
+                    if i < len(self.tag_names):
+                        # Sigmoid scaling for confidence
                         confidence = 1 / (1 + np.exp(-score))
-
                         if confidence >= confidence_threshold:
                             tag_scores.append((self.tag_names[i], float(confidence)))
+            elif hasattr(classifier.estimators_[0], "predict_proba"):
+                # This path might need adjustment depending on MultiOutputClassifier behavior
+                # Assuming predict_proba gives [[prob_class_0, prob_class_1], ...] for each tag
+                probabilities = classifier.predict_proba(X_tfidf)  # List of arrays
+                for i, prob_array in enumerate(probabilities):
+                    if i < len(self.tag_names) and prob_array.shape[1] > 1:
+                        confidence = prob_array[0][
+                            1
+                        ]  # Probability of positive class (tag present)
+                        if confidence >= confidence_threshold:
+                            tag_scores.append((self.tag_names[i], float(confidence)))
+            else:
+                logger.warning(
+                    "Classifier estimators lack decision_function and predict_proba."
+                )
+                # Fallback: Use predict if nothing else works (binary output)
+                predictions = self.pipeline.predict(X)[0]
+                tag_scores = [
+                    (self.tag_names[i], 1.0)
+                    for i, pred in enumerate(predictions)
+                    if pred == 1 and i < len(self.tag_names)
+                ]
 
-            # Sort by confidence
             tag_scores.sort(key=lambda x: x[1], reverse=True)
-
             return tag_scores
 
+        except ValueError as e:
+            # Catch errors related to data format or incompatible shapes
+            logger.error(f"Value error classifying file {file_metadata.path}: {e}")
+            return []
+        except AttributeError as e:
+            # Catch errors related to missing methods or attributes in the model
+            logger.error(
+                f"Model attribute error classifying file {file_metadata.path}: {e}"
+            )
+            return []
+        except np.linalg.LinAlgError as e:
+            # Catch numerical/linear algebra errors in numpy
+            logger.error(f"Numerical error classifying file {file_metadata.path}: {e}")
+            return []
+        except TypeError as e:
+            # Catch errors related to type mismatches
+            logger.error(f"Type error classifying file {file_metadata.path}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error classifying file {file_metadata.path}: {e}")
+            # Catch all other exceptions as a fallback
+            logger.error(
+                f"Unexpected error classifying file {file_metadata.path}: {e}",
+                exc_info=True,
+            )
             return []
 
     async def train(
@@ -346,74 +322,39 @@ class TagClassifier:
         test_size: float = 0.2,
         random_state: int = 42,
     ) -> dict[str, Any]:
-        """
-        Train the classifier with labeled examples.
-
-        Args:
-            training_data: List of (file_metadata, tags) tuples
-            test_size: Portion of data to use for testing
-            random_state: Random seed for reproducibility
-
-        Returns:
-            Dict[str, Any]: Training results with metrics
-
-        Raises:
-            ValueError: If training data is empty
-        """
+        """Train the classifier with labeled examples."""
         if not training_data:
             raise ValueError("Training data cannot be empty")
-
-        # Initialize components if needed
-        if self.pipeline is None:
+        if not self.pipeline or not self.mlb:
             self._initialize_default_model()
-
-        if self.mlb is None:
-            self.mlb = MultiLabelBinarizer()
-
-        # Ensure we have valid pipeline and mlb objects
-        pipeline = self.pipeline
-        mlb = self.mlb
-        if pipeline is None or mlb is None:
-            logger.error("Failed to initialize model components")
-            raise RuntimeError("Model components could not be initialized")
+        assert (
+            self.pipeline is not None and self.mlb is not None
+        ), "Model components not initialized"
 
         try:
-            # Extract features and labels
             X = []
             y = []
-
             for metadata, tags in training_data:
                 features = self._extract_features(metadata)
                 if features:
                     X.append(features)
                     y.append(tags)
-
             if not X or not y:
-                raise ValueError(
-                    "No valid features or tags extracted from training data"
-                )
+                raise ValueError("No valid features/tags extracted")
 
-            # Fit the binarizer on all tags
-            y_bin = mlb.fit_transform(y)
-            self.tag_names = list(mlb.classes_)
+            y_bin = self.mlb.fit_transform(y)
+            self.tag_names = list(self.mlb.classes_)  # Update tag names from fitted mlb
 
-            # Split data into train and test sets
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y_bin, test_size=test_size, random_state=random_state
             )
 
-            # Train the model
-            pipeline.fit(X_train, y_train)
-
-            # Get feature names for introspection
-            self.feature_names = pipeline.named_steps[
+            self.pipeline.fit(X_train, y_train)
+            self.feature_names = self.pipeline.named_steps[
                 "vectorizer"
             ].get_feature_names_out()
+            accuracy = self.pipeline.score(X_test, y_test)
 
-            # Evaluate on test set
-            accuracy = pipeline.score(X_test, y_test)
-
-            # Record training metadata
             self.training_metadata = {
                 "num_samples": len(X),
                 "num_tags": len(self.tag_names),
@@ -422,248 +363,158 @@ class TagClassifier:
                 "training_date": datetime.now().isoformat(),
                 "test_size": test_size,
             }
-
-            # Save the model
             await self.save_model()
-
-            logger.info(
-                f"Trained tag classifier on {len(X)} samples with {len(self.tag_names)} tags. Accuracy: {accuracy:.4f}"
-            )
-
+            logger.info(f"Trained tag classifier. Accuracy: {accuracy:.4f}")
             return self.training_metadata
-
+        except ValueError as e:
+            logger.error(f"Value error training tag classifier: {e}")
+            raise ValueError(f"Error training classifier: {e!s}")
+        except TypeError as e:
+            logger.error(f"Type error training tag classifier: {e}")
+            raise TypeError(f"Incompatible data type: {e!s}")
+        except np.linalg.LinAlgError as e:
+            logger.error(f"Numerical error training tag classifier: {e}")
+            raise ValueError(f"Numerical error during training: {e!s}")
+        except MemoryError as e:
+            logger.error(f"Memory error training tag classifier: {e}")
+            raise MemoryError(f"Insufficient memory for training: {e!s}")
         except Exception as e:
-            logger.error(f"Error training tag classifier: {e}")
-            raise
+            logger.error(
+                f"Unexpected error training tag classifier: {e}", exc_info=True
+            )
+            raise RuntimeError(f"Training failed: {e!s}") from e
 
+    async def get_model_info(self) -> dict[str, Any]:
+        """Get information about the current model."""
+        if not self._model_loaded:
+            await self.load_model()
+        return {
+            **self.training_metadata,
+            "model_path": str(self.model_path),
+            "is_loaded": self._model_loaded
+            and self.pipeline is not None
+            and self.mlb is not None,
+            "num_features": len(self.feature_names)
+            if self.feature_names is not None
+            else 0,
+            "num_tags": len(self.tag_names),
+            "tag_names": self.tag_names,
+        }
+
+    # Keep get_tag_features and get_similar_tags as they rely on the loaded model state
+    # ... (implementation for get_tag_features and get_similar_tags remains similar)
     async def get_tag_features(
         self, tag_name: str, top_n: int = 10
     ) -> list[tuple[str, float]]:
-        """
-        Get the most important features for a tag.
-
-        Args:
-            tag_name: Name of the tag
-            top_n: Number of top features to return
-
-        Returns:
-            List[Tuple[str, float]]: List of (feature, importance) tuples
-        """
-        if not self.pipeline or not self.mlb or not self.feature_names:
+        """Get the most important features for a tag."""
+        if not self._model_loaded:
             await self.load_model()
-            if not self.tag_names or not self.feature_names:
-                return []
-
-        # Make sure pipeline and feature_names are not None
-        pipeline = self.pipeline
-        feature_names = self.feature_names
-        if pipeline is None or feature_names is None:
-            logger.warning("Pipeline or feature_names not available")
+        if (
+            not self.pipeline
+            or not self.mlb
+            or self.feature_names is None
+            or not self.tag_names
+        ):
+            logger.warning("Model/features not available for get_tag_features.")
             return []
 
         try:
-            # Get tag index
             if tag_name not in self.tag_names:
                 return []
-
             tag_idx = self.tag_names.index(tag_name)
-
-            # Get coefficients for the tag
-            classifier = pipeline.named_steps["classifier"]
+            classifier = self.pipeline.named_steps["classifier"]
             if tag_idx >= len(classifier.estimators_):
                 return []
 
             estimator = classifier.estimators_[tag_idx]
+            # Check if estimator has coefficients (like LinearSVC)
+            if not hasattr(estimator, "coef_"):
+                logger.warning(
+                    f"Estimator for tag '{tag_name}' does not have coefficients."
+                )
+                return []
+
             coefficients = estimator.coef_[0]
-
-            # Pair features with coefficients
-            feature_importance = [
-                (feature, coef)
-                for feature, coef in zip(feature_names, coefficients, strict=False)
-            ]
-
-            # Sort by absolute importance
+            feature_importance = list(
+                zip(self.feature_names, coefficients, strict=False)
+            )
             feature_importance.sort(key=lambda x: abs(x[1]), reverse=True)
-
-            # Return top features
             return feature_importance[:top_n]
-
-        except Exception as e:
-            logger.error(f"Error finding important features for {tag_name}: {e}")
+        except ValueError as e:
+            logger.error(f"Value error getting features for tag '{tag_name}': {e}")
             return []
-
-    async def get_model_info(self) -> dict[str, Any]:
-        """
-        Get information about the current model.
-
-        Returns:
-            Dict[str, Any]: Model information and metadata
-        """
-        # Try to load the model if not loaded
-        if not self.training_metadata:
-            await self.load_model()
-
-        return {
-            **self.training_metadata,
-            "model_path": str(self.model_path),
-            "is_loaded": self.pipeline is not None and self.mlb is not None,
-            "num_features": (
-                len(self.feature_names) if self.feature_names is not None else 0
-            ),
-        }
+        except IndexError as e:
+            logger.error(f"Index error getting features for tag '{tag_name}': {e}")
+            return []
+        except AttributeError as e:
+            logger.error(f"Attribute error getting features for tag '{tag_name}': {e}")
+            return []
+        except Exception as e:
+            logger.error(
+                f"Unexpected error getting features for tag '{tag_name}': {e}",
+                exc_info=True,
+            )
+            return []
 
     async def get_similar_tags(
         self, tag_name: str, top_n: int = 5
     ) -> list[tuple[str, float]]:
-        """
-        Find tags that are similar to the given tag based on model coefficients.
-
-        Args:
-            tag_name: Tag name
-            top_n: Number of similar tags to return
-
-        Returns:
-            List[Tuple[str, float]]: List of (tag_name, similarity) tuples
-        """
-        if not self.pipeline or not self.mlb or not self.tag_names:
+        """Find tags that are similar based on model coefficients."""
+        if not self._model_loaded:
             await self.load_model()
-            if not self.tag_names:
-                return []
-
-        # Ensure pipeline is not None
-        pipeline = self.pipeline
-        if pipeline is None:
-            logger.warning("Pipeline not available")
+        if not self.pipeline or not self.mlb or not self.tag_names:
+            logger.warning("Model/tags not available for get_similar_tags.")
             return []
 
         try:
-            # Get tag index
             if tag_name not in self.tag_names:
                 return []
-
             tag_idx = self.tag_names.index(tag_name)
-
-            # Get coefficients for the tag
-            classifier = pipeline.named_steps["classifier"]
-            if tag_idx >= len(classifier.estimators_):
+            classifier = self.pipeline.named_steps["classifier"]
+            if tag_idx >= len(classifier.estimators_) or not hasattr(
+                classifier.estimators_[tag_idx], "coef_"
+            ):
                 return []
 
-            reference_estimator = classifier.estimators_[tag_idx]
-            reference_coefficients = reference_estimator.coef_[0]
-
-            # Calculate cosine similarity with all other tags
+            reference_coefficients = classifier.estimators_[tag_idx].coef_[0]
             similarities = []
 
             for i, estimator in enumerate(classifier.estimators_):
-                if i != tag_idx and i < len(self.tag_names):
+                if (
+                    i != tag_idx
+                    and i < len(self.tag_names)
+                    and hasattr(estimator, "coef_")
+                ):
                     coefficients = estimator.coef_[0]
-
-                    # Calculate cosine similarity
                     dot_product = np.dot(reference_coefficients, coefficients)
                     norm_product = np.linalg.norm(
                         reference_coefficients
                     ) * np.linalg.norm(coefficients)
-                    similarity = dot_product / norm_product if norm_product != 0 else 0
-
+                    similarity = (
+                        dot_product / norm_product if norm_product != 0 else 0.0
+                    )
                     similarities.append((self.tag_names[i], float(similarity)))
 
-            # Sort by similarity
+            # Sort by similarity score and return top N
             similarities.sort(key=lambda x: x[1], reverse=True)
-
             return similarities[:top_n]
-
-        except Exception as e:
-            logger.error(f"Error finding similar tags for {tag_name}: {e}")
+        except ValueError as e:
+            logger.error(f"Value error finding similar tags for '{tag_name}': {e}")
             return []
-
-    async def train_model(
-        self,
-        training_data: list[tuple[FileMetadata, list[str]]],
-        test_size: float = 0.2,
-        random_state: int = 42,
-    ) -> dict[str, Any]:
-        """
-        Train the tag classifier on a dataset of file metadata and tags.
-
-        Args:
-            training_data: List of (file_metadata, tags) tuples
-            test_size: Proportion of data to use for testing
-            random_state: Random seed for reproducibility
-
-        Returns:
-            Dict[str, Any]: Training results and metrics
-
-        Raises:
-            ValueError: If training data is insufficient
-        """
-        if not training_data:
-            raise ValueError("No training data provided")
-
-        # Initialize components if not already done
-        if self.pipeline is None:
-            self._initialize_default_model()
-
-        if self.mlb is None:
-            self.mlb = MultiLabelBinarizer()
-
-        # Ensure we have valid pipeline and mlb objects
-        assert self.pipeline is not None, "Pipeline not initialized"
-        assert self.mlb is not None, "MultiLabelBinarizer not initialized"
-
-        try:
-            # Extract features and labels
-            X = []
-            y = []
-
-            for metadata, tags in training_data:
-                features = self._extract_features(metadata)
-                if features:
-                    X.append(features)
-                    y.append(tags)
-
-            if not X or not y:
-                raise ValueError(
-                    "No valid features or tags extracted from training data"
-                )
-
-            # Fit the binarizer on all tags
-            y_bin = self.mlb.fit_transform(y)
-            self.tag_names = list(self.mlb.classes_)
-
-            # Split data into train and test sets
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y_bin, test_size=test_size, random_state=random_state
+        except IndexError as e:
+            logger.error(f"Index error finding similar tags for '{tag_name}': {e}")
+            return []
+        except AttributeError as e:
+            logger.error(f"Attribute error finding similar tags for '{tag_name}': {e}")
+            return []
+        except np.linalg.LinAlgError as e:
+            logger.error(
+                f"Linear algebra error finding similar tags for '{tag_name}': {e}"
             )
-
-            # Train the model
-            self.pipeline.fit(X_train, y_train)
-
-            # Get feature names for introspection
-            self.feature_names = self.pipeline.named_steps[
-                "vectorizer"
-            ].get_feature_names_out()
-
-            # Evaluate on test set
-            accuracy = self.pipeline.score(X_test, y_test)
-
-            # Record training metadata
-            self.training_metadata = {
-                "num_samples": len(X),
-                "num_tags": len(self.tag_names),
-                "tag_names": self.tag_names,
-                "accuracy": accuracy,
-                "trained_at": datetime.now().isoformat(),
-            }
-
-            # Save the model
-            await self.save_model()
-
-            logger.info(
-                f"Trained tag classifier on {len(X)} samples with {len(self.tag_names)} tags. Accuracy: {accuracy:.4f}"
-            )
-
-            return self.training_metadata
-
+            return []
         except Exception as e:
-            logger.error(f"Error training tag classifier: {e}")
-            raise
+            logger.error(
+                f"Unexpected error finding similar tags for '{tag_name}': {e}",
+                exc_info=True,
+            )
+            return []

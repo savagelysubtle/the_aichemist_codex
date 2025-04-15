@@ -123,7 +123,7 @@ def create_memory(
             console.print(table)
 
         except Exception as e:
-            console.print(f"❌ [red]Error creating memory: {str(e)}[/red]")
+            console.print(f"❌ [red]Error creating memory: {e!s}[/red]")
 
     asyncio.run(_create_memory())
 
@@ -203,7 +203,7 @@ def list_memories(
             console.print(table)
 
         except Exception as e:
-            console.print(f"❌ [red]Error listing memories: {str(e)}[/red]")
+            console.print(f"❌ [red]Error listing memories: {e!s}[/red]")
 
     asyncio.run(_list_memories())
 
@@ -296,7 +296,7 @@ def recall_memories(
             console.print(table)
 
         except Exception as e:
-            console.print(f"❌ [red]Error recalling memories: {str(e)}[/red]")
+            console.print(f"❌ [red]Error recalling memories: {e!s}[/red]")
 
     asyncio.run(_recall_memories())
 
@@ -341,7 +341,7 @@ def strengthen_memory(
             )
 
         except Exception as e:
-            console.print(f"❌ [red]Error strengthening memory: {str(e)}[/red]")
+            console.print(f"❌ [red]Error strengthening memory: {e!s}[/red]")
 
     asyncio.run(_strengthen_memory())
 
@@ -409,7 +409,7 @@ def show_memory_graph(
             )
 
         except Exception as e:
-            console.print(f"❌ [red]Error showing memory graph: {str(e)}[/red]")
+            console.print(f"❌ [red]Error showing memory graph: {e!s}[/red]")
 
     async def _build_memory_tree(
         repo: SQLiteMemoryRepository,

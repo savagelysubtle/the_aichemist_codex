@@ -143,7 +143,7 @@ class SimilarityProvider:
             return []
 
         # Check cache
-        cache_key = f"similar_files_{str(path_obj)}_{threshold}_{max_results}"
+        cache_key = f"similar_files_{path_obj!s}_{threshold}_{max_results}"
         if self.cache_manager:
             cached_result = await self.cache_manager.get(cache_key)
             if cached_result:
@@ -193,10 +193,10 @@ class SimilarityProvider:
             if self.cache_manager:
                 await self.cache_manager.put(cache_key, results)
 
-            logger.debug(f"Found {len(results)} similar files for: {str(path_obj)}")
+            logger.debug(f"Found {len(results)} similar files for: {path_obj!s}")
             return results
         except Exception as e:
-            logger.error(f"Error finding similar files for {str(path_obj)}: {e}")
+            logger.error(f"Error finding similar files for {path_obj!s}: {e}")
             return []
 
     async def find_file_groups(

@@ -95,7 +95,7 @@ def analyze_file(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error during analysis:[/] {str(e)}")
+            console.print(f"[bold red]Error during analysis:[/] {e!s}")
 
 
 @analysis_app.command("analyze-artifact")
@@ -147,7 +147,7 @@ def analyze_artifact(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error during analysis:[/] {str(e)}")
+            console.print(f"[bold red]Error during analysis:[/] {e!s}")
 
 
 @analysis_app.command("analyze-codebase")
@@ -192,7 +192,7 @@ def analyze_codebase(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error during analysis:[/] {str(e)}")
+            console.print(f"[bold red]Error during analysis:[/] {e!s}")
 
 
 @analysis_app.command("complexity")
@@ -259,7 +259,7 @@ def calculate_complexity(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error calculating complexity:[/] {str(e)}")
+            console.print(f"[bold red]Error calculating complexity:[/] {e!s}")
 
 
 @analysis_app.command("find-similar")
@@ -338,7 +338,7 @@ def find_similar_artifacts(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error finding similar artifacts:[/] {str(e)}")
+            console.print(f"[bold red]Error finding similar artifacts:[/] {e!s}")
 
 
 @analysis_app.command("extract-knowledge")
@@ -414,7 +414,7 @@ def extract_knowledge(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error extracting knowledge:[/] {str(e)}")
+            console.print(f"[bold red]Error extracting knowledge:[/] {e!s}")
 
 
 @analysis_app.command("find-dependencies")
@@ -483,7 +483,7 @@ def find_dependencies(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error finding dependencies:[/] {str(e)}")
+            console.print(f"[bold red]Error finding dependencies:[/] {e!s}")
 
 
 @analysis_app.command("find-references")
@@ -548,7 +548,7 @@ def find_references(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error finding references:[/] {str(e)}")
+            console.print(f"[bold red]Error finding references:[/] {e!s}")
 
 
 @analysis_app.command("get-summary")
@@ -602,7 +602,7 @@ def get_summary(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error getting summary:[/] {str(e)}")
+            console.print(f"[bold red]Error getting summary:[/] {e!s}")
 
 
 @analysis_app.command("get-structure")
@@ -699,7 +699,7 @@ def get_structure(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error getting structure:[/] {str(e)}")
+            console.print(f"[bold red]Error getting structure:[/] {e!s}")
 
 
 def _display_analysis_results(

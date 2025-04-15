@@ -7,13 +7,15 @@ the base class and registry for dynamic extractor discovery and selection.
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from the_aichemist_codex.infrastructure.fs.file_metadata import FileMetadata
-from the_aichemist_codex.infrastructure.utils.cache.cache_manager import CacheManager
 from the_aichemist_codex.infrastructure.utils.io.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
+
+# Define a type variable for metadata dictionaries
+T = TypeVar("T", bound=dict[str, Any])
 
 
 class BaseMetadataExtractor(ABC):
@@ -23,13 +25,9 @@ class BaseMetadataExtractor(ABC):
     such as keywords, topics, entities, and other content-based metadata.
     """
 
-    def __init__(self, cache_manager: CacheManager | None = None):
-        """Initialize the metadata extractor.
-
-        Args:
-            cache_manager: Optional cache manager for caching extraction results
-        """
-        self.cache_manager = cache_manager
+    def __init__(self) -> None:
+        """Initialize the metadata extractor."""
+        pass
 
     @abstractmethod
     async def extract(
@@ -38,7 +36,7 @@ class BaseMetadataExtractor(ABC):
         content: str | None = None,
         mime_type: str | None = None,
         metadata: FileMetadata | None = None,
-    ) -> dict[str, Any]:
+    ) -> T:
         """
         Extract metadata from the given file.
 
@@ -49,7 +47,12 @@ class BaseMetadataExtractor(ABC):
             metadata: Optional existing metadata to enhance
 
         Returns:
-            Dictionary of extracted metadata
+            Dictionary of extracted metadata conforming to the implementing class's TypedDict
+
+        Raises:
+            FileNotFoundError: If the file does not exist
+            UnicodeDecodeError: If the file content cannot be decoded
+            IOError: If there is an error reading the file
         """
         pass
 
@@ -78,6 +81,7 @@ class BaseMetadataExtractor(ABC):
             FileNotFoundError: If the file does not exist
             UnicodeDecodeError: If the file content cannot be decoded as UTF-8
             IOError: If there is an error reading the file
+            PermissionError: If the file cannot be accessed due to permission issues
         """
         path = Path(file_path) if isinstance(file_path, str) else file_path
         try:
@@ -86,9 +90,19 @@ class BaseMetadataExtractor(ABC):
         except UnicodeDecodeError:
             logger.warning(f"File {path} is not a text file or has non-UTF-8 encoding")
             raise
-        except Exception as e:
-            logger.error(f"Error reading file {path}: {e}")
+        except FileNotFoundError:
+            logger.error(f"File not found: {path}")
             raise
+        except PermissionError:
+            logger.error(f"Permission denied accessing file {path}")
+            raise
+        except OSError as e:
+            logger.error(f"I/O error reading file {path}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error reading file {path}: {e}", exc_info=True)
+            # Re-raise as IOError with original exception as context
+            raise OSError(f"Error reading file {path}") from e
 
 
 class MetadataExtractorRegistry:
@@ -126,7 +140,7 @@ class MetadataExtractorRegistry:
         # Create dummy instance to access properties
         try:
             # Map MIME types to this extractor
-            dummy_instance = extractor_class(None)
+            dummy_instance = extractor_class()
             for mime_type in dummy_instance.supported_mime_types:
                 if mime_type in cls._mime_type_map:
                     existing = cls._mime_type_map[mime_type].__name__
@@ -140,6 +154,24 @@ class MetadataExtractorRegistry:
             logger.error(
                 f"Error registering MIME types for {extractor_class.__name__}: {e}"
             )
+            # Attempt to create instance without cache manager now
+            try:
+                dummy_instance = extractor_class()
+                for mime_type in dummy_instance.supported_mime_types:
+                    if mime_type in cls._mime_type_map:
+                        existing = cls._mime_type_map[mime_type].__name__
+                        logger.warning(
+                            f"MIME type {mime_type} already registered to {existing}, "
+                            f"overriding with {extractor_class.__name__}"
+                        )
+                    cls._mime_type_map[mime_type] = extractor_class
+                logger.debug(
+                    f"Registered {extractor_class.__name__} metadata extractor"
+                )
+            except Exception as inner_e:
+                logger.error(
+                    f"Error registering MIME types for {extractor_class.__name__} even without cache_manager: {inner_e}"
+                )
 
         return extractor_class
 

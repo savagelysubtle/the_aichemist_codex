@@ -22,18 +22,18 @@ try:
     )
 
     __all__ = [
+        "ActionType",
+        "ConditionOperator",
         "Notification",
         "NotificationLevel",
-        "NotificationType",
         "NotificationManager",
-        "notification_manager",
         "NotificationRule",
-        "RuleCondition",
+        "NotificationType",
         "RuleAction",
+        "RuleCondition",
         "TimeCondition",
-        "ConditionOperator",
         "TimeConditionType",
-        "ActionType",
+        "notification_manager",
         "rule_engine",
     ]
 except ImportError:
@@ -41,7 +41,7 @@ except ImportError:
     __all__ = [
         "Notification",
         "NotificationLevel",
-        "NotificationType",
         "NotificationManager",
+        "NotificationType",
         "notification_manager",
     ]

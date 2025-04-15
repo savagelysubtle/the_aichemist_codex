@@ -3,12 +3,14 @@ import logging
 import os
 from pathlib import Path
 
+from the_aichemist_codex.infrastructure.config import config
 from the_aichemist_codex.infrastructure.fs.rollback import (
     OperationType,
     RollbackManager,
 )
+from the_aichemist_codex.infrastructure.utils import AsyncFileIO
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 rollback_manager = RollbackManager()
 
 
@@ -20,8 +22,15 @@ class DirectoryManager:
     handling creation, validation, and path resolution.
     """
 
-    # Standard directory types
-    STANDARD_DIRS = ["cache", "logs", "versions", "exports", "backup", "trash"]
+    # Default standard directories if not in config
+    _DEFAULT_STANDARD_DIRS = [
+        "cache",
+        "logs",
+        "versions",
+        "exports",
+        "backup",
+        "trash",
+    ]
 
     def __init__(self, base_dir: Path | None = None) -> None:
         """
@@ -31,29 +40,51 @@ class DirectoryManager:
             base_dir: Optional custom base directory path
         """
         self.base_dir = base_dir or self._get_default_data_dir()
+        self.standard_dirs = config.get("fs.standard_dirs", self._DEFAULT_STANDARD_DIRS)
+        self.async_file_io = AsyncFileIO()
         self._ensure_directories_exist()
 
     def _get_default_data_dir(self) -> Path:
         """
-        Get the default data directory based on env vars or system location.
+        Get the default data directory based on config, env vars, or system location.
 
         Returns:
             Path: The resolved data directory path
         """
-        # Check for environment variable override
+        # 1. Check config first
+        if config_dir := config.get("data_dir"):
+            return Path(config_dir)
+
+        # 2. Check for environment variable override
         if env_dir := os.environ.get("AICHEMIST_DATA_DIR"):
             return Path(env_dir)
 
-        # Use standard OS-specific data directories
+        # 3. Use standard OS-specific data directories
+        # Retrieve application name from config if available
+        app_name = config.get("application.name", "AichemistCodex")
         if os.name == "nt":  # Windows
-            return Path(os.environ["APPDATA"]) / "AichemistCodex"
+            appdata = os.environ.get("APPDATA")
+            if appdata:
+                return Path(appdata) / app_name
+            else:
+                # Fallback if APPDATA is not set
+                return Path.home() / app_name
         else:  # Linux/Mac
-            return Path.home() / ".aichemist"
+            # Use . prefix for hidden directory
+            return Path.home() / f".{app_name.lower()}"
 
     def _ensure_directories_exist(self) -> None:
-        """Create all required directories if they don't exist."""
-        for subdir in self.STANDARD_DIRS:
-            (self.base_dir / subdir).mkdir(parents=True, exist_ok=True)
+        """Create all required directories if they don't exist (synchronous)."""
+        try:
+            for subdir in self.standard_dirs:
+                dir_path = self.base_dir / subdir
+                dir_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Ensured standard directories exist under {self.base_dir}")
+        except OSError as e:
+            logger.error(
+                f"Failed to create standard directories under {self.base_dir}: {e}"
+            )
+            # Potentially raise an error or handle critical failure
 
     def get_dir(self, dir_type: str) -> Path:
         """
@@ -68,7 +99,7 @@ class DirectoryManager:
         Raises:
             ValueError: If the directory type is not recognized
         """
-        if dir_type not in self.STANDARD_DIRS:
+        if dir_type not in self.standard_dirs:
             raise ValueError(f"Unknown directory type: {dir_type}")
         return self.base_dir / dir_type
 
@@ -93,15 +124,16 @@ class DirectoryManager:
         """
         directory = directory.resolve()
 
-        # Use async existence check
-        dir_exists = await asyncio.to_thread(directory.exists)
+        # Use async existence check via AsyncFileIO
+        dir_exists = await self.async_file_io.exists(directory)
 
         if not dir_exists:
             try:
-                await asyncio.to_thread(directory.mkdir, parents=True, exist_ok=True)
+                # Use AsyncFileIO.mkdir
+                await self.async_file_io.mkdir(directory, parents=True, exist_ok=True)
                 logger.info(f"Ensured directory exists: {directory}")
                 # Record the creation so that an undo would delete this new directory
-                rollback_manager.record_operation(OperationType.CREATE, directory)
+                await rollback_manager.record_operation(OperationType.CREATE, directory)
             except Exception as e:
                 logger.error(f"Error ensuring directory {directory}: {e}")
         else:
@@ -117,25 +149,49 @@ class DirectoryManager:
         directory = directory.resolve()
 
         async def remove_if_empty(subdir: Path) -> None:
-            # Check if directory exists and is empty
-            is_dir = await asyncio.to_thread(subdir.is_dir)
+            # Check if directory exists and is empty using AsyncFileIO
+            is_dir = await self.async_file_io.is_dir(subdir)
             if not is_dir:
                 return
 
-            # Check if directory is empty (convert to list to properly evaluate)
-            dir_contents = await asyncio.to_thread(lambda: list(subdir.iterdir()))
-            if not dir_contents:
+            # Check if directory is empty using AsyncFileIO.iterdir
+            # Need to materialize the async iterator to check if it's empty
+            is_empty = True
+            try:
+                async for _ in self.async_file_io.iterdir(subdir):
+                    is_empty = False
+                    break  # Found an item, not empty
+            except FileNotFoundError:
+                # Directory might have been deleted between checks
+                logger.warning(f"Directory {subdir} not found during emptiness check.")
+                return
+            except Exception as e:
+                logger.error(f"Error checking emptiness of {subdir}: {e}")
+                return  # Avoid deleting if we can't be sure it's empty
+
+            if is_empty:
                 try:
                     # Record deletion before removing the directory
-                    rollback_manager.record_operation(OperationType.DELETE, subdir)
-                    await asyncio.to_thread(subdir.rmdir)
+                    await rollback_manager.record_operation(
+                        OperationType.DELETE, subdir
+                    )
+                    # Use AsyncFileIO.rmdir
+                    await self.async_file_io.rmdir(subdir)
                     logger.info(f"Removed empty directory: {subdir}")
                 except Exception as e:
+                    # Log error but continue trying other directories
                     logger.error(f"Failed to remove {subdir}: {e}")
 
-        # Get all subdirectories
-        subdirs = await asyncio.to_thread(lambda: list(directory.glob("**/")))
+        # Get all subdirectories recursively. AsyncFileIO doesn't have a direct glob.
+        # We might need a more specific async walk implementation or stick to to_thread for glob.
+        # For now, sticking with to_thread for glob, but operations inside loop are async.
+        try:
+            subdirs = await asyncio.to_thread(lambda: list(directory.glob("**/")))
+        except Exception as e:
+            logger.error(f"Error scanning directory {directory} for cleanup: {e}")
+            return
 
         # Process each subdirectory
-        for subdir in sorted(subdirs, reverse=True):  # Process deeper directories first
-            await remove_if_empty(subdir)
+        # Use asyncio.gather for potentially better performance if many dirs
+        tasks = [remove_if_empty(subdir) for subdir in sorted(subdirs, reverse=True)]
+        await asyncio.gather(*tasks)

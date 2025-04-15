@@ -1,5 +1,7 @@
 """Provides enhanced concurrency tools for efficient parallel processing."""
 
+from __future__ import annotations
+
 import asyncio
 import functools
 import logging
@@ -10,6 +12,52 @@ from typing import Any, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
+
+# Private singleton instances
+_thread_pool_instance: AsyncThreadPoolExecutor | None = None
+_task_queue_instance: TaskQueue | None = None
+
+
+def get_thread_pool(max_workers: int | None = None) -> AsyncThreadPoolExecutor:
+    """
+    Get or create the thread pool executor instance.
+
+    Args:
+        max_workers: Maximum number of worker threads
+
+    Returns:
+        AsyncThreadPoolExecutor: Singleton instance of the thread pool
+    """
+    global _thread_pool_instance
+
+    if _thread_pool_instance is None:
+        _thread_pool_instance = AsyncThreadPoolExecutor(max_workers=max_workers)
+
+    return _thread_pool_instance
+
+
+def get_task_queue(
+    max_concurrent: int = 10, max_rate: float | None = None, time_period: float = 1.0
+) -> TaskQueue:
+    """
+    Get or create the task queue instance.
+
+    Args:
+        max_concurrent: Maximum number of concurrent tasks
+        max_rate: Maximum tasks per time period (None for no limit)
+        time_period: Time period in seconds for rate limiting
+
+    Returns:
+        TaskQueue: Singleton instance of the task queue
+    """
+    global _task_queue_instance
+
+    if _task_queue_instance is None:
+        _task_queue_instance = TaskQueue(
+            max_concurrent=max_concurrent, max_rate=max_rate, time_period=time_period
+        )
+
+    return _task_queue_instance
 
 
 class TaskPriority(Enum):
@@ -234,8 +282,3 @@ class TaskQueue:
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return cast(list[T | BaseException], results)
-
-
-# Create singleton instances for application-wide use
-thread_pool = AsyncThreadPoolExecutor()
-task_queue = TaskQueue()

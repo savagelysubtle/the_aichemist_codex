@@ -4,6 +4,7 @@ This module provides efficient diffing algorithms for various file types,
 supporting storage optimization for the versioning system.
 """
 
+import asyncio
 import difflib
 import hashlib
 import logging
@@ -29,7 +30,17 @@ class DiffFormat(Enum):
 
 @dataclass
 class DiffResult:
-    """Result of a diff operation."""
+    """Result of a diff operation.
+
+    Attributes:
+        is_different: True if the files differ, False otherwise.
+        diff_content: The content of the diff (format depends on diff_format).
+        diff_format: The format used for the diff content.
+        original_hash: SHA-256 hash of the original file.
+        new_hash: SHA-256 hash of the new file.
+        change_percentage: Percentage of the file that changed (0-100).
+        change_size_bytes: Size of the changes in bytes.
+    """
 
     is_different: bool
     diff_content: str = ""
@@ -41,7 +52,12 @@ class DiffResult:
 
 
 class DiffEngine:
-    """Provides diffing capabilities for various file types."""
+    """Provides diffing capabilities for various file types.
+
+    This engine calculates differences between file versions and can apply
+    diffs to reconstruct specific versions. It supports different diff
+    formats based on file types.
+    """
 
     def __init__(self):
         """Initialize the diff engine."""
@@ -56,15 +72,23 @@ class DiffEngine:
     async def calculate_diff(
         self, original_path: Path, new_path: Path, mime_type: str | None = None
     ) -> DiffResult:
-        """Calculate diff between two files.
+        """Calculate the difference between two files asynchronously.
+
+        Determines the appropriate diffing strategy based on file type
+        (text, binary, or specific MIME types like JSON) and returns the
+        result including diff content and change metrics.
 
         Args:
-            original_path: Path to the original file
-            new_path: Path to the new file
-            mime_type: Optional MIME type to use specific diff strategy
+            original_path: Path to the original file.
+            new_path: Path to the new file.
+            mime_type: Optional MIME type to override detection and use
+                a specific diff strategy.
 
         Returns:
-            DiffResult with diff information
+            A DiffResult object containing the diff information.
+
+        Raises:
+            FileNotFoundError: If either the original or new file does not exist.
         """
         # Check if the files exist
         if not await self.file_io.exists(original_path):
@@ -117,16 +141,19 @@ class DiffEngine:
         output_path: Path,
         diff_format: DiffFormat = DiffFormat.UNIFIED,
     ) -> bool:
-        """Apply a diff to recreate a file.
+        """Apply a diff patch to a base file to reconstruct a target version.
+
+        Selects the appropriate method to apply the patch based on the
+        specified diff format.
 
         Args:
-            base_path: Path to the base file
-            diff_path: Path to the diff file
-            output_path: Path where the reconstructed file should be written
-            diff_format: Format of the diff file
+            base_path: Path to the base file.
+            diff_path: Path to the file containing the diff information.
+            output_path: Path where the reconstructed file should be written.
+            diff_format: The format of the diff stored in diff_path.
 
         Returns:
-            True if successful, False otherwise
+            True if the diff was applied successfully, False otherwise.
         """
         try:
             if diff_format == DiffFormat.UNIFIED:
@@ -143,14 +170,17 @@ class DiffEngine:
             return False
 
     async def _diff_text(self, original_path: Path, new_path: Path) -> DiffResult:
-        """Calculate diff for text files.
+        """Calculate the diff for text files using the unified diff format.
+
+        Reads both files, compares them line by line, and generates a
+        standard unified diff.
 
         Args:
-            original_path: Path to the original file
-            new_path: Path to the new file
+            original_path: Path to the original text file.
+            new_path: Path to the new text file.
 
         Returns:
-            DiffResult with unified diff
+            A DiffResult object containing the unified diff and change metrics.
         """
         # Read file contents
         original_content = await self.file_io.read_text(original_path)
@@ -182,60 +212,79 @@ class DiffEngine:
         )
 
     async def _diff_binary(self, original_path: Path, new_path: Path) -> DiffResult:
-        """Calculate diff for binary files.
+        """Handle diff calculation for binary files.
 
-        For binary files, we store the full new file content as the "diff".
-        A more sophisticated implementation would use binary diffing tools.
+        Note:
+            This current implementation does not perform a true binary diff.
+            It marks the files as different if their hashes don't match and
+            calculates the size of the new file. A placeholder reference to the
+            new file path is stored in `diff_content`. A more sophisticated
+            implementation would use dedicated binary diffing tools (e.g., xdelta,
+            bsdiff).
 
         Args:
-            original_path: Path to the original file
-            new_path: Path to the new file
+            original_path: Path to the original binary file.
+            new_path: Path to the new binary file.
 
         Returns:
-            DiffResult with binary diff information
+            A DiffResult indicating a binary difference and the size of the new file.
         """
-        # For binary files, we simply note they're different
-        # In a real implementation, we would use a binary diff tool
-        # For now, we'll just calculate the change size
-        original_size = os.path.getsize(original_path)
-        new_size = os.path.getsize(new_path)
+        # For binary files, we simply note they're different if hashes mismatch.
+        # Calculate file sizes asynchronously.
+        try:
+            original_size = await asyncio.to_thread(os.path.getsize, original_path)
+            new_size = await asyncio.to_thread(os.path.getsize, new_path)
+        except OSError as e:
+            logger.error(f"Error getting size for binary diff: {e}")
+            original_size = 0
+            new_size = 0
 
-        # We don't actually generate a diff for binary files in this example
-        # Instead, we'll store the full new file as the "diff"
+        # We don't actually generate a diff for binary files in this example.
+        # Instead, we'll store a placeholder referencing the new file.
         return DiffResult(
             is_different=True,
-            diff_content=f"BINARY_DIFF:{new_path}",  # Just a placeholder
+            diff_content=f"BINARY_DIFF:{new_path}",  # Placeholder reference
             diff_format=DiffFormat.BINARY,
             change_percentage=100.0,  # Consider it a full change for binary files
             change_size_bytes=new_size,
         )
 
     async def _diff_json(self, original_path: Path, new_path: Path) -> DiffResult:
-        """Calculate structured diff for JSON files.
+        """Calculate a structured diff for JSON files.
+
+        Note:
+            Currently falls back to standard text diff. A future enhancement
+            could use a JSON-specific diff library (e.g., `jsonpatch`, `jsondiffpatch`)
+            for more semantic comparisons.
 
         Args:
-            original_path: Path to the original file
-            new_path: Path to the new file
+            original_path: Path to the original JSON file.
+            new_path: Path to the new JSON file.
 
         Returns:
-            DiffResult with JSON diff
+            A DiffResult object, currently using the unified text diff format.
         """
-        # In a real implementation, we would use a JSON-specific diff algorithm
-        # For now, just use text diff
+        # In a real implementation, we would use a JSON-specific diff algorithm.
+        # For now, just use text diff.
         return await self._diff_text(original_path, new_path)
 
     async def _apply_unified_diff(
         self, base_path: Path, diff_path: Path, output_path: Path
     ) -> bool:
-        """Apply a unified diff to recreate a file.
+        """Apply a unified diff patch to a base text file.
+
+        Note:
+            Uses a mock patching implementation (`_mock_apply_patch`).
+            A real implementation should use a robust patching library (e.g., the
+            `patch` utility or a Python equivalent).
 
         Args:
-            base_path: Path to the base file
-            diff_path: Path to the diff file
-            output_path: Path where the reconstructed file should be written
+            base_path: Path to the base text file.
+            diff_path: Path to the unified diff file.
+            output_path: Path where the reconstructed file will be written.
 
         Returns:
-            True if successful, False otherwise
+            True if the mock application was successful, False on error.
         """
         try:
             # Read the base file and diff
@@ -261,13 +310,18 @@ class DiffEngine:
     ) -> bool:
         """Apply a binary diff to recreate a file.
 
+        Note:
+            Based on the simplified `_diff_binary`, this assumes the `diff_path`
+            contains a text file whose content is the placeholder
+            `BINARY_DIFF:<path_to_new_file>`. It then copies the referenced new file.
+
         Args:
-            base_path: Path to the base file
-            diff_path: Path to the diff file
-            output_path: Path where the reconstructed file should be written
+            base_path: Path to the base file (potentially unused in this strategy).
+            diff_path: Path to the file containing the placeholder diff info.
+            output_path: Path where the reconstructed (copied) file will be written.
 
         Returns:
-            True if successful, False otherwise
+            True if the file was copied successfully, False otherwise.
         """
         # In our simplified implementation, the diff is actually the full new file
         # So we just copy it to the output path
@@ -289,13 +343,18 @@ class DiffEngine:
     ) -> bool:
         """Apply a JSON diff to recreate a file.
 
+        Note:
+            Currently falls back to applying a unified text diff.
+            A future enhancement mirroring `_diff_json` would use a JSON-specific
+            patch application method.
+
         Args:
-            base_path: Path to the base file
-            diff_path: Path to the diff file
-            output_path: Path where the reconstructed file should be written
+            base_path: Path to the base JSON file.
+            diff_path: Path to the diff file (assumed unified format for now).
+            output_path: Path where the reconstructed file will be written.
 
         Returns:
-            True if successful, False otherwise
+            True if the unified diff application was successful, False otherwise.
         """
         # For now, this is the same as applying a unified diff
         return await self._apply_unified_diff(base_path, diff_path, output_path)
@@ -303,43 +362,56 @@ class DiffEngine:
     def _calculate_change_percentage(
         self, original_lines: list[str], new_lines: list[str]
     ) -> float:
-        """Calculate the percentage of a file that changed.
+        """Calculate the percentage difference between two lists of lines.
+
+        Uses `difflib.SequenceMatcher` to find the ratio of similarity and
+        converts it to a percentage difference.
 
         Args:
-            original_lines: Lines from the original file
-            new_lines: Lines from the new file
+            original_lines: A list of strings representing lines from the original file.
+            new_lines: A list of strings representing lines from the new file.
 
         Returns:
-            Percentage of change (0-100)
+            The percentage of lines that are different (0.0 to 100.0).
         """
+        if not original_lines and not new_lines:
+            return 0.0
+        if not original_lines:
+            return 100.0  # All new lines
+
         matcher = difflib.SequenceMatcher(None, original_lines, new_lines)
         similarity = matcher.ratio()
         return (1 - similarity) * 100
 
     def _mock_apply_patch(self, base_lines: list[str], diff_content: str) -> str:
-        """Mock implementation of applying a patch.
+        """Mock implementation of applying a unified diff patch.
 
-        In a real system, we would use a proper patch library.
+        Warning:
+            This is **not** a functional patch application. It simply returns the
+            original content with a comment appended. Replace with a proper patch
+            library for actual use.
 
         Args:
-            base_lines: Lines from the base file
-            diff_content: Unified diff content
+            base_lines: Lines from the base file.
+            diff_content: Unified diff content (unused in this mock).
 
         Returns:
-            Patched content
+            The original base content concatenated with a comment.
         """
         # This is a simplified mock - in reality we would use a proper patch library
         # For now, just return the base content with a note
         return "".join(base_lines) + "\n# Patched with diff\n"
 
     async def _calculate_file_hash(self, file_path: Path) -> str:
-        """Calculate SHA-256 hash of a file.
+        """Calculate the SHA-256 hash of a file asynchronously.
+
+        Reads the file in chunks to handle potentially large files efficiently.
 
         Args:
-            file_path: Path to the file
+            file_path: The path to the file.
 
         Returns:
-            SHA-256 hash as a hex string
+            The hex digest of the SHA-256 hash, or an empty string if an error occurs.
         """
         try:
             hasher = hashlib.sha256()
@@ -354,13 +426,17 @@ class DiffEngine:
             return ""
 
     async def _is_binary_file(self, file_path: Path) -> bool:
-        """Check if a file is binary.
+        """Attempt to detect if a file is binary by checking the first few bytes.
+
+        Reads the beginning of the file and checks for null bytes or a high
+        proportion of bytes outside the typical ASCII text range.
 
         Args:
-            file_path: Path to the file
+            file_path: The path to the file.
 
         Returns:
-            True if the file is binary, False otherwise
+            True if the file seems binary, False otherwise or if empty.
+            Returns True if an error occurs during reading (e.g., permission denied).
         """
         try:
             # Read the first chunk of the file

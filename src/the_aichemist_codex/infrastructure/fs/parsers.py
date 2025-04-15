@@ -9,7 +9,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+# Added imports
+from the_aichemist_codex.infrastructure.utils import AsyncFileIO
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+# Instantiate AsyncFileIO once for potential reuse
+async_file_io = AsyncFileIO()
 
 
 class BaseParser(ABC):
@@ -47,45 +53,40 @@ class TextParser(BaseParser):
     """Parser for basic text files (TXT, MD, etc.)."""
 
     async def parse(self, file_path: Path) -> dict[str, Any]:
-        """Parse a text file."""
+        """Parse a text file asynchronously using AsyncFileIO."""
+        content = ""
+        encoding = ""
+        line_count = 0
+        error = None
+
         try:
-            with open(file_path, encoding="utf-8") as f:
-                content = f.read()
-
-            line_count = content.count("\n") + 1
-            return {
-                "content": content,
-                "encoding": "utf-8",
-                "line_count": line_count,
-            }
+            # Try reading with UTF-8 first
+            content = await async_file_io.read_text(file_path, encoding="utf-8")
+            encoding = "utf-8"
         except UnicodeDecodeError:
+            logger.warning(f"UTF-8 decoding failed for {file_path}, trying latin-1.")
             try:
-                # Try with Latin-1 encoding as fallback
-                with open(file_path, encoding="latin-1") as f:
-                    content = f.read()
-
-                line_count = content.count("\n") + 1
-                return {
-                    "content": content,
-                    "encoding": "latin-1",
-                    "line_count": line_count,
-                }
+                # Fallback to Latin-1
+                content = await async_file_io.read_text(file_path, encoding="latin-1")
+                encoding = "latin-1"
             except Exception as e:
-                logger.error(f"Error parsing text file {file_path}: {str(e)}")
-                return {
-                    "error": str(e),
-                    "content": "",
-                    "encoding": "",
-                    "line_count": 0,
-                }
+                error_msg = f"Error parsing {file_path} with fallback encoding: {e!s}"
+                logger.error(error_msg)
+                error = error_msg
         except Exception as e:
-            logger.error(f"Error parsing text file {file_path}: {str(e)}")
-            return {
-                "error": str(e),
-                "content": "",
-                "encoding": "",
-                "line_count": 0,
-            }
+            error_msg = f"Error reading/parsing text file {file_path}: {e!s}"
+            logger.error(error_msg)
+            error = error_msg
+
+        if content:
+            line_count = content.count("\n") + 1
+
+        return {
+            "content": content,
+            "encoding": encoding,
+            "line_count": line_count,
+            "error": error,
+        }
 
     def get_preview(self, parsed_data: dict[str, Any], max_length: int = 1000) -> str:
         """Get a preview of the text content."""
@@ -129,7 +130,7 @@ def get_parser_for_mime_type(mime_type: str) -> BaseParser | None:
         try:
             return parsing_get_parser(mime_type)
         except Exception as e:
-            logger.warning(f"Error using main parser system for {mime_type}: {str(e)}")
+            logger.warning(f"Error using main parser system for {mime_type}: {e!s}")
             # Fall back to simplified implementation
 
     # Fallback simplified implementation

@@ -9,8 +9,11 @@ from rich.console import Console
 from the_aichemist_codex.infrastructure.fs.directory import DirectoryManager
 from the_aichemist_codex.infrastructure.fs.file_reader import FileReader
 
-logger = logging.getLogger(__name__)
-console = Console()
+# Import and register command groups after creating the app
+from .commands import analysis, artifacts, config, fs, ingest, memory, search, version
+
+logger: logging.Logger = logging.getLogger(__name__)
+console: Console = Console()
 
 
 class CLI:
@@ -39,13 +42,13 @@ class CLI:
     def handle_error(self, error: Exception) -> None:
         """Handle and format errors consistently."""
         if isinstance(error, FileNotFoundError):
-            console.print(f"[bold red]Error:[/] File not found: {str(error)}")
+            console.print(f"[bold red]Error:[/] File not found: {error!s}")
         elif isinstance(error, PermissionError):
-            console.print(f"[bold red]Error:[/] Permission denied: {str(error)}")
+            console.print(f"[bold red]Error:[/] Permission denied: {error!s}")
         elif isinstance(error, ValueError):
-            console.print(f"[bold red]Error:[/] Invalid value: {str(error)}")
+            console.print(f"[bold red]Error:[/] Invalid value: {error!s}")
         else:
-            console.print(f"[bold red]Error:[/] {str(error)}")
+            console.print(f"[bold red]Error:[/] {error!s}")
         logger.error(f"CLI error: {error}", exc_info=True)
 
 
@@ -66,9 +69,6 @@ def callback() -> None:
     pass
 
 
-# Import and register command groups after creating the app
-from .commands import analysis, artifacts, config, fs, memory, search, version
-
 # Register command groups
 fs.register_commands(cli_app, _cli)
 config.register_commands(cli_app, _cli)
@@ -77,6 +77,6 @@ analysis.register_commands(cli_app, _cli)
 artifacts.register_commands(cli_app, _cli)
 memory.register_commands(cli_app, _cli)
 search.register_commands(cli_app, _cli)
-
+ingest.register_commands(cli_app, _cli)
 if __name__ == "__main__":
     cli_app()

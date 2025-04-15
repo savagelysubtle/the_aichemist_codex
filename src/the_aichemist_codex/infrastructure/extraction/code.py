@@ -10,14 +10,33 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from the_aichemist_codex.infrastructure.fs.file_metadata import FileMetadata
-from the_aichemist_codex.infrastructure.utils.cache.cache_manager import CacheManager
 
 from .base_extractor import BaseMetadataExtractor, MetadataExtractorRegistry
 
 logger = logging.getLogger(__name__)
+
+
+# Define TypedDict for the return type of extract
+class CodeComplexityDict(TypedDict):
+    line_count: int
+    comment_percentage: int
+    cyclomatic_complexity: int
+
+
+class CodeMetadataDict(TypedDict):
+    code_language: str
+    imports: list[str]
+    functions: list[str]
+    classes: list[str]
+    complexity: CodeComplexityDict
+    tags: list[str]
+    extraction_complete: bool
+    extraction_confidence: float
+    extraction_time: float
+    error: str | None  # Added error field
 
 
 @MetadataExtractorRegistry.register
@@ -28,13 +47,9 @@ class CodeMetadataExtractor(BaseMetadataExtractor):
     function/class definitions, complexity metrics, and other code-specific metadata.
     """
 
-    def __init__(self, cache_manager: CacheManager | None = None):
-        """Initialize the code metadata extractor.
-
-        Args:
-            cache_manager: Optional cache manager for caching extraction results
-        """
-        super().__init__(cache_manager)
+    def __init__(self):
+        """Initialize the code metadata extractor."""
+        super().__init__()
 
         # Language detection patterns
         self.language_patterns = {
@@ -202,13 +217,13 @@ class CodeMetadataExtractor(BaseMetadataExtractor):
             "application/x-sh",
         ]
 
-    async def extract(  # type: ignore
+    async def extract(
         self,
         file_path: str | Path,
         content: str | None = None,
         mime_type: str | None = None,
         metadata: FileMetadata | None = None,
-    ) -> dict[str, Any]:
+    ) -> CodeMetadataDict:
         """Extract metadata from a code file.
 
         Args:
@@ -218,18 +233,9 @@ class CodeMetadataExtractor(BaseMetadataExtractor):
             metadata: Optional existing metadata to enhance
 
         Returns:
-            A dictionary containing extracted metadata
+            A CodeMetadataDict containing extracted metadata.
         """
         start_time = time.time()
-
-        # Check if we have cached results
-        if self.cache_manager and hasattr(self.cache_manager, "get"):
-            cache_key = f"code_metadata:{file_path}"
-            # Properly await the async cache manager get method
-            cached_result = await self.cache_manager.get(cache_key)
-            if cached_result and isinstance(cached_result, dict):
-                logger.debug(f"Using cached metadata for {file_path}")
-                return cached_result  # type: ignore
 
         # Convert file_path to Path object
         if isinstance(file_path, str):
@@ -237,26 +243,44 @@ class CodeMetadataExtractor(BaseMetadataExtractor):
 
         # Get the content if not provided
         if content is None:
-            content = await self._get_content(file_path)  # type: ignore
+            content = await self._get_content(file_path)
             if not content:
                 return {
                     "error": "Failed to read file content",
                     "extraction_complete": False,
                     "extraction_confidence": 0.0,
                     "extraction_time": time.time() - start_time,
+                    "code_language": "",
+                    "imports": [],
+                    "functions": [],
+                    "classes": [],
+                    "complexity": {
+                        "line_count": 0,
+                        "comment_percentage": 0,
+                        "cyclomatic_complexity": 0,
+                    },
+                    "tags": [],
                 }
 
         # Detect language
         language = self._detect_language(file_path, content)
 
         # Extract code metadata
-        extracted_data: dict[str, Any] = {
+        extracted_data: CodeMetadataDict = {
             "code_language": language,
             "imports": [],
             "functions": [],
             "classes": [],
-            "complexity": {},
+            "complexity": {
+                "line_count": 0,
+                "comment_percentage": 0,
+                "cyclomatic_complexity": 0,
+            },
             "tags": [],
+            "extraction_complete": False,
+            "extraction_confidence": 0.0,
+            "extraction_time": 0.0,
+            "error": None,
         }
 
         if language:
@@ -286,10 +310,7 @@ class CodeMetadataExtractor(BaseMetadataExtractor):
         extracted_data["extraction_complete"] = True
         extracted_data["extraction_confidence"] = 0.7 if language else 0.3
         extracted_data["extraction_time"] = time.time() - start_time
-
-        # Cache the results if we have a cache manager
-        if self.cache_manager and hasattr(self.cache_manager, "put"):
-            await self.cache_manager.put(cache_key, extracted_data)  # type: ignore
+        extracted_data["error"] = None
 
         return extracted_data
 

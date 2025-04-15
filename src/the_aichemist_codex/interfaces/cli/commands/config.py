@@ -87,7 +87,7 @@ def list_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("get")
@@ -148,7 +148,7 @@ def get_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("set")
@@ -211,7 +211,7 @@ def set_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("init")
@@ -302,7 +302,7 @@ def init_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("import")
@@ -351,7 +351,7 @@ def import_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("export")
@@ -402,7 +402,7 @@ def export_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @config_app.command("reset")
@@ -490,7 +490,7 @@ def reset_config(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 # Helper functions
@@ -511,7 +511,7 @@ def _load_config() -> dict[str, Any]:
         return {}
     except Exception as e:
         console.print(
-            f"[yellow]Warning: Failed to load configuration: {str(e)}. Using empty configuration.[/]"
+            f"[yellow]Warning: Failed to load configuration: {e!s}. Using empty configuration.[/]"
         )
         return {}
 

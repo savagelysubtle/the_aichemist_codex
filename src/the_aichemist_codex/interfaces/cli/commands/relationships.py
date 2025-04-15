@@ -152,7 +152,7 @@ def create_relationship(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @relationships_app.command("list")
@@ -296,7 +296,7 @@ def list_relationships(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @relationships_app.command("remove")
@@ -375,7 +375,7 @@ def remove_relationship(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @relationships_app.command("detect")
@@ -489,9 +489,7 @@ def detect_relationships(
                     all_relationships.extend(detected)
 
                 except Exception as e:
-                    console.print(
-                        f"[yellow]Warning: Error processing {file}: {str(e)}[/]"
-                    )
+                    console.print(f"[yellow]Warning: Error processing {file}: {e!s}[/]")
 
                 progress.update(task, advance=1)
 
@@ -547,7 +545,7 @@ def detect_relationships(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @relationships_app.command("visualize")
@@ -661,4 +659,4 @@ def visualize_relationships(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")

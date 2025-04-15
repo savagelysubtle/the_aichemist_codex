@@ -72,14 +72,20 @@ class TextParser(BaseParser):
                     "content": "",
                     "encoding": "",
                     "line_count": 0,
+                    "preview_text": "Error: " + content,
                 }
 
             encoding_used = "utf-8"
             line_count = content.count("\n") + 1
+
+            # Generate a standardized preview_text
+            preview_text = content[:1000] + "..." if len(content) > 1000 else content
+
             return {
                 "content": content,
                 "encoding": encoding_used,
                 "line_count": line_count,
+                "preview_text": preview_text,
             }
         except UnicodeDecodeError:
             # Skipping fallback for brevity; you could do another read with 'latin-1'
@@ -88,26 +94,69 @@ class TextParser(BaseParser):
                 "content": "",
                 "encoding": "",
                 "line_count": 0,
+                "preview_text": "Error: Unable to decode file content",
             }
 
     def get_preview(self, parsed_data: dict[str, Any], max_length: int = 1000) -> str:
-        content = parsed_data.get("content", "")
-        return content[:max_length] + "..." if len(content) > max_length else content
+        # Use the standardized preview_text field if available
+        preview = parsed_data.get("preview_text", "")
+        if not preview and "content" in parsed_data:
+            # Fallback to the old approach if preview_text is not present
+            preview = parsed_data["content"]
+
+        return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
 class JsonParser(BaseParser):
     """Parser for JSON files."""
 
     async def parse(self, file_path: Path) -> dict[str, Any]:
-        json_data = await AsyncFileIO.read_json(file_path)
-        return {
-            "content": json_data,
-            "structure": type(json_data).__name__,
-            "size": len(json.dumps(json_data)),
-        }
+        try:
+            json_data = await AsyncFileIO.read_json(file_path)
+            preview_text = json.dumps(json_data, indent=2)
+            if len(preview_text) > 1000:
+                preview_text = preview_text[:997] + "..."
+
+            return {
+                "content": json_data,
+                "structure": type(json_data).__name__,
+                "size": len(json.dumps(json_data)),
+                "preview_text": preview_text,
+            }
+        except json.JSONDecodeError as e:
+            # Handle JSON parsing errors specifically
+            error_message = f"Invalid JSON: {e!s}"
+            logger.error(f"Error parsing JSON file {file_path}: {error_message}")
+            return {
+                "error": error_message,
+                "content": None,
+                "structure": None,
+                "size": 0,
+                "preview_text": f"Error: {error_message}",
+            }
+        except Exception as e:
+            # Handle other errors (file not found, permission issues, etc.)
+            error_message = f"Error reading file: {e!s}"
+            logger.error(f"Error accessing JSON file {file_path}: {error_message}")
+            return {
+                "error": error_message,
+                "content": None,
+                "structure": None,
+                "size": 0,
+                "preview_text": f"Error: {error_message}",
+            }
 
     def get_preview(self, parsed_data: dict[str, Any], max_length: int = 1000) -> str:
-        preview = json.dumps(parsed_data["content"], indent=2)
+        # Use the standardized preview_text field if available
+        preview = parsed_data.get("preview_text", "")
+        if (
+            not preview
+            and "content" in parsed_data
+            and parsed_data["content"] is not None
+        ):
+            # Fallback to the old approach
+            preview = json.dumps(parsed_data["content"], indent=2)
+
         return preview[:max_length] + "..." if len(preview) > max_length else preview
 
 
@@ -279,7 +328,7 @@ class SpreadsheetParser(BaseParser):
             else:
                 raise ValueError(f"Unsupported spreadsheet format: {suffix}")
         except Exception as e:
-            logger.error(f"Error parsing spreadsheet {file_path}: {str(e)}")
+            logger.error(f"Error parsing spreadsheet {file_path}: {e!s}")
             raise
 
     async def _parse_csv(self, file_path: Path) -> dict[str, Any]:
@@ -363,7 +412,7 @@ class CodeParser(BaseParser):
             else:
                 raise ValueError(f"Unsupported code/config format: {suffix}")
         except Exception as e:
-            logger.error(f"Error parsing code/config file {file_path}: {str(e)}")
+            logger.error(f"Error parsing code/config file {file_path}: {e!s}")
             raise
 
     def get_preview(self, parsed_data: dict[str, Any], max_length: int = 1000) -> str:
@@ -395,7 +444,7 @@ class CodeParser(BaseParser):
                 },
             }
         except Exception as e:
-            logger.error(f"Python parsing error: {str(e)}")
+            logger.error(f"Python parsing error: {e!s}")
             raise
 
     async def _parse_javascript(self, file_path: Path) -> dict[str, Any]:
@@ -467,7 +516,7 @@ class CodeParser(BaseParser):
                 },
             }
         except Exception as e:
-            logger.error(f"TOML parsing error: {str(e)}")
+            logger.error(f"TOML parsing error: {e!s}")
             raise
 
 
@@ -484,7 +533,7 @@ class VectorParser(BaseParser):
             else:
                 raise ValueError(f"Unsupported vector format: {suffix}")
         except Exception as e:
-            logger.error(f"Error parsing vector file {file_path}: {str(e)}")
+            logger.error(f"Error parsing vector file {file_path}: {e!s}")
             raise
 
     def get_preview(self, parsed_data: dict[str, Any], max_length: int = 1000) -> str:
@@ -496,60 +545,67 @@ class VectorParser(BaseParser):
             # Import the readfile function from the filemanagement module
             from ezdxf.filemanagement import readfile
 
-            doc = readfile(str(file_path))
-            modelspace = doc.modelspace()
-            entities = {
-                "lines": len(modelspace.query("LINE")),
-                "circles": len(modelspace.query("CIRCLE")),
-                "arcs": len(modelspace.query("ARC")),
-                "polylines": len(modelspace.query("LWPOLYLINE")),
-                "text": len(modelspace.query("TEXT")),
-            }
-            layers = [layer.dxf.name for layer in doc.layers]
-            metadata = {
-                "filename": file_path.name,
-                "created_by": doc.header["$TDCREATE"],
-                "last_modified": doc.header["$TDUPDATE"],
-                "drawing_units": doc.header["$INSUNITS"],
-                "layers": layers,
-                "entity_counts": entities,
-            }
-            return {
-                "content": str(doc.entitydb),
-                "preview": (
-                    f"CAD drawing with {sum(entities.values())} entities across "
-                    f"{len(layers)} layers"
-                ),
-                "metadata": metadata,
-            }
+            # Use run_in_executor to prevent blocking the event loop
+            loop = asyncio.get_running_loop()
+
+            def parse_cad_sync(p: Path) -> dict[str, Any]:
+                doc = readfile(str(p))
+                modelspace = doc.modelspace()
+                entities = {
+                    "lines": len(modelspace.query("LINE")),
+                    "circles": len(modelspace.query("CIRCLE")),
+                    "arcs": len(modelspace.query("ARC")),
+                    "polylines": len(modelspace.query("LWPOLYLINE")),
+                    "text": len(modelspace.query("TEXT")),
+                }
+                layers = [layer.dxf.name for layer in doc.layers]
+                metadata = {
+                    "filename": p.name,
+                    "created_by": doc.header["$TDCREATE"],
+                    "last_modified": doc.header["$TDUPDATE"],
+                    "drawing_units": doc.header["$INSUNITS"],
+                    "layers": layers,
+                    "entity_counts": entities,
+                }
+                return {
+                    "content": str(doc.entitydb),
+                    "preview": (
+                        f"CAD drawing with {sum(entities.values())} entities across "
+                        f"{len(layers)} layers"
+                    ),
+                    "metadata": metadata,
+                }
+
+            return await loop.run_in_executor(None, parse_cad_sync, file_path)
         except Exception as e:
-            logger.error(f"CAD parsing error: {str(e)}")
+            logger.error(f"CAD parsing error: {e!s}")
             raise
 
     async def _parse_svg(self, file_path: Path) -> dict[str, Any]:
         try:
-            tree = ET_defused.parse(file_path)
-            root = tree.getroot()
-            width = root.get("width", "unknown")
-            height = root.get("height", "unknown")
-            view_box = root.get("viewBox", "unknown")
-            elements = {
-                "path": len(root.findall(".//{*}path")),
-                "rect": len(root.findall(".//{*}rect")),
-                "circle": len(root.findall(".//{*}circle")),
-                "text": len(root.findall(".//{*}text")),
-                "group": len(root.findall(".//{*}g")),
-            }
             content = await AsyncFileIO.read_text(file_path)
             if content.startswith("# "):
                 return {"error": content, "preview": content, "metadata": {}}
-            return {
-                "content": content,
-                "preview": (
-                    f"SVG image ({width}x{height}) with {sum(elements.values())} "
-                    f"elements"
-                ),
-                "metadata": {
+
+            # Use run_in_executor to prevent blocking the event loop with XML parsing
+            loop = asyncio.get_running_loop()
+
+            def parse_svg_sync(data: str, fp: Path) -> dict[str, Any]:
+                from io import StringIO
+
+                tree = ET_defused.parse(StringIO(data))
+                root = tree.getroot()
+                width = root.get("width", "unknown")
+                height = root.get("height", "unknown")
+                view_box = root.get("viewBox", "unknown")
+                elements = {
+                    "path": len(root.findall(".//{*}path")),
+                    "rect": len(root.findall(".//{*}rect")),
+                    "circle": len(root.findall(".//{*}circle")),
+                    "text": len(root.findall(".//{*}text")),
+                    "group": len(root.findall(".//{*}g")),
+                }
+                return {
                     "dimensions": {
                         "width": width,
                         "height": height,
@@ -558,10 +614,24 @@ class VectorParser(BaseParser):
                     "element_counts": elements,
                     "xmlns": root.get("xmlns", "unknown"),
                     "version": root.get("version", "unknown"),
-                },
+                    "filename": fp.name,
+                }
+
+            # Parse the SVG in the executor
+            metadata = await loop.run_in_executor(
+                None, parse_svg_sync, content, file_path
+            )
+
+            return {
+                "content": content,
+                "preview": (
+                    f"SVG image ({metadata['dimensions']['width']}x{metadata['dimensions']['height']}) "
+                    f"with {sum(metadata['element_counts'].values())} elements"
+                ),
+                "metadata": metadata,
             }
         except Exception as e:
-            logger.error(f"SVG parsing error: {str(e)}")
+            logger.error(f"SVG parsing error: {e!s}")
             raise
 
 
@@ -574,26 +644,42 @@ class ArchiveParser(BaseParser):
                 raise FileNotFoundError(f"Archive file not found: {file_path}")
 
             suffix = file_path.suffix.lower()
-            files_list = []
+            loop = asyncio.get_running_loop()
 
+            # Helper functions for each archive type
+            def extract_zip(p: Path) -> list[str]:
+                with zipfile.ZipFile(p, "r") as archive:
+                    return archive.namelist()
+
+            def extract_tar(p: Path) -> list[str]:
+                with tarfile.open(p, "r") as archive:
+                    return archive.getnames()
+
+            def extract_rar(p: Path) -> list[str]:
+                try:
+                    with rarfile.RarFile(p, "r") as archive:
+                        return archive.namelist()
+                except rarfile.NotRarFile:
+                    raise ValueError(f"Not a valid RAR file: {p}")
+
+            def extract_7z(p: Path) -> list[str]:
+                with py7zr.SevenZipFile(p, "r") as archive:
+                    return archive.getnames()
+
+            # Choose the appropriate extraction function
             if suffix == ".zip":
-                with zipfile.ZipFile(file_path, "r") as archive:
-                    files_list = archive.namelist()
+                files_list = await loop.run_in_executor(None, extract_zip, file_path)
             elif suffix in [".tar", ".tgz", ".gz", ".bz2"]:
-                with tarfile.open(file_path, "r") as archive:
-                    files_list = archive.getnames()
+                files_list = await loop.run_in_executor(None, extract_tar, file_path)
             elif suffix == ".rar":
                 try:
-                    with rarfile.RarFile(file_path, "r") as archive:
-                        files_list = archive.namelist()
-                except Exception as e:
-                    if isinstance(e, rarfile.NotRarFile):
-                        raise ValueError(f"Unsupported archive format: {suffix}") from e
-                    else:
-                        raise
+                    files_list = await loop.run_in_executor(
+                        None, extract_rar, file_path
+                    )
+                except ValueError as e:
+                    raise ValueError(f"Unsupported archive format: {suffix}") from e
             elif suffix == ".7z":
-                with py7zr.SevenZipFile(file_path, "r") as archive:
-                    files_list = archive.getnames()
+                files_list = await loop.run_in_executor(None, extract_7z, file_path)
             else:
                 raise ValueError(f"Unsupported archive format: {suffix}")
 

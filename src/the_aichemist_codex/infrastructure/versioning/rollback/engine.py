@@ -1,13 +1,12 @@
 """Rollback engine for The Aichemist Codex.
 
-This module provides functionality for rolling back files to previous versions,
-with support for both individual file rollbacks and bulk rollbacks with
-transaction guarantees.
+This module provides the core functionality for rolling back files to specific
+versions managed by the `VersionManager`. It supports different rollback strategies,
+including single-file rollback, backups, staging, and transactional bulk rollback.
 """
 
 import datetime
 import logging
-import os
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -32,7 +31,15 @@ class RollbackStrategy(Enum):
 
 @dataclass
 class RollbackSpec:
-    """Specification for a file rollback."""
+    """Defines the parameters for rolling back a single file.
+
+    Attributes:
+        file_path: The absolute path to the file to be rolled back.
+        version_id: The unique ID of the target version to restore.
+        strategy: The strategy to use for the rollback operation.
+        backup_path: If a backup is created, this holds the path to the backup file.
+            This is typically set by the `RollbackEngine`.
+    """
 
     file_path: Path
     version_id: str
@@ -42,7 +49,16 @@ class RollbackSpec:
 
 @dataclass
 class BulkRollbackResult:
-    """Result of a bulk rollback operation."""
+    """Holds the results of a bulk rollback operation.
+
+    Attributes:
+        success: True if the overall bulk operation (potentially transactional)
+            was successful, False otherwise.
+        results: A list of `RollbackResult` objects, one for each file processed.
+        transaction_id: A unique identifier for the transaction, if applicable.
+        error_message: An error message summarizing the failure, if `success` is False.
+        rollback_timestamp: The timestamp when the bulk rollback operation was initiated.
+    """
 
     success: bool
     results: list[RollbackResult]
@@ -52,7 +68,12 @@ class BulkRollbackResult:
 
 
 class RollbackEngine:
-    """Handles rollback operations with transaction support."""
+    """Handles the logic for executing file rollback operations.
+
+    Provides methods for rolling back individual files or multiple files
+    atomically using different strategies. Interacts with the `VersionManager`
+    to retrieve version data and `AsyncFileIO` for file operations.
+    """
 
     def __init__(self):
         """Initialize the rollback engine."""
@@ -72,16 +93,22 @@ class RollbackEngine:
         strategy: RollbackStrategy = RollbackStrategy.BACKUP_AND_COPY,
         dry_run: bool = False,
     ) -> RollbackResult:
-        """Roll back a single file to the specified version.
+        """Roll back a single file to a specified version asynchronously.
+
+        Retrieves the specified version's content from the `VersionManager`
+        and replaces the current file content based on the chosen strategy.
+        Optionally creates a backup or stages the change.
 
         Args:
-            file_path: Path to the file to roll back
-            version_id: ID of the version to roll back to
-            strategy: Strategy to use for the rollback
-            dry_run: If True, only simulate the rollback
+            file_path: The absolute path to the file to roll back.
+            version_id: The ID of the target version to restore.
+            strategy: The `RollbackStrategy` to use (e.g., COPY, BACKUP_AND_COPY).
+            dry_run: If True, simulates the rollback without making changes
+                and returns a success result.
 
         Returns:
-            RollbackResult with the result of the operation
+            A `RollbackResult` object detailing the success or failure of the
+            operation, including any backup path created.
         """
         file_path = file_path.resolve()
 
@@ -180,17 +207,24 @@ class RollbackEngine:
     async def rollback_bulk(
         self, specs: list[RollbackSpec], transaction: bool = True, dry_run: bool = False
     ) -> BulkRollbackResult:
-        """Roll back multiple files, optionally as a transaction.
+        """Roll back multiple files, optionally ensuring atomicity via staging.
+
+        Processes a list of `RollbackSpec` objects. If `transaction` is True,
+        it first stages all rollbacks. Only if all staging operations succeed
+        does it commit the changes by copying staged files to their final
+        destinations. If `transaction` is False or `dry_run` is True, it processes
+        each spec individually using `rollback_file`.
 
         Args:
-            specs: List of rollback specifications
-            transaction: If True, only commit if all rollbacks succeed
-            dry_run: If True, only simulate the rollback
+            specs: A list of `RollbackSpec` defining the files and versions.
+            transaction: If True, perform an atomic rollback using staging.
+                If False, roll back each file independently.
+            dry_run: If True, simulates the operations without file changes.
 
         Returns:
-            BulkRollbackResult with the results of the operations
+            A `BulkRollbackResult` summarizing the outcome of the operation.
         """
-        # Generate a transaction ID
+        # Generate a transaction ID (even if not strictly transactional)
         transaction_id = f"rollback_{int(datetime.datetime.now().timestamp())}"
         results = []
 
@@ -250,7 +284,7 @@ class RollbackEngine:
                 for spec in specs:
                     staged_path = self._get_staged_path(spec.file_path)
                     try:
-                        os.remove(staged_path)
+                        await self.file_io.remove(staged_path)
                     except Exception as e:
                         logger.warning(
                             f"Failed to clean up staged file {staged_path}: {e}"
@@ -260,8 +294,8 @@ class RollbackEngine:
                 for spec in specs:
                     staged_path = self._get_staged_path(spec.file_path)
                     try:
-                        if os.path.exists(staged_path):
-                            os.remove(staged_path)
+                        if await self.file_io.exists(staged_path):
+                            await self.file_io.remove(staged_path)
                     except Exception as e:
                         logger.warning(
                             f"Failed to clean up staged file {staged_path}: {e}"
@@ -297,13 +331,13 @@ class RollbackEngine:
         )
 
     async def _create_backup(self, file_path: Path) -> Path:
-        """Create a backup of a file before rolling back.
+        """Create a timestamped backup of a file in the designated backup directory.
 
         Args:
-            file_path: Path to the file to back up
+            file_path: Path to the file to back up.
 
         Returns:
-            Path to the backup file
+            The absolute path to the created backup file.
         """
         # Create a timestamped backup path
         timestamp = int(datetime.datetime.now().timestamp())
@@ -317,13 +351,16 @@ class RollbackEngine:
         return backup_path
 
     def _get_staged_path(self, file_path: Path) -> Path:
-        """Get the path where a file should be staged during a transaction.
+        """Generate a unique path within the staging directory for a given file.
+
+        This path is used temporarily during transactional rollbacks.
+        The filename is derived from the original file path to avoid collisions.
 
         Args:
-            file_path: Original file path
+            file_path: The original absolute file path.
 
         Returns:
-            Path where the file should be staged
+            The absolute path within the staging directory for this file.
         """
         # Create a unique filename based on the original path
         rel_path = str(file_path).replace(":", "_").replace("/", "_").replace("\\", "_")

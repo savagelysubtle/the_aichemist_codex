@@ -123,7 +123,7 @@ def list_artifacts(
         if _cli:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Repository Error:[/] {str(e)}")
+            console.print(f"[bold red]Repository Error:[/] {e!s}")
 
 
 @artifacts_app.command("show")
@@ -214,7 +214,7 @@ def show_artifact(
         if _cli:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Repository Error:[/] {str(e)}")
+            console.print(f"[bold red]Repository Error:[/] {e!s}")
 
 
 @artifacts_app.command("create")
@@ -272,7 +272,7 @@ def create_artifact(
         if _cli:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @artifacts_app.command("delete")
@@ -331,7 +331,7 @@ def delete_artifact(
         if _cli:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Repository Error:[/] {str(e)}")
+            console.print(f"[bold red]Repository Error:[/] {e!s}")
 
 
 @artifacts_app.command("snippet")
@@ -397,9 +397,9 @@ def get_snippet(
         )
 
     except ValueError as e:
-        console.print(f"[bold red]Error:[/] {str(e)}")
+        console.print(f"[bold red]Error:[/] {e!s}")
     except RepositoryError as e:
         if _cli:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Repository Error:[/] {str(e)}")
+            console.print(f"[bold red]Repository Error:[/] {e!s}")

@@ -134,7 +134,7 @@ def search_files(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @search_app.command("regex")
@@ -154,7 +154,7 @@ def regex_search(
         "./.aichemist/search_index", help="Directory for search index"
     ),
 ) -> None:
-    """
+    r"""
     Search for regex patterns in file contents.
 
     Examples:
@@ -239,7 +239,7 @@ def regex_search(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @search_app.command("similar")
@@ -328,7 +328,7 @@ def find_similar(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @search_app.command("index")
@@ -435,7 +435,7 @@ def index_files(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")
 
 
 @search_app.command("groups")
@@ -528,4 +528,4 @@ def find_groups(
         if _cli is not None:
             _cli.handle_error(e)
         else:
-            console.print(f"[bold red]Error:[/] {str(e)}")
+            console.print(f"[bold red]Error:[/] {e!s}")

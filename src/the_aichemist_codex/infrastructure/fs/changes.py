@@ -13,10 +13,12 @@ import time
 from enum import Enum
 from pathlib import Path
 
-from the_aichemist_codex.infrastructure.config.loader.config_loader import config
-from the_aichemist_codex.infrastructure.utils.common.safety import SafeFileHandler
+import aiofiles
 
-logger = logging.getLogger(__name__)
+from the_aichemist_codex.infrastructure.config import config
+from the_aichemist_codex.infrastructure.utils import AsyncFileIO, SafeFileHandler
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ChangeSeverity(Enum):
@@ -141,6 +143,8 @@ class ChangeDetector:
         self.major_threshold = config.get("major_change_threshold", 0.50)  # 50% changed
         # Above major_threshold is considered CRITICAL
 
+        self.async_file_io = AsyncFileIO()
+
     async def detect_change(self, file_path: Path) -> ChangeInfo | None:
         """
         Detect changes in a file compared to its previously known state.
@@ -218,7 +222,7 @@ class ChangeDetector:
         path_str = str(file_path)
 
         try:
-            # Get current file stats
+            # Get current file stats using asyncio.to_thread as direct async stat may not exist
             stats = await asyncio.to_thread(file_path.stat)
             modified_time = stats.st_mtime
             file_size = stats.st_size
@@ -286,12 +290,14 @@ class ChangeDetector:
 
         # Sample the first few KB to check for binary content
         try:
-            sample_size = min(4096, file_path.stat().st_size)
+            sample_size = min(4096, (await asyncio.to_thread(file_path.stat)).st_size)
             if sample_size == 0:
                 return True  # Empty file is considered text
 
-            with open(file_path, "rb") as f:
-                sample = f.read(sample_size)
+            # Use AsyncFileIO to read a sample chunk asynchronously
+            sample = await self.async_file_io.read_chunk(
+                file_path, size=sample_size, mode="rb"
+            )
 
             # Check for null bytes which indicate binary content
             return b"\0" not in sample
@@ -313,9 +319,9 @@ class ChangeDetector:
             ChangeInfo with details about the changes
         """
         try:
-            # Read current content
-            current_content = await asyncio.to_thread(
-                file_path.read_text, encoding="utf-8"
+            # Read current content using AsyncFileIO
+            current_content = await self.async_file_io.read_text(
+                file_path, encoding="utf-8"
             )
 
             # If we don't have cached content, read it now
@@ -323,12 +329,13 @@ class ChangeDetector:
             if cached_content is None:
                 # No previous content to compare, update cache and return
                 file_hash = await self._calculate_file_hash(file_path)
+                stats = await asyncio.to_thread(file_path.stat)
                 self.file_cache[str(file_path)].update(
                     {
                         "hash": file_hash,
                         "content": current_content,
-                        "modified_time": file_path.stat().st_mtime,
-                        "file_size": file_path.stat().st_size,
+                        "modified_time": stats.st_mtime,
+                        "file_size": stats.st_size,
                     }
                 )
                 return None
@@ -368,11 +375,12 @@ class ChangeDetector:
             severity = self._classify_severity(change_percentage)
 
             # Update cache with new content
+            stats = await asyncio.to_thread(file_path.stat)
             self.file_cache[str(file_path)].update(
                 {
                     "content": current_content,
-                    "modified_time": file_path.stat().st_mtime,
-                    "file_size": file_path.stat().st_size,
+                    "modified_time": stats.st_mtime,
+                    "file_size": stats.st_size,
                     "hash": await self._calculate_file_hash(file_path),
                 }
             )
@@ -409,40 +417,43 @@ class ChangeDetector:
             ChangeInfo with basic change details
         """
         try:
-            # Calculate current hash
+            # Calculate current file hash asynchronously
             current_hash = await self._calculate_file_hash(file_path)
             cached_hash = cached.get("hash")
 
             if current_hash == cached_hash:
-                # File hasn't changed despite stat differences
+                # No change detected based on hash
                 return None
 
-            # Update cache
-            stats = file_path.stat()
+            # Hash differs, update cache
+            stats = await asyncio.to_thread(file_path.stat)
             self.file_cache[str(file_path)].update(
                 {
                     "hash": current_hash,
                     "modified_time": stats.st_mtime,
                     "file_size": stats.st_size,
+                    "content": None,  # Invalidate potentially stale content
                 }
             )
 
-            # Get file size difference
-            size_diff = abs(stats.st_size - cached.get("file_size", 0))
-            size_percentage = size_diff / max(stats.st_size, 1)
-
-            # Determine severity based on size changes
-            severity = self._classify_severity(size_percentage)
+            # Determine severity based on size difference (simple heuristic)
+            cached_size = cached.get("file_size", 0)
+            current_size = stats.st_size
+            size_diff_ratio = (
+                abs(current_size - cached_size) / max(cached_size, 1)
+                if cached_size > 0
+                else 1.0
+            )
+            severity = self._classify_severity(size_diff_ratio)
 
             return ChangeInfo(
                 file_path=file_path,
                 change_type=ChangeType.CONTENT,
                 severity=severity,
                 details={
-                    "old_size": cached.get("file_size", 0),
-                    "new_size": stats.st_size,
-                    "size_diff": size_diff,
-                    "size_percentage": size_percentage,
+                    "old_size": cached_size,
+                    "new_size": current_size,
+                    "size_diff_ratio": size_diff_ratio,
                 },
             )
         except Exception as e:
@@ -450,26 +461,43 @@ class ChangeDetector:
             return None
 
     async def _calculate_file_hash(self, file_path: Path) -> str:
-        """Calculate SHA-256 hash of a file asynchronously."""
+        """
+        Calculate the SHA-256 hash of a file asynchronously.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            SHA-256 hash of the file content as a hex string
+        """
+        hasher = hashlib.sha256()
         try:
-            hasher = hashlib.sha256()
-
-            # Process in chunks to handle large files
-            async def process_file() -> None:
-                chunk_size = 65536  # 64KB chunks
-                with open(file_path, "rb") as f:
-                    while chunk := f.read(chunk_size):
-                        hasher.update(chunk)
-
-            await asyncio.to_thread(process_file)
-            return hasher.hexdigest()
-        except Exception as e:
-            logger.error(f"Error calculating file hash: {file_path}, {e}")
+            # Use aiofiles for async reading
+            async with aiofiles.open(file_path, "rb") as f:
+                while True:
+                    chunk = await f.read(8192)  # Read in 8KB chunks
+                    if not chunk:
+                        break
+                    # Run the hashing update in a thread to avoid blocking event loop
+                    # Although hashlib operations are often C-optimized and might release GIL,
+                    # for large files or busy loops, this is safer.
+                    hasher = await asyncio.to_thread(self._update_hasher, hasher, chunk)
+            return await asyncio.to_thread(hasher.hexdigest)
+        except FileNotFoundError:
+            logger.warning(f"File not found during hash calculation: {file_path}")
             return ""
+        except Exception as e:
+            logger.error(f"Error calculating hash for {file_path}: {e}")
+            return ""
+
+    # Helper function to run hasher update in thread
+    def _update_hasher(self, hasher, chunk):
+        hasher.update(chunk)
+        return hasher
 
     def _classify_severity(self, change_percentage: float) -> ChangeSeverity:
         """
-        Classify the severity of a change based on the percentage changed.
+        Classify the severity of a change based on a percentage metric.
 
         Args:
             change_percentage: Percentage of file that changed (0.0-1.0)
