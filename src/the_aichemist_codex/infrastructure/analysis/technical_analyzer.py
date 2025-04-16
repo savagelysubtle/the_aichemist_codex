@@ -11,10 +11,249 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
+from the_aichemist_codex.domain.entities.code_artifact import CodeArtifact
+from the_aichemist_codex.domain.repositories.code_artifact_repository import (
+    CodeArtifactRepository,
+)
+from the_aichemist_codex.domain.services.interfaces.code_analysis_service import (
+    CodeAnalysisServiceInterface,
+)
 from the_aichemist_codex.infrastructure.utils.io.async_io import AsyncFileIO
 
 logger = logging.getLogger(__name__)
+
+
+class TechnicalCodeAnalyzer(CodeAnalysisServiceInterface):
+    """Implementation of the CodeAnalysisServiceInterface."""
+
+    def __init__(
+        self: "TechnicalCodeAnalyzer", repository: CodeArtifactRepository
+    ) -> None:
+        """Initialize with a repository to access artifacts."""
+        self.repository = repository
+
+    async def analyze_artifact(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID, depth: int = 1
+    ) -> dict[str, Any]:
+        """Analyze a single code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        # Process the file and get analysis results
+        content = artifact.content
+        if not content:
+            raise ValueError(f"Artifact {artifact_id} has no content")
+
+        try:
+            tree = ast.parse(content)
+            complexity = calculate_python_complexity(tree)
+        except SyntaxError:
+            # Fallback to basic complexity for non-Python files
+            complexity = calculate_basic_complexity(content)
+
+        knowledge_items = extract_comments(content)
+        structure = _get_python_structure(content) if depth > 1 else {}
+
+        return {
+            "complexity": complexity,
+            "knowledge_items": knowledge_items,
+            "structure": structure,
+            "depth": depth,
+        }
+
+    async def analyze_file(
+        self: "TechnicalCodeAnalyzer", file_path: Path, depth: int = 1
+    ) -> dict[str, Any]:
+        """Analyze a file and create a CodeArtifact if it doesn't exist."""
+        content, analysis = await process_file(file_path)
+        analysis["depth"] = depth
+        return analysis
+
+    async def find_dependencies(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID, recursive: bool = False
+    ) -> list[CodeArtifact]:
+        """Find dependencies of a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        # Basic implementation - could be enhanced with AST analysis
+        dependencies = []
+        content = artifact.content
+        if content:
+            # Look for import statements
+            import_pattern = r"(?:from|import)\s+([\w.]+)"
+            matches = re.finditer(import_pattern, content)
+            for match in matches:
+                module_name = match.group(1)
+                # Find artifacts that match the module name
+                dep_artifacts = await self.repository.find_by_criteria(
+                    {"module": module_name}
+                )
+                dependencies.extend(dep_artifacts)
+
+        return dependencies[:10]  # Limit to 10 dependencies
+
+    async def find_references(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID, recursive: bool = False
+    ) -> list[CodeArtifact]:
+        """Find references to a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        # Basic implementation - could be enhanced
+        references = []
+        all_artifacts = await self.repository.find_all()
+
+        for other in all_artifacts:
+            if other.id != artifact_id and other.content:
+                # Look for references to the artifact's name
+                if artifact.name in other.content:
+                    references.append(other)
+
+        return references[:10]  # Limit to 10 references
+
+    async def calculate_complexity(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID
+    ) -> float:
+        """Calculate complexity of a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        content = artifact.content
+        if not content:
+            return 0.0
+
+        try:
+            tree = ast.parse(content)
+            return calculate_python_complexity(tree)
+        except SyntaxError:
+            # Fallback to basic complexity for non-Python files
+            return calculate_basic_complexity(content)
+
+    async def find_similar_artifacts(
+        self: "TechnicalCodeAnalyzer",
+        artifact_id: UUID,
+        min_similarity: float = 0.5,
+        limit: int = 10,
+    ) -> list[tuple[CodeArtifact, float]]:
+        """Find artifacts similar to the given artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        similar = []
+        all_artifacts = await self.repository.find_all()
+
+        for other in all_artifacts:
+            if other.id != artifact_id:
+                similarity = calculate_similarity(
+                    artifact.content,
+                    other.content,
+                    Path(artifact.path),
+                    Path(other.path),
+                )
+                if similarity >= min_similarity:
+                    similar.append((other, similarity))
+
+        # Sort by similarity score and return top matches
+        similar.sort(key=lambda x: x[1], reverse=True)
+        return similar[:limit]
+
+    async def extract_knowledge(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID, max_items: int = 10
+    ) -> list[dict[str, Any]]:
+        """Extract knowledge items from a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        if not artifact.content:
+            return []
+
+        knowledge_items = extract_comments(artifact.content)
+        return knowledge_items[:max_items]
+
+    async def analyze_codebase(
+        self: "TechnicalCodeAnalyzer",
+        directory: Path,
+        depth: int = 1,
+        file_pattern: str = "*.py",
+    ) -> dict[str, Any]:
+        """Analyze a codebase directory."""
+        results = {
+            "files_analyzed": 0,
+            "total_complexity": 0.0,
+            "average_complexity": 0.0,
+            "knowledge_items": [],
+            "structure": {},
+        }
+
+        # Find all matching files
+        for file_path in directory.rglob(file_pattern):
+            try:
+                analysis = await self.analyze_file(file_path, depth)
+                results["files_analyzed"] += 1
+                results["total_complexity"] += analysis.get("complexity", 0.0)
+                results["knowledge_items"].extend(analysis.get("knowledge_items", []))
+                if depth > 1:
+                    results["structure"][str(file_path)] = analysis.get("structure", {})
+            except Exception as e:
+                logger.error(f"Error analyzing {file_path}: {e}")
+
+        if results["files_analyzed"] > 0:
+            results["average_complexity"] = (
+                results["total_complexity"] / results["files_analyzed"]
+            )
+
+        return results
+
+    async def get_summary(self: "TechnicalCodeAnalyzer", artifact_id: UUID) -> str:
+        """Get a summary of a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        analysis = await self.analyze_artifact(artifact_id)
+        complexity = analysis.get("complexity", 0.0)
+        complexity_assessment = assess_complexity(complexity)
+
+        knowledge_items = analysis.get("knowledge_items", [])
+        structure = analysis.get("structure", {})
+
+        summary_parts = [
+            f"Code artifact: {artifact.name}",
+            f"Complexity: {complexity:.2f} ({complexity_assessment})",
+            f"Contains {len(knowledge_items)} knowledge items",
+        ]
+
+        if structure:
+            for section, items in structure.items():
+                summary_parts.append(f"{section}: {len(items)} items")
+
+        return "\n".join(summary_parts)
+
+    async def get_structure(
+        self: "TechnicalCodeAnalyzer", artifact_id: UUID
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Get the structure of a code artifact."""
+        artifact = await self.repository.get_by_id(artifact_id)
+        if not artifact:
+            raise ValueError(f"Artifact with id {artifact_id} not found")
+
+        if not artifact.content:
+            return {}
+
+        try:
+            return _get_python_structure(artifact.content)
+        except SyntaxError:
+            logger.warning(f"Could not parse {artifact.name} as Python code")
+            return {}
 
 
 def calculate_python_complexity(tree: ast.AST) -> float:
@@ -34,12 +273,12 @@ def calculate_python_complexity(tree: ast.AST) -> float:
     branch_count = 0
 
     # Helper function to track nesting depth
-    def _track_nesting(node, current_depth):
+    def _track_nesting(node: ast.AST, current_depth: int) -> None:
         nonlocal max_nesting
         max_nesting = max(max_nesting, current_depth)
         for child in ast.iter_child_nodes(node):
             new_depth = current_depth
-            if isinstance(child, (ast.If, ast.For, ast.While, ast.With, ast.Try)):
+            if isinstance(child, ast.If | ast.For | ast.While | ast.With | ast.Try):
                 new_depth += 1
             _track_nesting(child, new_depth)
 
@@ -211,7 +450,7 @@ def _get_python_structure(content: str) -> dict[str, list[dict[str, Any]]]:
             for method in [
                 m
                 for m in node.body
-                if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))
+                if isinstance(m, ast.FunctionDef | ast.AsyncFunctionDef)
             ]:
                 methods.append(
                     {
@@ -237,7 +476,7 @@ def _get_python_structure(content: str) -> dict[str, list[dict[str, Any]]]:
         for node in [
             n
             for n in tree.body  # Use tree.body for top-level nodes
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
         ]:
             structure["functions"].append(
                 {
@@ -258,7 +497,7 @@ def _get_python_structure(content: str) -> dict[str, list[dict[str, Any]]]:
                         # Consider adding type hints or assigned value preview if useful
                     )
                 # Handle tuple unpacking assignment if necessary
-                elif isinstance(target, (ast.Tuple, ast.List)):
+                elif isinstance(target, ast.Tuple | ast.List):
                     for elt in target.elts:
                         if isinstance(elt, ast.Name):
                             structure["variables"].append(

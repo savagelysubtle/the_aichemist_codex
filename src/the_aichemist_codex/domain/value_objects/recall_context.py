@@ -44,7 +44,7 @@ class RecallContext:
     prioritize_recency: bool = True
     prioritize_strength: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self: "RecallContext") -> None:
         """Validate the recall context after initialization."""
         if self.max_results <= 0:
             object.__setattr__(self, "max_results", 10)
@@ -52,7 +52,7 @@ class RecallContext:
         if self.min_relevance < 0 or self.min_relevance > 1:
             object.__setattr__(self, "min_relevance", 0.2)
 
-    def with_tags(self, tags: set[str]) -> "RecallContext":
+    def with_tags(self: "RecallContext", tags: set[str]) -> "RecallContext":
         """Create a new instance with additional tags."""
         combined_tags = frozenset(set(self.tags).union(tags))
         return RecallContext(
@@ -67,7 +67,9 @@ class RecallContext:
             prioritize_strength=self.prioritize_strength,
         )
 
-    def with_strategy(self, strategy: RecallStrategy) -> "RecallContext":
+    def with_strategy(
+        self: "RecallContext", strategy: RecallStrategy
+    ) -> "RecallContext":
         """Create a new instance with a different strategy."""
         return RecallContext(
             query=self.query,
@@ -81,7 +83,7 @@ class RecallContext:
             prioritize_strength=self.prioritize_strength,
         )
 
-    def with_limit(self, max_results: int) -> "RecallContext":
+    def with_limit(self: "RecallContext", max_results: int) -> "RecallContext":
         """Create a new instance with a different result limit."""
         return RecallContext(
             query=self.query,

@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class SQLiteMemoryRepository:
     """SQLite implementation of the MemoryRepository interface."""
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self: "SQLiteMemoryRepository", db_path: Path) -> None:
         """
         Initialize the repository with a database path.
 
@@ -53,7 +53,7 @@ class SQLiteMemoryRepository:
         self.db_path = db_path
         self.sql = AsyncSQL(db_path)
 
-    async def initialize(self) -> None:
+    async def initialize(self: "SQLiteMemoryRepository") -> None:
         """
         Initialize the repository by creating necessary tables.
 
@@ -119,7 +119,7 @@ class SQLiteMemoryRepository:
 
         logger.info("Initialized SQLite Memory Repository")
 
-    async def save_memory(self, memory: Memory) -> UUID:
+    async def save_memory(self: "SQLiteMemoryRepository", memory: Memory) -> UUID:
         """
         Save a memory to the repository.
 
@@ -181,7 +181,9 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def get_memory(self, memory_id: UUID) -> Memory | None:
+    async def get_memory(
+        self: "SQLiteMemoryRepository", memory_id: UUID
+    ) -> Memory | None:
         """
         Retrieve a memory by its ID.
 
@@ -202,7 +204,7 @@ class SQLiteMemoryRepository:
             if not row:
                 return None
 
-            return self._row_to_memory(row)
+            return self._row_to_memory(tuple(row))
         except Exception as e:
             logger.error(f"Error retrieving memory {memory_id}: {e}")
             raise RepositoryError(
@@ -213,7 +215,7 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def delete_memory(self, memory_id: UUID) -> bool:
+    async def delete_memory(self: "SQLiteMemoryRepository", memory_id: UUID) -> bool:
         """
         Delete a memory by its ID.
 
@@ -260,7 +262,7 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def update_memory(self, memory: Memory) -> bool:
+    async def update_memory(self: "SQLiteMemoryRepository", memory: Memory) -> bool:
         """
         Update an existing memory.
 
@@ -287,7 +289,9 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def save_association(self, association: MemoryAssociation) -> UUID:
+    async def save_association(
+        self: "SQLiteMemoryRepository", association: MemoryAssociation
+    ) -> UUID:
         """
         Save a memory association.
 
@@ -346,7 +350,9 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def get_association(self, association_id: UUID) -> MemoryAssociation | None:
+    async def get_association(
+        self: "SQLiteMemoryRepository", association_id: UUID
+    ) -> MemoryAssociation | None:
         """
         Retrieve an association by its ID.
 
@@ -367,7 +373,7 @@ class SQLiteMemoryRepository:
             if not row:
                 return None
 
-            return self._row_to_association(row)
+            return self._row_to_association(tuple(row))
         except Exception as e:
             logger.error(f"Error retrieving association {association_id}: {e}")
             raise RepositoryError(
@@ -379,7 +385,7 @@ class SQLiteMemoryRepository:
             ) from e
 
     async def find_associations(
-        self, memory_id: UUID, bidirectional: bool = True
+        self: "SQLiteMemoryRepository", memory_id: UUID, bidirectional: bool = True
     ) -> list[MemoryAssociation]:
         """
         Find all associations for a given memory.
@@ -405,7 +411,7 @@ class SQLiteMemoryRepository:
             )
 
             for row in source_rows:
-                associations.append(self._row_to_association(row))
+                associations.append(self._row_to_association(tuple(row)))
 
             # Optionally get associations where this memory is the target
             if bidirectional:
@@ -418,7 +424,7 @@ class SQLiteMemoryRepository:
                 )
 
                 for row in target_rows:
-                    associations.append(self._row_to_association(row))
+                    associations.append(self._row_to_association(tuple(row)))
 
             return associations
         except Exception as e:
@@ -431,7 +437,9 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def recall_memories(self, context: RecallContext) -> list[Memory]:
+    async def recall_memories(
+        self: "SQLiteMemoryRepository", context: RecallContext
+    ) -> list[Memory]:
         """
         Recall memories based on the provided context.
 
@@ -482,7 +490,7 @@ class SQLiteMemoryRepository:
             query += f" LIMIT {context.max_results}"
 
             rows = await self.sql.fetchall(query, tuple(params))
-            memories = [self._row_to_memory(row) for row in rows]
+            memories = [self._row_to_memory(tuple(row)) for row in rows]
 
             # If using MOST_RELEVANT strategy, we need to calculate relevance scores
             if context.strategy == RecallStrategy.MOST_RELEVANT:
@@ -555,7 +563,7 @@ class SQLiteMemoryRepository:
             ) from e
 
     async def find_by_tags(
-        self, tags: set[str], match_all: bool = False
+        self: "SQLiteMemoryRepository", tags: set[str], match_all: bool = False
     ) -> list[Memory]:
         """
         Find memories with the specified tags.
@@ -595,7 +603,7 @@ class SQLiteMemoryRepository:
                     query += f" AND ({tag_query})"
 
             rows = await self.sql.fetchall(query, tuple(params))
-            return [self._row_to_memory(row) for row in rows]
+            return [self._row_to_memory(tuple(row)) for row in rows]
         except Exception as e:
             logger.error(f"Error finding memories by tags: {e}")
             raise RepositoryError(
@@ -606,7 +614,9 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    async def find_by_type(self, memory_type: MemoryType) -> list[Memory]:
+    async def find_by_type(
+        self: "SQLiteMemoryRepository", memory_type: MemoryType
+    ) -> list[Memory]:
         """
         Find memories of a specific type.
 
@@ -624,7 +634,7 @@ class SQLiteMemoryRepository:
                 "SELECT * FROM memories WHERE type = ?", (memory_type.name,)
             )
 
-            return [self._row_to_memory(row) for row in rows]
+            return [self._row_to_memory(tuple(row)) for row in rows]
         except Exception as e:
             logger.error(f"Error finding memories by type {memory_type}: {e}")
             raise RepositoryError(
@@ -636,7 +646,7 @@ class SQLiteMemoryRepository:
             ) from e
 
     async def find_strongest_associations(
-        self,
+        self: "SQLiteMemoryRepository",
         memory_id: UUID,
         association_type: AssociationType | None = None,
         limit: int = 10,
@@ -678,7 +688,7 @@ class SQLiteMemoryRepository:
 
             result = []
             for row in association_rows:
-                association = self._row_to_association(row)
+                association = self._row_to_association(tuple(row))
 
                 # Determine which memory to fetch (the one that isn't the input memory_id)
                 other_id = (
@@ -704,7 +714,7 @@ class SQLiteMemoryRepository:
                 cause=e,
             ) from e
 
-    def _row_to_memory(self, row: tuple) -> Memory:
+    def _row_to_memory(self: "SQLiteMemoryRepository", row: tuple[Any, ...]) -> Memory:
         """Convert a database row to a Memory entity."""
         # Extract row data (adjust indices based on the query structure)
         (
@@ -752,7 +762,9 @@ class SQLiteMemoryRepository:
             strength=strength,
         )
 
-    def _row_to_association(self, row: tuple) -> MemoryAssociation:
+    def _row_to_association(
+        self: "SQLiteMemoryRepository", row: tuple[Any, ...]
+    ) -> MemoryAssociation:
         """Convert a database row to a MemoryAssociation entity."""
         # Extract row data (adjust indices based on the query structure)
         (

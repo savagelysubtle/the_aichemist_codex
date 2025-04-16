@@ -20,7 +20,9 @@ class CodeArtifactRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, artifact: CodeArtifact) -> CodeArtifact:
+    async def save(
+        self: CodeArtifactRepository, artifact: CodeArtifact
+    ) -> CodeArtifact:
         """Save a code artifact to the repository.
 
         Args:
@@ -35,7 +37,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_id(self, artifact_id: UUID) -> CodeArtifact | None:
+    async def get_by_id(
+        self: CodeArtifactRepository, artifact_id: UUID
+    ) -> CodeArtifact | None:
         """Get a code artifact by its ID.
 
         Args:
@@ -50,7 +54,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_path(self, path: Path) -> CodeArtifact | None:
+    async def get_by_path(
+        self: CodeArtifactRepository, path: Path
+    ) -> CodeArtifact | None:
         """Get a code artifact by its path.
 
         Args:
@@ -65,7 +71,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_name(self, name: str) -> list[CodeArtifact]:
+    async def get_by_name(
+        self: CodeArtifactRepository, name: str
+    ) -> list[CodeArtifact]:
         """Get code artifacts by name.
 
         Args:
@@ -80,7 +88,7 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def find_all(self) -> list[CodeArtifact]:
+    async def find_all(self: CodeArtifactRepository) -> list[CodeArtifact]:
         """Get all code artifacts.
 
         Returns:
@@ -92,7 +100,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def find_by_criteria(self, criteria: dict[str, Any]) -> list[CodeArtifact]:
+    async def find_by_criteria(
+        self: CodeArtifactRepository, criteria: dict[str, Any]
+    ) -> list[CodeArtifact]:
         """Find code artifacts matching criteria.
 
         Args:
@@ -107,7 +117,7 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def delete(self, artifact_id: UUID) -> bool:
+    async def delete(self: CodeArtifactRepository, artifact_id: UUID) -> bool:
         """Delete a code artifact by its ID.
 
         Args:
@@ -122,7 +132,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_children(self, parent_id: UUID) -> list[CodeArtifact]:
+    async def get_children(
+        self: CodeArtifactRepository, parent_id: UUID
+    ) -> list[CodeArtifact]:
         """Get child artifacts of a parent artifact.
 
         Args:
@@ -137,7 +149,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_dependencies(self, artifact_id: UUID) -> list[CodeArtifact]:
+    async def get_dependencies(
+        self: CodeArtifactRepository, artifact_id: UUID
+    ) -> list[CodeArtifact]:
         """Get dependencies of an artifact.
 
         Args:
@@ -152,7 +166,9 @@ class CodeArtifactRepository(ABC):
         pass
 
     @abstractmethod
-    def get_dependents(self, artifact_id: UUID) -> list[CodeArtifact]:
+    async def get_dependents(
+        self: CodeArtifactRepository, artifact_id: UUID
+    ) -> list[CodeArtifact]:
         """Get artifacts that depend on an artifact.
 
         Args:

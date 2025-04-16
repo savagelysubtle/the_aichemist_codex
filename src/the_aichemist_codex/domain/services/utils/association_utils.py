@@ -12,15 +12,15 @@ from the_aichemist_codex.domain.entities.memory_association import (
     AssociationType,
     MemoryAssociation,
 )
-from the_aichemist_codex.infrastructure.repositories.sqlite_memory_repository import (
-    SQLiteMemoryRepository,
+from the_aichemist_codex.domain.repositories.interfaces.memory_repository import (
+    MemoryRepositoryInterface,
 )
 
 logger = logging.getLogger(__name__)
 
 
 async def create_bidirectional_association(
-    repository: SQLiteMemoryRepository,
+    repository: MemoryRepositoryInterface,
     source_id: UUID,
     target_id: UUID,
     association_type: AssociationType,
@@ -67,7 +67,7 @@ async def create_bidirectional_association(
 
 
 async def link_related_memories(
-    repository: SQLiteMemoryRepository,
+    repository: MemoryRepositoryInterface,
     memory: Memory,
     tags_to_match: set[str] | None = None,
     min_tag_overlap: int = 2,
@@ -82,7 +82,8 @@ async def link_related_memories(
         repository: The memory repository
         memory: The memory to link to others
         tags_to_match: Specific tags to match (if None, uses all tags from the memory)
-        min_tag_overlap: Minimum number of overlapping tags required to create an association
+        min_tag_overlap: Minimum number of overlapping tags
+        required to create an association
         max_associations: Maximum number of associations to create
         association_type: Type of association to create
         initial_strength: Initial strength of the associations
@@ -147,7 +148,7 @@ async def link_related_memories(
 
 
 async def strengthen_associations_on_recall(
-    repository: SQLiteMemoryRepository,
+    repository: MemoryRepositoryInterface,
     recalled_memories: list[Memory],
     strengthen_amount: float = 0.05,
     max_depth: int = 1,
@@ -190,7 +191,7 @@ async def strengthen_associations_on_recall(
 
 
 async def find_knowledge_gap_recommendations(
-    repository: SQLiteMemoryRepository,
+    repository: MemoryRepositoryInterface,
     memory: Memory,
     min_strength: float = 0.3,
     max_recommendations: int = 5,
@@ -245,24 +246,13 @@ async def find_knowledge_gap_recommendations(
     for tag, count in sorted(missing_tags.items(), key=lambda x: x[1], reverse=True)[
         :max_recommendations
     ]:
-        # Find memories with this tag that aren't directly connected
-        memories_with_tag = await repository.find_by_tags({tag})
-        unconnected_memories = [
-            m
-            for m in memories_with_tag
-            if m.id not in direct_memory_ids and m.id != memory.id
-        ]
+        recommendation = {
+            "tag": tag,
+            "frequency": count,
+            "confidence": count / len(connected_memories),
+            "reason": f"This tag appears in {count} related memories "
+            f"but is missing from the current memory",
+        }
+        recommendations.append(recommendation)
 
-        if unconnected_memories:
-            recommendations.append(
-                {
-                    "tag": tag,
-                    "frequency": count,
-                    "suggestion": f"Consider connecting with memory about "
-                    f"'{unconnected_memories[0].content[:50]}...'",
-                    "memory_id": str(unconnected_memories[0].id),
-                    "confidence": count / len(connected_memories),
-                }
-            )
-
-    return recommendations[:max_recommendations]
+    return recommendations

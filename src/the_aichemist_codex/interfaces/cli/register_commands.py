@@ -42,18 +42,16 @@ def register_commands(
         # init.register_commands(typer_app, cli_services)
         # Remove or fix if init command exists
 
-        config.register_commands(typer_app, cli_services)  # Updated call
-        ingest.register_commands(typer_app, cli_services)  # Updated call
-        fs.register_commands(typer_app, cli_services)  # Updated call
-        artifacts.register_commands(typer_app, cli_services)  # Updated call
-        analysis.register_commands(typer_app, cli_services)  # Updated call
-        search.register_commands(typer_app, cli_services)  # Updated call
-        version.register_commands(typer_app, cli_services)  # Updated call
-        tagging.register_commands(typer_app, cli_services)  # Updated call
-        relationships.register_commands(typer_app, cli_services)  # Updated call
-        memory.register_commands(
-            typer_app, cli_services
-        )  # Added memory based on cli.py
+        config.register_commands(typer_app, cli_services)
+        ingest.register_commands(typer_app, cli_services)
+        fs.register_commands(typer_app, cli_services)
+        artifacts.register_commands(typer_app, cli_services)
+        analysis.register_commands(typer_app, cli_services)
+        search.register_commands(typer_app, cli_services)
+        version.register_commands(typer_app, cli_services)
+        tagging.register_commands(typer_app, cli_services)
+        relationships.register_commands(typer_app, cli_services)
+        memory.register_commands(typer_app, cli_services)
     except ImportError as e:
         logger.error(f"Failed to import command module: {e}", exc_info=True)
         # Optionally re-raise or handle differently
